@@ -114,16 +114,15 @@ export interface SubBoundaryInfo {
 }
 
 /**
- * Stack A's lords record, unchanged apart from the optional boundary fields (filled in by
- * `port-lords`). Lord fields stay `string` here: `kp-lords.ts` builds them from `string` lookup
- * tables and is not owned by this package. `port-lords` should narrow them to `KPPlanetLord`
- * (`KpLords` below is already narrow) once it owns that file.
+ * Stack A's lords record, plus the optional boundary fields. `getPositionLords` fills the boundary
+ * fields only when the caller passes the near-boundary threshold (TODO(#29 Q10)). The four lord
+ * fields are `KPPlanetLord` (narrowed by `port-lords`, #43).
  */
 export interface KPPositionLords extends Partial<SubBoundaryInfo> {
   longitude: number;
   signIndex: number;       // 0 = Aries, 11 = Pisces
   signName: string;
-  signLord: string;
+  signLord: KPPlanetLord;
   degreeInSign: number;
   formatted: string;       // e.g., "03°40'12\" Tau"
   degrees: number;
@@ -132,9 +131,9 @@ export interface KPPositionLords extends Partial<SubBoundaryInfo> {
   starIndex: number;       // 0 to 26
   starNumber: number;      // 1 to 27
   starName: string;
-  starLord: string;
-  subLord: string;
-  subSubLord: string;
+  starLord: KPPlanetLord;
+  subLord: KPPlanetLord;
+  subSubLord: KPPlanetLord;
   horary249Number: number; // 1 to 249
 }
 
