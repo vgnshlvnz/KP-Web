@@ -12,7 +12,12 @@ import {
   ZODIAC_SIGNS,
   TOTAL_DASHA_YEARS,
 } from '../src/engine/kp-lords.js';
-import type { KPPlanetLord, KPPositionLords, SubBoundaryInfo } from '../src/engine/types.js';
+import type {
+  KPPlanetLord,
+  KPPositionLords,
+  SubBoundaryInfo,
+  SubSubBoundaryInfo,
+} from '../src/engine/types.js';
 
 describe('KP Lords and 1-249 Sub Table', () => {
   it('generates exactly 249 horary numbers in the table', () => {
@@ -565,5 +570,91 @@ describe('sub-boundary fields (opt-in, threshold required)', () => {
     expect(cusp.house).toBe(1);
     expect(cusp.subSpanStart).toBeCloseTo(SUB_START, 9);
     expect(cusp.isNearSubBoundary).toBe(false);
+  });
+});
+
+describe('sub-sub boundary fields (port-chart, #54; opt-in like the sub fields)', () => {
+  const starts = buildSubSubStarts();
+  const T = { nearBoundaryThresholdArcsec: 60 };
+
+  it('are absent without options', () => {
+    const l = getPositionLords(42.0295069);
+    expect('distanceFromSubSubStartArcsec' in l).toBe(false);
+    expect('distanceToSubSubEndArcsec' in l).toBe(false);
+    expect('isNearSubSubBoundary' in l).toBe(false);
+    expect('isNearSubSubBoundary' in buildKPCusp(1, 42.0295069, 70)).toBe(false);
+  });
+
+  it('are present with options, and typed as SubSubBoundaryInfo', () => {
+    const l = getPositionLords(42.0295069, T);
+    expectTypeOf(l).toMatchTypeOf<SubSubBoundaryInfo>();
+    expectTypeOf(l.isNearSubSubBoundary).toEqualTypeOf<boolean>();
+    expectTypeOf<SubBoundaryInfo['isNearSubSubBoundary']>().toEqualTypeOf<boolean | undefined>();
+    expect(buildKPCusp(1, 42.0295069, 70, T).isNearSubSubBoundary).toBe(false);
+  });
+
+  it('KL 1992 Moon (Rahu-Rahu): distances equal the integer-oracle sub-sub span 45,240 to 45,564 units', () => {
+    // Rahu sub of Rohini: 45,240 to 47,400 units; its first sub-sub (Rahu, 18 y) is 18 x 18 = 324 units.
+    const start = 45240 / 1080;
+    const end = (45240 + 324) / 1080;
+    const l = getPositionLords(42.0295069, T);
+    expect(l.subSubLord).toBe('Rahu');
+    expect(l.distanceFromSubSubStartArcsec).toBeCloseTo((42.0295069 - start) * 3600, 4);
+    expect(l.distanceToSubSubEndArcsec).toBeCloseTo((end - 42.0295069) * 3600, 4);
+    expect(l.isNearSubSubBoundary).toBe(false);
+  });
+
+  it('at every one of the 2,187 sub-sub starts: 5 arcsec in, the distances match the oracle and nest in the sub span', () => {
+    const bad: string[] = [];
+    for (let k = 0; k < starts.length; k++) {
+      const startDeg = starts[k].unit / 1080;
+      const endDeg = (k + 1 < starts.length ? starts[k + 1].unit : 388800) / 1080;
+      const lon = startDeg + 5 / 3600;
+      const l = getPositionLords(lon, T);
+      const fromStart = l.distanceFromSubSubStartArcsec;
+      const toEnd = l.distanceToSubSubEndArcsec;
+      if (Math.abs(fromStart - 5) > 1e-6) bad.push(`k=${k} from ${fromStart}`);
+      if (Math.abs(toEnd - (endDeg - lon) * 3600) > 1e-6) bad.push(`k=${k} to ${toEnd}`);
+      // A sub-sub span lies inside its sub span, so its edges are never farther away.
+      if (fromStart > l.distanceFromSubStartArcsec + 1e-6) bad.push(`k=${k} sub-sub start beyond sub start`);
+      if (toEnd > l.distanceToSubEndArcsec + 1e-6) bad.push(`k=${k} sub-sub end beyond sub end`);
+      if (!l.isNearSubSubBoundary) bad.push(`k=${k} not near at threshold 60`);
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('isNearSubSubBoundary uses the caller threshold on both edges', () => {
+    const start = 45240 / 1080;
+    const end = (45240 + 324) / 1080;
+    const nearStart = start + 30 / 3600;
+    const nearEnd = end - 30 / 3600;
+    for (const lon of [nearStart, nearEnd]) {
+      expect(getPositionLords(lon, { nearBoundaryThresholdArcsec: 31 }).isNearSubSubBoundary).toBe(true);
+      expect(getPositionLords(lon, { nearBoundaryThresholdArcsec: 29 }).isNearSubSubBoundary).toBe(false);
+      expect(getPositionLords(lon, { nearBoundaryThresholdArcsec: 0 }).isNearSubSubBoundary).toBe(false);
+    }
+  });
+
+  it('Chennai 1950 Saturn (KP Old, SE 140.3495955): 5.2 arcsec from a sub-sub edge, far from the sub edges', () => {
+    // The sub-sub edge is what flips first; the sub edges are 858.5 and 5541.5 arcsec away (#51).
+    const l = getPositionLords(140.3495955, T);
+    expect(Math.min(l.distanceFromSubSubStartArcsec, l.distanceToSubSubEndArcsec)).toBeCloseTo(5.2, 1);
+    expect(l.isNearSubSubBoundary).toBe(true);
+    expect(l.isNearSubBoundary).toBe(false);
+  });
+
+  it('PJ 2026 Mars (KP Old, SE 123.8271669): 11.1 arcsec from a sub-sub edge, not near a sub edge', () => {
+    const l = getPositionLords(123.8271669, T);
+    expect(Math.min(l.distanceFromSubSubStartArcsec, l.distanceToSubSubEndArcsec)).toBeCloseTo(11.1, 1);
+    expect(l.isNearSubSubBoundary).toBe(true);
+    expect(l.isNearSubBoundary).toBe(false);
+  });
+
+  it('distances are never negative', () => {
+    for (let lon = 0; lon < 360; lon += 0.37) {
+      const l = getPositionLords(lon, T);
+      expect(l.distanceFromSubSubStartArcsec).toBeGreaterThanOrEqual(0);
+      expect(l.distanceToSubSubEndArcsec).toBeGreaterThanOrEqual(0);
+    }
   });
 });

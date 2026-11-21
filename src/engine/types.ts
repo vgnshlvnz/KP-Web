@@ -105,12 +105,26 @@ export interface DateTimeLocation {
  * TODO(#29 Q10): the near-boundary threshold is undecided (Stack B uses 60 arcsec). It is an
  * explicit input to whatever computes `isNearSubBoundary`; there is no default here.
  */
-export interface SubBoundaryInfo {
+export interface SubBoundaryInfo extends Partial<SubSubBoundaryInfo> {
   subSpanStart: number; // degrees in zodiac (0-360)
   subSpanEnd: number; // degrees in zodiac (0-360)
   distanceFromSubStartArcsec: number;
   distanceToSubEndArcsec: number;
   isNearSubBoundary: boolean; // within the caller-supplied threshold
+}
+
+/**
+ * Distance of a longitude from the edges of its KP sub-sub span (`port-chart`, #54). A sub-sub span
+ * is as small as 120 arcsec, so this is the boundary that a few arcseconds of ephemeris error
+ * flips first. Optional on `SubBoundaryInfo` so Stack B's `KpLords` (which has no such fields)
+ * keeps compiling; `getPositionLords(lon, options)` always fills all three.
+ * TODO(#29 Q16): whether the near-boundary warning follows the sub edge, the sub-sub edge or
+ * either is undecided. `calculateChart` warns when either flag is true.
+ */
+export interface SubSubBoundaryInfo {
+  distanceFromSubSubStartArcsec: number;
+  distanceToSubSubEndArcsec: number;
+  isNearSubSubBoundary: boolean; // within the caller-supplied threshold
 }
 
 /**
@@ -303,6 +317,20 @@ export interface RulingPlanets {
   rulingPlanetsList: KPPlanetLord[];
 }
 
+/**
+ * Ruling planets when there is no sunrise at the place (polar night or polar day), as returned by
+ * `calculateChart`. There is no day lord, so `dayLord` and `sunriseUtc` are `null` and
+ * `rulingPlanetsList` holds only the ascendant and Moon entries.
+ * TODO(#29 Q8): how a chart reports this case, beyond this flag and a `no_sunrise` warning, is
+ * undecided. Structurally identical to `RulingPlanetsNoSunrise` in `ruling-planets.ts`.
+ */
+export interface RulingPlanetsWithoutSunrise
+  extends Omit<RulingPlanets, 'dayLord' | 'sunriseUtc' | 'sunriseStatus'> {
+  dayLord: null;
+  sunriseUtc: null;
+  sunriseStatus: 'no_sunrise_polar_night' | 'no_sunrise_polar_day';
+}
+
 export interface DashaPeriod {
   lord: KPPlanetLord;
   level: 'dasha' | 'bhukti' | 'antara';
@@ -431,8 +459,11 @@ export interface ChartCalculationResult {
   nodeMode?: NodeMode;
   /** Computed planets with tropical/sidereal longitude, speed and lords (Stack B record). */
   planetPositions?: PlanetaryPosition[];
-  /** TODO(#24): membership depends on the chosen `RulingPlanetSet`. */
-  rulingPlanets?: RulingPlanets;
+  /**
+   * TODO(#24): membership depends on the chosen `RulingPlanetSet`.
+   * The second member is the no-sunrise variant (TODO(#29 Q8)).
+   */
+  rulingPlanets?: RulingPlanets | RulingPlanetsWithoutSunrise;
   /** TODO(#29 Q9): timeline depends on the chosen dasha year length. */
   dashaBalance?: DashaBalance;
   /** Four-level significators with node agents. TODO(#23). */
@@ -444,6 +475,23 @@ export interface ChartCalculationResult {
   isPolarFallback?: boolean;
   /** Polar fallback, near-sub-boundary and no-sunrise warnings. */
   warnings?: ChartWarning[];
+}
+
+/**
+ * What `calculateChart` returns: a `ChartCalculationResult` in which every additive field is
+ * present. Assignable to `ChartCalculationResult`.
+ */
+export interface FullChartCalculationResult extends ChartCalculationResult {
+  nodeMode: NodeMode;
+  planets: PlanetHouseAssignment[];
+  planetPositions: PlanetaryPosition[];
+  significators: SignificatorsResult;
+  chartWheels: ChartWheels;
+  rulingPlanets: RulingPlanets | RulingPlanetsWithoutSunrise;
+  dashaBalance: DashaBalance;
+  nodeAgentSignificators: FourLevelSignificators;
+  isPolarFallback: boolean;
+  warnings: ChartWarning[];
 }
 
 /** Horary-specific fields. Asc is the START of the chosen sub unless `useSubMidpoint` is true. */

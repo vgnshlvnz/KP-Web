@@ -67,8 +67,6 @@ export interface DashaAtBirth {
 /** Periods shorter than this (years, about 0.3 ms) are floating-point residue, not real periods. */
 const EPSILON_YEARS = 1e-11;
 const MS_PER_DAY = 86_400_000;
-/** Mean month length Stack B used to express the balance as years/months/days. */
-const DAYS_PER_MONTH = 30.4375;
 
 function lordsFrom(start: KPPlanetLord): KPPlanetLord[] {
   const i = VIMSHOTTARI_LORDS.indexOf(start);
@@ -234,7 +232,11 @@ export function calculateVimshottariDasha(
   const balanceYears = Math.floor(birth.balanceYears);
   const remMonths = (birth.balanceYears - balanceYears) * 12;
   const balanceMonths = Math.floor(remMonths);
-  const balanceDays = Math.round((remMonths - balanceMonths) * DAYS_PER_MONTH);
+  // A dasha month is one twelfth of the dasha year, so the displayed balance follows the one
+  // year-length option. (This used to be a hidden 30.4375 = 365.25 / 12.)
+  // TODO(#29 Q17): owner to confirm that months are derived as dashaYearDays / 12.
+  const daysPerMonth = dashaYearDays / 12;
+  const balanceDays = Math.round((remMonths - balanceMonths) * daysPerMonth);
 
   const timeline: DashaPeriod[] = [];
   const dashaOrder = lordsFrom(birth.dashaLord);
