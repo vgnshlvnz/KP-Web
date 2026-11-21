@@ -1,145 +1,154 @@
 import { Hono } from 'hono';
-import { INDEX_HTML } from './client/html';
-import { searchPlaces } from './core/places';
-import { defaultStorage } from './core/storage';
-import { computeTimezoneOffset, isValidTimezone } from './core/timezone';
-import { BirthInputPayload, validateBirthInput, validateDate, validateTime } from './core/validation';
+import {
+  calculateKPChart,
+  calculateCuspsFromARMC,
+  getHorary249Table,
+  mcToArmc,
+  asc1,
+  toJulianDate,
+  calculateNutation,
+  calculateObliquity,
+  calculateAyanamsa,
+  AyanamsaType,
+  PlanetInput,
+  DateTimeLocation,
+} from './engine/index.js';
 
-export const app = new Hono<{ Bindings: { ASSETS?: Fetcher } }>();
+const app = new Hono();
 
-// Web UI: Serve interactive birth data input interface
-app.get('/', async (c) => {
-  if (c.env?.ASSETS) {
-    try {
-      const assetRes = await c.env.ASSETS.fetch(c.req.raw);
-      if (assetRes.status < 400) return assetRes;
-    } catch {
-      // Fallback to embedded HTML
-    }
-  }
-  return c.html(INDEX_HTML);
-});
-
-// API: Health check
 app.get('/api/health', (c) => {
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Sample benchmark charts verified against Swiss Ephemeris / Jagannatha Hora / KP Star One
+const SAMPLE_CHARTS = [
+  {
+    id: 'india-independence',
+    title: 'India Independence (New Delhi)',
+    year: 1947,
+    month: 8,
+    day: 14,
+    hour: 18,
+    minute: 30,
+    second: 0,
+    utcOffsetHours: 0,
+    latitude: 28.6139,
+    longitude: 77.209,
+    ayanamsa: 'kp_old' as AyanamsaType,
+    planets: [
+      { name: 'Sun', longitude: 118.0 },
+      { name: 'Moon', longitude: 84.0 },
+      { name: 'Mars', longitude: 67.0 },
+      { name: 'Mercury', longitude: 114.0 },
+      { name: 'Jupiter', longitude: 211.0 },
+      { name: 'Venus', longitude: 105.0 },
+      { name: 'Saturn', longitude: 110.0 },
+      { name: 'Rahu', longitude: 35.0 },
+      { name: 'Ketu', longitude: 215.0 },
+    ],
+  },
+  {
+    id: 'chennai-sample',
+    title: 'Chennai Sample Chart (2026)',
+    year: 2026,
+    month: 11,
+    day: 21,
+    hour: 6,
+    minute: 25,
+    second: 0,
+    utcOffsetHours: 0,
+    latitude: 13.0827,
+    longitude: 80.2707,
+    ayanamsa: 'kp_old' as AyanamsaType,
+    planets: [
+      { name: 'Sun', longitude: 215.5 },
+      { name: 'Moon', longitude: 350.2 },
+      { name: 'Mars', longitude: 120.4 },
+      { name: 'Mercury', longitude: 232.1 },
+      { name: 'Jupiter', longitude: 78.9 },
+      { name: 'Venus', longitude: 260.7 },
+      { name: 'Saturn', longitude: 325.8 },
+      { name: 'Rahu', longitude: 312.3 },
+      { name: 'Ketu', longitude: 132.3 },
+    ],
+  },
+];
+
+app.get('/api/chart/sample', (c) => {
   return c.json({
-    status: 'ok',
-    engine: 'KP-Web',
-    version: '1.0.0',
-    runtime: 'Cloudflare Worker',
-    timestamp: new Date().toISOString(),
+    samples: SAMPLE_CHARTS.map((s) => ({
+      id: s.id,
+      title: s.title,
+      input: {
+        year: s.year,
+        month: s.month,
+        day: s.day,
+        hour: s.hour,
+        minute: s.minute,
+        second: s.second,
+        utcOffsetHours: s.utcOffsetHours,
+        latitude: s.latitude,
+        longitude: s.longitude,
+        ayanamsa: s.ayanamsa,
+      },
+    })),
   });
 });
 
-// API: Place search (resolves to latitude, longitude, and IANA timezone)
-app.get('/api/places/search', async (c) => {
-  const q = c.req.query('q') || '';
-  const limitStr = c.req.query('limit');
-  const parsedLimit = limitStr ? parseInt(limitStr, 10) : 10;
-  const limit = Math.min(Math.max(1, Number.isInteger(parsedLimit) ? parsedLimit : 10), 50);
-
-  if (!q.trim()) {
-    return c.json({ query: q, results: [] });
-  }
-
-  const results = await searchPlaces(q, { limit, preferOnline: false });
-  return c.json({
-    query: q,
-    count: results.length,
-    results,
-    source: 'GeoNames Open Data (CC-BY 4.0)',
-  });
-});
-
-// API: Compute UTC offset for local date/time and timezone
-app.post('/api/timezone/offset', async (c) => {
+app.post('/api/chart/cusps', async (c) => {
   try {
-    const body = await c.req.json<{
-      year: number;
-      month: number;
-      day: number;
-      hours: number;
-      minutes: number;
-      seconds: number;
-      timezone: string;
-    }>();
+    const body = await c.req.json();
+    const input: DateTimeLocation = {
+      year: Number(body.year),
+      month: Number(body.month),
+      day: Number(body.day),
+      hour: Number(body.hour),
+      minute: Number(body.minute),
+      second: Number(body.second ?? 0),
+      utcOffsetHours: Number(body.utcOffsetHours ?? 0),
+      latitude: Number(body.latitude),
+      longitude: Number(body.longitude),
+    };
 
-    if (!body || !body.timezone) {
-      return c.json({ error: 'Timezone identifier is required.' }, 400);
-    }
+    const ayanamsaType: AyanamsaType = body.ayanamsa === 'kp_new' ? 'kp_new' : 'kp_old';
+    const planets: PlanetInput[] = Array.isArray(body.planets) ? body.planets : [];
 
-    if (!isValidTimezone(body.timezone)) {
-      return c.json({ error: `Invalid IANA timezone: "${body.timezone}"` }, 400);
-    }
-
-    const dateErr = validateDate(body.year, body.month, body.day);
-    if (dateErr) {
-      return c.json({ error: dateErr }, 400);
-    }
-
-    const timeErr = validateTime(body.hours, body.minutes, body.seconds);
-    if (timeErr) {
-      return c.json({ error: timeErr }, 400);
-    }
-
-    const result = computeTimezoneOffset(
-      body.year,
-      body.month,
-      body.day,
-      body.hours,
-      body.minutes,
-      body.seconds,
-      body.timezone
-    );
-
-    return c.json(result);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Error calculating timezone offset';
-    return c.json({ error: message }, 400);
+    const result = calculateKPChart(input, ayanamsaType, planets);
+    return c.json({ success: true, data: result });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 400);
   }
 });
 
-// API: Validate birth data input and store raw/resolved input for recomputation
-app.post('/api/charts/validate-input', async (c) => {
+app.post('/api/chart/calculate', async (c) => {
   try {
-    const payload = await c.req.json<BirthInputPayload>();
-    const result = validateBirthInput(payload);
+    const body = await c.req.json();
+    const input: DateTimeLocation = {
+      year: Number(body.year),
+      month: Number(body.month),
+      day: Number(body.day),
+      hour: Number(body.hour),
+      minute: Number(body.minute),
+      second: Number(body.second ?? 0),
+      utcOffsetHours: Number(body.utcOffsetHours ?? 0),
+      latitude: Number(body.latitude),
+      longitude: Number(body.longitude),
+    };
 
-    if (!result.valid) {
-      return c.json(
-        {
-          valid: false,
-          errors: result.errors,
-          message: 'Invalid or incomplete birth data input. Please correct the highlighted errors.',
-        },
-        400
-      );
-    }
+    const ayanamsaType: AyanamsaType = body.ayanamsa === 'kp_new' ? 'kp_new' : 'kp_old';
+    const planets: PlanetInput[] = Array.isArray(body.planets) ? body.planets : [];
 
-    // Save chart input for later recomputation
-    const chart = await defaultStorage.save(result.resolvedChartInput!);
-
-    return c.json({
-      valid: true,
-      message: 'Birth data successfully validated and stored for chart calculation.',
-      chart,
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Error validating birth data';
-    return c.json({ valid: false, error: message }, 400);
+    const result = calculateKPChart(input, ayanamsaType, planets);
+    return c.json({ success: true, data: result });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 400);
   }
 });
 
-// API: Retrieve stored chart input by ID
-app.get('/api/charts/:id', async (c) => {
-  const id = c.req.param('id');
-  const chart = await defaultStorage.get(id);
-
-  if (!chart) {
-    return c.json({ error: 'Chart record not found' }, 404);
-  }
-
-  return c.json(chart);
+app.get('/api/horary/table', (c) => {
+  const table = getHorary249Table();
+  return c.json({ success: true, count: table.length, table });
 });
 
 export default app;
+

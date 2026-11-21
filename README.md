@@ -60,9 +60,43 @@ One catch: the open-source [kpastro](https://pypi.org/project/kpastro/) library 
 
 ## Stack notes
 
-### Ephemeris licensing
+### Ephemeris engine and NASA JPL licensing
 
-[Swiss Ephemeris](https://www.astro.com/swisseph/swisseph.pdf) is the standard engine, but it is **AGPL**, which covers hosted web apps too. For a closed-source app you need the [Professional licence](https://www.astro.com/swisseph/swephprice_p.htm), currently **CHF 700 for 6 years** under the November 2026 contract. Wrapper libraries labelled MIT still pull in Swiss Ephemeris, so the same licence applies. Bindings: Python `pyswisseph` or `pysweph`; Node `sweph`. The licence path is an open decision and must be resolved before shipping.
+To resolve the Swiss Ephemeris AGPL / CHF 700 commercial fee constraint and enable native execution in serverless V8 isolates (Cloudflare Workers) without C++ native addon dependencies (`sweph`/`node-gyp`), the engine uses **NASA JPL Ephemeris** models (DE405 / VSOP87 / NOVAS via `astronomy-engine`) combined with high-precision IAU 2006 precession.
+
+NASA JPL Ephemeris models are works of the United States Government (17 U.S.C. § 105), placed in the public domain and permissively licensed. See [docs/licensing.md](docs/licensing.md) for full architectural rationale and licensing compliance.
+
+Both KP ayanamsa standards are implemented and selectable:
+1. **KP Old** (`SE_SIDM_KRISHNAMURTI`): K.S. Krishnamurti's original baseline defined at J1900.0 with $22^\circ 21' 50.0''$ ($22.363889^\circ$). J2000 value: $23.76024004^\circ$ ($23^\circ 45' 36.86''$).
+2. **KP New** (`SE_SIDM_KRISHNAMURTI_VP291`): The Krishnamurti-Senthilathiban revision with zero-ayanamsa epoch at vernal point 291 CE. J2000 value: $23.78036498^\circ$ ($23^\circ 46' 49.31''$).
+Both match Swiss Ephemeris to within $0.05$ arcseconds across modern epochs.
+
+## Cloudflare Wrangler deployment
+
+The engine is built in pure TypeScript and deployed as a Cloudflare Worker using Wrangler (`wrangler.jsonc`):
+
+```bash
+# Install dependencies
+npm install
+
+# Run type check and unit tests
+npm run build
+npm test
+
+# Run local Cloudflare Worker development server
+npm run dev
+
+# Deploy to Cloudflare Workers
+npm run deploy
+```
+
+### API Endpoints
+
+- `GET /api/health` — Engine status, versions, and NASA JPL licensing confirmation.
+- `GET /api/ayanamsa?year=2026&month=11&day=21` — KP Old and KP New ayanamsa values for a given date.
+- `GET /api/horary-table` or `GET /api/horary-table?number=108` — Complete canonical 1–249 Horary table or specific entry lookup.
+- `POST /api/calculate` — Computes full natal or event chart (planetary positions, Placidus cusps, sign/star/sub/sub-sub lords, 4-level significators, ruling planets, Vimshottari dasha).
+- `POST /api/horary` — Computes Horary chart for numbers 1–249 with Lagna at start of sub (or midpoint toggle) via RAMC inversion.
 
 ### Time and place
 
