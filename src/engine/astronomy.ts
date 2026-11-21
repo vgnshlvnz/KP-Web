@@ -1,5 +1,12 @@
 import * as Astronomy from 'astronomy-engine';
 import { AyanamsaType } from './types.js';
+import {
+  AYANAMSA_LABELS,
+  isAyanamsaMode,
+  isSeDefinedAyanamsaMode,
+  meanAyanamsaSeDefined,
+  unsupportedAyanamsaMessage,
+} from './ayanamsa-defs.js';
 
 export const DEG2RAD = Math.PI / 180.0;
 export const RAD2DEG = 180.0 / Math.PI;
@@ -208,30 +215,43 @@ export interface AyanamsaResult {
 }
 
 /**
- * Computes KP Ayanamsa (KP Old or KP New) for the given Julian date.
+ * Computes the ayanamsa of an explicitly chosen mode for the given Julian date.
  * KP Old: Krishnamurti original ayanamsa (Swiss Ephemeris SIDM_KRISHNAMURTI #5)
  *   Epoch: J1900.0 (JD 2415020.0), Ayanamsa = 22°21'50" = 22.363889°
  *   J2000.0 value: 23°45'36.86" = 23.760240°
  * KP New: Krishnamurti VP291 / Senthilathiban (Swiss Ephemeris SIDM_KRISHNAMURTI_VP291 #45)
  *   Epoch: Zero ayanamsa at 291 CE (JD 1827424.752255678)
  *   J2000.0 value: 23°46'49.31" = 23.780365°
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi: the Swiss Ephemeris 2.10.03
+ *   modes of the same names, defined in `ayanamsa-defs.ts` (owner decision on #29, 2026-11-21).
+ * Nil: the tropical zodiac. The mean and the true ayanamsa are both 0, and `dPsiDeg` is ignored,
+ *   so sidereal longitude = tropical longitude.
  * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses.
  *
- * TODO(#22): the default KP ayanamsa is the owner's decision. `type` is a required parameter (this
- * function used to default it to 'kp_old'), and any value other than 'kp_old' / 'kp_new' throws
- * instead of silently becoming KP Old.
+ * TODO(#22): the default ayanamsa is the owner's decision. `type` is a required parameter (this
+ * function used to default it to 'kp_old'), and any value that is not one of the supported modes
+ * throws instead of silently becoming KP Old or Lahiri.
  */
 export function calculateAyanamsa(
   jd: number,
   type: AyanamsaType,
   dPsiDeg: number = 0
 ): AyanamsaResult {
+  // Never fall back to another mode (or to Lahiri) for an unknown value.
+  if (!isAyanamsaMode(type)) {
+    throw new Error(unsupportedAyanamsaMessage(type));
+  }
+
   const T = (jd - 2451545.0) / 36525.0;
 
   let meanAyanamsa: number;
   let name: string;
 
-  if (type === 'kp_new') {
+  if (type === 'nil') {
+    // Tropical: no ayanamsa, and no nutation term either (the planets and cusps are already in the
+    // true equinox of date).
+    return { type, name: AYANAMSA_LABELS.nil, meanAyanamsa: 0, trueAyanamsa: 0 };
+  } else if (type === 'kp_new') {
     name = 'KP New (VP291 / Senthilathiban)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI_VP291
     meanAyanamsa =
@@ -249,9 +269,12 @@ export function calculateAyanamsa(
       0.000307064 * T * T +
       0.00000000227 * T * T * T -
       0.00000000411 * T * T * T * T;
+  } else if (isSeDefinedAyanamsaMode(type)) {
+    name = `${AYANAMSA_LABELS[type]} (Swiss Ephemeris)`;
+    meanAyanamsa = meanAyanamsaSeDefined(type, T);
   } else {
-    // Never fall back to another mode (or to Lahiri) for an unknown value.
-    throw new Error(`Unsupported ayanamsa mode: ${String(type)} (expected 'kp_old' or 'kp_new')`);
+    // Unreachable: every AyanamsaMode is handled above.
+    throw new Error(unsupportedAyanamsaMessage(type));
   }
 
   // True ayanamsa includes nutation in longitude

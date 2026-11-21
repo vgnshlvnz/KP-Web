@@ -10,7 +10,9 @@
  *    nutation in longitude (dPsi).
  *  - Sidereal longitude = tropical - (mean ayanamsa + dPsi). Subtracting the mean ayanamsa alone
  *    leaves the sidereal longitude off by exactly dPsi (up to ~18 arcsec, issue #33).
- *  - The mean ayanamsa is Stack A's polynomial (`calculateAyanamsa`), evaluated at TT.
+ *  - The mean ayanamsa is `calculateAyanamsa` (Stack A's polynomial for KP Old / KP New, the
+ *    Swiss Ephemeris definitions in `ayanamsa-defs.ts` for the others), evaluated at TT.
+ *  - 'nil' (tropical) subtracts nothing: mean ayanamsa 0 and no dPsi term, so sidereal = tropical.
  *
  * Lunar nodes: MEAN node only (#29 (owner, 2026-11-21): "Use mean node only"). IAU polynomial for
  * the mean longitude of the ascending node (mean equinox of date), with dPsi added so it is in the
@@ -21,6 +23,7 @@
 
 import * as Astronomy from 'astronomy-engine';
 import { calculateAyanamsa, normalizeDegrees } from './astronomy.js';
+import { isAyanamsaMode, unsupportedAyanamsaMessage } from './ayanamsa-defs.js';
 import type { AyanamsaMode, ChartCalculationOptions, PlanetName } from './types.js';
 
 /** Julian Day of the J2000.0 epoch. */
@@ -55,9 +58,9 @@ export interface EphemerisResult {
   ayanamsa: AyanamsaMode;
   julianDayUt: number;
   julianDayTt: number;
-  /** Mean ayanamsa (Stack A polynomial), degrees. */
+  /** Mean ayanamsa of the chosen mode, degrees (0 for 'nil'). */
   meanAyanamsaDeg: number;
-  /** Mean ayanamsa + dPsi: the value actually subtracted from tropical longitudes, degrees. */
+  /** Mean ayanamsa + dPsi (0 for 'nil'): the value actually subtracted from tropical longitudes, degrees. */
   trueAyanamsaDeg: number;
   /** Nutation in longitude, degrees (astronomy-engine, IAU 2000B). */
   nutationInLongitudeDeg: number;
@@ -141,9 +144,9 @@ function tropicalCoordinates(
 }
 
 function assertAyanamsa(mode: AyanamsaMode): void {
-  if (mode !== 'kp_old' && mode !== 'kp_new') {
+  if (!isAyanamsaMode(mode)) {
     // No silent fallback to KP Old or Lahiri.
-    throw new Error(`Unsupported ayanamsa mode: ${String(mode)} (expected 'kp_old' or 'kp_new')`);
+    throw new Error(unsupportedAyanamsaMessage(mode));
   }
 }
 
@@ -171,8 +174,10 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
   const nutationInLongitudeDeg = tilt.dpsi / 3600.0; // arcsec -> degrees
   const nutationInObliquityDeg = tilt.deps / 3600.0;
 
-  const meanAyanamsaDeg = calculateAyanamsa(julianDayTt, options.ayanamsa).meanAyanamsa;
-  const trueAyanamsaDeg = meanAyanamsaDeg + nutationInLongitudeDeg;
+  // mean + dPsi for every mode except 'nil' (tropical), where both are 0.
+  const ayanamsa = calculateAyanamsa(julianDayTt, options.ayanamsa, nutationInLongitudeDeg);
+  const meanAyanamsaDeg = ayanamsa.meanAyanamsa;
+  const trueAyanamsaDeg = ayanamsa.trueAyanamsa;
 
   const halfWindowMs = (SPEED_WINDOW_HOURS * 3600 * 1000) / 2;
   const timeBefore = Astronomy.MakeTime(new Date(date.getTime() - halfWindowMs));
