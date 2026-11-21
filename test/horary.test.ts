@@ -15,12 +15,12 @@ import type { ChartCalculationOptions } from '../src/engine/types.js';
  *   chart.ascendant.siderealLongitude -> chart.ascendant (a number, sidereal degrees)
  *   chart.ascendant.signName / starLord / subLord -> chart.cusps[0].signName / starLord / subLord
  *
- * The engine options below are a TEST FIXTURE, not defaults: each one is an open owner decision
- * (#22, #23, #24) and `calculateHoraryChart` has no default for any of them. Everything else is a
+ * The engine options below are a TEST FIXTURE, not defaults: each one is an owner decision
+ * (#22 decided: no API default; #23, #24) and `calculateHoraryChart` has no default for any of them. Everything else is a
  * fixed convention (`src/engine/conventions.ts`).
  */
 const OPTIONS: ChartCalculationOptions = {
-  ayanamsa: 'kp_old', // TODO(#22): fixture, not a default
+  ayanamsa: 'kp_old', // fixture, not a default (#22: no API default)
   nodeAgentRuleSet: 'sign_lord_star_lord_same_sign', // TODO(#23): fixture
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord', // TODO(#24): fixture
 };

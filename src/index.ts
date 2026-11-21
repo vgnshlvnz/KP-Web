@@ -54,12 +54,12 @@ import { AYANAMSA_LABELS, AYANAMSA_MODES, DEFAULT_AYANAMSA_SELECTION } from './e
 import { validateAyanamsa } from './core/validation.js';
 
 // ---------------------------------------------------------------------------
-// Engine configuration: the two decisions that are still open
+// Engine configuration: the two decisions that are still open (#23, #24)
 // ---------------------------------------------------------------------------
 
 /**
- * The only place the API picks a value for the still-open engine options. `ayanamsa` is NOT here:
- * it always comes from the request (TODO(#22), no default).
+ * The only place the API picks a value for the still-open engine options (#23, #24). `ayanamsa` is NOT here:
+ * it always comes from the request (#22 decided: no API default).
  */
 const ENGINE_CONFIG: {
   nodeAgentRuleSet: NodeAgentRuleSet;
@@ -384,7 +384,7 @@ app.get('/api/ayanamsa', (c) => {
 /**
  * Natal or event chart: `calculateChart`. Flat body, the fields of `DateTimeLocation` plus
  * `ayanamsa`: year, month, day, hour, minute, second (optional, 0), utcOffsetHours (REQUIRED, no
- * silent UTC), latitude, longitude, ayanamsa (REQUIRED, TODO(#22)).
+ * silent UTC), latitude, longitude, ayanamsa (REQUIRED, #22 decided: no API default).
  */
 app.post('/api/calculate', async (c) => {
   const body = await readJsonBody(c.req);

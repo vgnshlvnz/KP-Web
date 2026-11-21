@@ -7,7 +7,7 @@ import type { ChartCalculationOptions } from '../src/engine/types.js';
 /**
  * Re-pointed from the Stack B `calculateNatalChart` (src/kp/engine) to `calculateChart` (#54).
  *
- * Every option below is a test fixture, not a default: each is an open owner decision.
+ * Every option below is a test fixture, not a default: each is an owner decision with no default (#22 decided; #23, #24 open).
  * They reproduce what Stack B did here (KP Old, its Rahu/Ketu agents, its 5-entry ruling-planet
  * list). Mean node, 365.2425-day dasha year, 60 arcsec threshold and upper-limb sunrise are fixed
  * conventions; the outer planets (Stack B returned 12 planets) are removed (#29 (owner, 2026-11-21)).

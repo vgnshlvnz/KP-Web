@@ -2,9 +2,9 @@
  * Fixed KP conventions of the engine, all in one place.
  *
  * Each one is an owner decision recorded on the tracking issue (#29, owner, 2026-11-21) and is a
- * constant, not an option. The decisions that are still open are NOT here; they stay as required
- * options of `ChartCalculationOptions`: `ayanamsa` (TODO(#22)), `nodeAgentRuleSet` (TODO(#23))
- * and `rulingPlanetSet` (TODO(#24)).
+ * constant, not an option. The options stay required in `ChartCalculationOptions`: `ayanamsa`
+ * (#22 decided: no API default; KPSTLA is the UI preselect only), plus the still-open
+ * `nodeAgentRuleSet` (TODO(#23)) and `rulingPlanetSet` (TODO(#24)).
  */
 
 /**

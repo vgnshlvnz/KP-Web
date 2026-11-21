@@ -199,7 +199,7 @@ function assertFiniteNumber(name: string, value: unknown): asserts value is numb
 }
 
 /**
- * The three options still open (ayanamsa, node-agent rule set, ruling-planet set) have no default:
+ * The three options (ayanamsa, node-agent rule set, ruling-planet set) have no default (#22 decided: no API default):
  * a missing one is an error, not a silent fallback. Values are validated again by the module that
  * consumes them, which throws on an unknown value.
  */
@@ -208,7 +208,7 @@ function assertChartOptions(options: ChartCalculationOptions): void {
     throw new TypeError('calculateChart requires an options object; every option is required');
   }
   const required: Array<keyof ChartCalculationOptions> = [
-    'ayanamsa', // TODO(#22)
+    'ayanamsa', // #22 decided: no API default
     'nodeAgentRuleSet', // TODO(#23)
     'rulingPlanetSet', // TODO(#24)
   ];
@@ -267,8 +267,9 @@ function chartInstantUtc(input: DateTimeLocation): Date {
 
 /**
  * The one chart function. The conventions in `conventions.ts` are fixed (#29 (owner, 2026-11-21));
- * only the three still-open decisions are options, each required with no default:
- * `ayanamsa` (TODO(#22)), `nodeAgentRuleSet` (TODO(#23)) and `rulingPlanetSet` (TODO(#24)).
+ * only three options remain, each required with no default: `ayanamsa` (#22 decided: no API
+ * default; KPSTLA is the UI preselect only), `nodeAgentRuleSet` (TODO(#23)) and
+ * `rulingPlanetSet` (TODO(#24)).
  *
  * - Planets (Sun to Saturn, mean Rahu and Ketu) come from `calculateEphemeris` (astronomy-engine).
  * - Placidus cusps use the same true ayanamsa and nutation as the planets. At polar latitudes the
@@ -284,7 +285,7 @@ function chartInstantUtc(input: DateTimeLocation): Date {
  * `input.utcOffsetHours` is required here (unlike `calculateKPChart`, which treats it as 0).
  * The legacy `calculateKPChart` is still used by the `/api/chart/*` routes in `src/index.ts`. Its only change
  * is at polar latitudes, where it now returns Porphyry cusps plus a `polar_fallback` warning instead of
- * throwing. Its `ayanamsaType` argument is required: there is no default (#22).
+ * throwing. Its `ayanamsaType` argument is required: there is no default (#22 decided).
  */
 export function calculateChart(
   input: DateTimeLocation,
