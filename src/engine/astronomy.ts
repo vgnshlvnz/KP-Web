@@ -1,3 +1,4 @@
+import * as Astronomy from 'astronomy-engine';
 import { AyanamsaType } from './types.js';
 
 export const DEG2RAD = Math.PI / 180.0;
@@ -60,57 +61,62 @@ export function toJulianDate(
   return jd;
 }
 
+/**
+ * Converts a Julian Day (UT) to a UTC `Date`, to the nearest second. Meeus, chapter 7 (inverse).
+ */
+export function julianDayToDate(jd: number): Date {
+  const z = Math.floor(jd + 0.5);
+  const f = jd + 0.5 - z;
+  let a = z;
+  if (z >= 2299161) {
+    const alpha = Math.floor((z - 1867216.25) / 36524.25);
+    a = z + 1 + alpha - Math.floor(alpha / 4);
+  }
+  const b = a + 1524;
+  const c = Math.floor((b - 122.1) / 365.25);
+  const d = Math.floor(365.25 * c);
+  const e = Math.floor((b - d) / 30.6001);
+  const day = b - d - Math.floor(30.6001 * e) + f;
+  const month = e < 14 ? e - 1 : e - 13;
+  const year = month > 2 ? c - 4716 : c - 4715;
+
+  const dayInt = Math.floor(day);
+  const totalSeconds = Math.round((day - dayInt) * 86400);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return new Date(Date.UTC(year, month - 1, dayInt, hours, minutes, seconds));
+}
+
+/** Julian Day of the J2000.0 epoch. */
+const JD_J2000 = 2451545.0;
+
+/**
+ * astronomy-engine time for a Julian Day in UT. astronomy-engine takes a numeric time as UT days
+ * since J2000 and derives TT (via its own delta-T model) from it.
+ */
+function astroTimeFromJd(jd: number): Astronomy.AstroTime {
+  return new Astronomy.AstroTime(jd - JD_J2000);
+}
+
 export interface NutationResult {
   dPsi: number; // Nutation in longitude (degrees)
   dEps: number; // Nutation in obliquity (degrees)
 }
 
 /**
- * Computes nutation in longitude (dPsi) and obliquity (dEps) using the IAU 1980 / Meeus theory.
- * Returns values in degrees.
+ * Nutation in longitude (dPsi) and obliquity (dEps), in degrees, for a Julian Day in UT.
+ *
+ * Delegates to astronomy-engine (IAU 2000B), so that planets, cusps and the ayanamsa correction
+ * all use one nutation model (port-ephemeris, #41; see #33). The signature is unchanged.
  */
 export function calculateNutation(jd: number): NutationResult {
-  const T = (jd - 2451545.0) / 36525.0;
-
-  // Fundamental Delaunay arguments in degrees
-  const omega = normalizeDegrees(125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000.0);
-  const L = normalizeDegrees(280.4665 + 36000.7698 * T); // Sun mean longitude
-  const Lp = normalizeDegrees(218.3165 + 481267.8813 * T); // Moon mean longitude
-  const D = normalizeDegrees(297.85036 + 445267.11148 * T); // Moon mean elongation
-  const M = normalizeDegrees(357.52772 + 35999.05034 * T); // Sun mean anomaly
-  const Mp = normalizeDegrees(134.96298 + 477198.867398 * T); // Moon mean anomaly
-
-  // Nutation terms (in arcseconds)
-  let dPsiSec =
-    -17.1996 * sind(omega) +
-    -1.3187 * sind(2 * L) +
-    -0.2274 * sind(2 * Lp) +
-    0.2062 * sind(2 * omega) +
-    0.1426 * sind(M) +
-    0.0712 * sind(Mp) +
-    -0.0517 * sind(2 * L - omega) +
-    -0.0386 * sind(2 * D - omega) +
-    -0.0301 * sind(2 * Lp + Mp) +
-    0.0217 * sind(2 * L - M) +
-    -0.0158 * sind(2 * D - Mp) +
-    0.0129 * sind(2 * L - 2 * D + omega) +
-    0.0123 * sind(2 * Lp - omega);
-
-  let dEpsSec =
-    9.2025 * cosd(omega) +
-    0.5736 * cosd(2 * L) +
-    0.0977 * cosd(2 * Lp) +
-    -0.0895 * cosd(2 * omega) +
-    0.0054 * cosd(M) +
-    -0.0007 * cosd(Mp) +
-    0.0224 * cosd(2 * L - omega) +
-    0.0200 * cosd(2 * D - omega) +
-    0.0129 * cosd(2 * Lp + Mp) +
-    -0.0095 * cosd(2 * L - M);
-
+  const tilt = Astronomy.e_tilt(astroTimeFromJd(jd));
+  // astronomy-engine reports both angles in arcseconds.
   return {
-    dPsi: dPsiSec / 3600.0,
-    dEps: dEpsSec / 3600.0,
+    dPsi: tilt.dpsi / 3600.0,
+    dEps: tilt.deps / 3600.0,
   };
 }
 
@@ -120,15 +126,13 @@ export interface ObliquityResult {
 }
 
 /**
- * Computes mean and true obliquity of the ecliptic using Laskar / IAU 2006 formula.
- * Returns values in degrees.
+ * Mean and true obliquity of the ecliptic, in degrees, for a Julian Day in UT.
+ *
+ * The mean obliquity is astronomy-engine's (IAU 2006). The true obliquity is the mean plus the
+ * caller-supplied `dEps` (from `calculateNutation`), exactly as before.
  */
 export function calculateObliquity(jd: number, dEps: number = 0): ObliquityResult {
-  const T = (jd - 2451545.0) / 36525.0;
-  // Laskar's formula for mean obliquity (Meeus eq 22.2)
-  const eps0 =
-    23.4392911111 -
-    (46.815 * T + 0.00059 * T * T - 0.001813 * T * T * T) / 3600.0;
+  const eps0 = Astronomy.e_tilt(astroTimeFromJd(jd)).mobl;
   return {
     meanObliquity: eps0,
     trueObliquity: eps0 + dEps,
@@ -146,9 +150,12 @@ export interface SiderealTimeResult {
 }
 
 /**
- * Computes Greenwich Mean Sidereal Time (GMST), Greenwich Apparent Sidereal Time (GAST),
- * Local Apparent Sidereal Time (LAST), and ARMC in degrees.
- * Based on IAU 1982 / 2006 standards.
+ * Greenwich Mean Sidereal Time (GMST), Greenwich Apparent Sidereal Time (GAST), Local Apparent
+ * Sidereal Time and ARMC, in hours and degrees, for a Julian Day in UT.
+ *
+ * GMST comes from astronomy-engine (IAU 2006). GAST = GMST + caller-supplied equation of the
+ * equinoxes `dPsiDeg * cos(trueEpsDeg)`, as before, so a caller that passes dPsi = 0 still gets
+ * GMST.
  */
 export function calculateSiderealTime(
   jd: number,
@@ -156,32 +163,16 @@ export function calculateSiderealTime(
   dPsiDeg: number = 0,
   trueEpsDeg: number = 23.439291
 ): SiderealTimeResult {
-  // Midnight UT Julian Day
-  const jd0 = Math.floor(jd - 0.5) + 0.5;
-  const dayFrac = jd - jd0; // 0.0 to 1.0 (UT fraction of day)
-  const utHours = dayFrac * 24.0;
-
-  const T0 = (jd0 - 2451545.0) / 36525.0;
-
-  // GMST at 0h UT in seconds
-  let gmstSeconds =
-    24110.54841 +
-    8640184.812866 * T0 +
-    0.093104 * T0 * T0 -
-    0.0000062 * T0 * T0 * T0;
-
-  // Advance to given UT
-  gmstSeconds += utHours * 3600.0 * 1.002737909350795;
-
-  // Normalize to [0, 86400) seconds
-  gmstSeconds = ((gmstSeconds % 86400.0) + 86400.0) % 86400.0;
-
-  const gmstHours = gmstSeconds / 3600.0;
+  const time = astroTimeFromJd(jd);
+  // astronomy-engine returns apparent (GAST) hours; `ee` is the equation of the equinoxes it added,
+  // in seconds of time. Removing it leaves GMST.
+  const gastAeHours = Astronomy.SiderealTime(time);
+  const eeAeHours = Astronomy.e_tilt(time).ee / 3600.0;
+  const gmstHours = (((gastAeHours - eeAeHours) % 24.0) + 24.0) % 24.0;
   const gmstDegrees = normalizeDegrees(gmstHours * 15.0);
 
   // Equation of the equinoxes: EE = dPsi * cos(trueEps)
   const eqEquinoxesDeg = dPsiDeg * cosd(trueEpsDeg);
-  const eqEquinoxesHours = eqEquinoxesDeg / 15.0;
 
   const gastDegrees = normalizeDegrees(gmstDegrees + eqEquinoxesDeg);
   const gastHours = gastDegrees / 15.0;
@@ -202,6 +193,13 @@ export function calculateSiderealTime(
   };
 }
 
+/**
+ * Swiss Ephemeris mean ayanamsa at J2000.0 (JD 2451545.0), in degrees, as listed in audit.md
+ * Appendix A.2. Reference values; `calculateAyanamsa` uses its own polynomial (kept from Stack A).
+ */
+export const KP_OLD_J2000_DEG = 23.76024004;
+export const KP_NEW_J2000_DEG = 23.78036498;
+
 export interface AyanamsaResult {
   type: AyanamsaType;
   name: string;
@@ -218,10 +216,14 @@ export interface AyanamsaResult {
  *   Epoch: Zero ayanamsa at 291 CE (JD 1827424.752255678)
  *   J2000.0 value: 23°46'49.31" = 23.780365°
  * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses.
+ *
+ * TODO(#22): the default KP ayanamsa is the owner's decision. `type` is a required parameter (this
+ * function used to default it to 'kp_old'), and any value other than 'kp_old' / 'kp_new' throws
+ * instead of silently becoming KP Old.
  */
 export function calculateAyanamsa(
   jd: number,
-  type: AyanamsaType = 'kp_old',
+  type: AyanamsaType,
   dPsiDeg: number = 0
 ): AyanamsaResult {
   const T = (jd - 2451545.0) / 36525.0;
@@ -238,7 +240,7 @@ export function calculateAyanamsa(
       0.000306078 * T * T +
       0.00000000446 * T * T * T -
       0.00000000374 * T * T * T * T;
-  } else {
+  } else if (type === 'kp_old') {
     name = 'KP Old (Krishnamurti original)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI
     meanAyanamsa =
@@ -247,6 +249,9 @@ export function calculateAyanamsa(
       0.000307064 * T * T +
       0.00000000227 * T * T * T -
       0.00000000411 * T * T * T * T;
+  } else {
+    // Never fall back to another mode (or to Lahiri) for an unknown value.
+    throw new Error(`Unsupported ayanamsa mode: ${String(type)} (expected 'kp_old' or 'kp_new')`);
   }
 
   // True ayanamsa includes nutation in longitude
