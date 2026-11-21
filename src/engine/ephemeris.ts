@@ -33,7 +33,7 @@ const JD_J2000 = 2451545.0;
 const SPEED_WINDOW_HOURS = 1;
 
 /**
- * Explicit input. `ayanamsa` has no default, because it is an open owner decision: TODO(#22).
+ * Explicit input. `ayanamsa` has no default (#22 decided: no API default; KPSTLA is the UI preselect only).
  */
 export type EphemerisOptions = Pick<ChartCalculationOptions, 'ayanamsa'>;
 

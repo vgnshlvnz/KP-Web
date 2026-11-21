@@ -108,7 +108,7 @@ function locate(
  * Moon longitude to birth dasha, balance and the running bhukti and antara (years only).
  *
  * @param moonSiderealLon Moon's sidereal longitude, degrees. Which ayanamsa produced it is the
- *   caller's business (TODO(#22)); this function never picks one.
+ *   caller's business (#22 decided: no API default); this function never picks one.
  */
 export function getDashaAtBirth(moonSiderealLon: number): DashaAtBirth {
   const lon = ((moonSiderealLon % 360) + 360) % 360;
@@ -211,7 +211,7 @@ function buildAntaras(
  * running one (cut to what is left), and the first antara inside that is the running one (cut).
  * All later dashas, bhuktis and antaras are full.
  *
- * @param moonSiderealLon Moon's sidereal longitude, degrees (caller chose the ayanamsa, TODO(#22))
+ * @param moonSiderealLon Moon's sidereal longitude, degrees (caller chose the ayanamsa; #22 decided: no API default)
  * @param birthDateUtc    birth or question instant
  * @param options         `numDashas` defaults to 9. Year length is `DASHA_YEAR_DAYS`.
  */

@@ -202,7 +202,7 @@ describe('UI contract: /api/chart/* (public/index.html must keep working unchang
   });
 });
 
-describe('ayanamsa is required and validated, no default and no fallback (TODO(#22))', () => {
+describe('ayanamsa is required and validated, no default and no fallback (#22 decided)', () => {
   const ROUTES: Array<[string, Record<string, unknown>]> = [
     ['/api/chart/cusps', { ...KL_1992 }],
     ['/api/chart/calculate', { ...KL_1992 }],

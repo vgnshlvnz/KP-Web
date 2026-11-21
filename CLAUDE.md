@@ -70,7 +70,7 @@ Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/citie
 - Horary lagna is the **start** of the chosen sub, not the midpoint (midpoint only behind an explicit toggle).
 - Day lord for ruling planets changes at **sunrise**, not midnight.
 - A planet's house comes from Placidus cusps, not its sign.
-- Open rule decisions (issues #23, #24) are made by the repo owner. #22 is decided (owner, #29): default selection = KPSTLA in the UI, API requires an explicit ayanamsa. Do not pick defaults for them; keep them as explicit config with a `TODO(#NN)` comment.
+- Open rule decisions (#23, #24) are made by the repo owner: do not pick defaults for them; keep them as explicit config with a `TODO(#NN)` comment. #22 is decided (owner, #29): KPSTLA is the UI's default selection; the API requires an explicit ayanamsa.
 - Do not delete a module until everything it uniquely provides has been ported and is covered by a test.
 - Don't add dependencies beyond `astronomy-engine` without asking. No native/C++ addons — the code must run in Workers V8 isolates.
 - Never run `wrangler deploy`, `git push --force`, or anything that publishes. Pushing `build/*` branches and opening PRs into `build/integration` is part of the workflow. Never push to `main`.

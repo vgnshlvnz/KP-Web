@@ -12,7 +12,8 @@
  * (sidereal = tropical - TRUE ayanamsa), so it never falls in the previous sub (#33).
  *
  * Every option passed to `calculateHoraryChart` here is a TEST FIXTURE, not a default: each one is
- * an open owner decision (#22, #23, #24, #29 Q6..Q12) and the function has no default for any.
+ * an owner decision (#22 decided: no API default; #23, #24, #29 Q6..Q12) and the function has no
+ * default for any.
  */
 import { describe, it, expect } from 'vitest';
 import { calculateHoraryChart } from '../src/engine/horary.js';
@@ -36,7 +37,7 @@ import type {
 type AyanamsaMode = Extract<AnyAyanamsaMode, 'kp_old' | 'kp_new'>;
 
 const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
-  ayanamsa, // TODO(#22): fixture, not a default
+  ayanamsa, // fixture, not a default (#22: no API default)
   nodeAgentRuleSet: 'sign_lord_star_lord_same_sign', // TODO(#23): fixture
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord', // TODO(#24): fixture
 });

@@ -48,7 +48,7 @@ const SUB_START_INSIDE_ARCSEC = 1e-4;
 /**
  * Computes the KP horary chart for a chosen number 1-249.
  *
- * The options are the same as for `calculateChart`: `ayanamsa` (TODO(#22)), `nodeAgentRuleSet`
+ * The options are the same as for `calculateChart`: `ayanamsa` (#22 decided: no default), `nodeAgentRuleSet`
  * (TODO(#23)) and `rulingPlanetSet` (TODO(#24)), each required with no default; a missing or
  * unknown one throws.
  *

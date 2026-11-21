@@ -309,7 +309,7 @@ function jdTt(utc: string): number {
   return Astronomy.MakeTime(new Date(utc)).tt + 2451545.0;
 }
 
-/** Test fixtures for the options that are still open (TODO(#22), TODO(#23), TODO(#24)); not defaults. */
+/** Test fixtures, not defaults (#22 decided: no API default; #23 and #24 still open, TODO(#23), TODO(#24)). */
 const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
   ayanamsa,
   nodeAgentRuleSet: 'none',

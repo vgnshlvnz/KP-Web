@@ -145,7 +145,7 @@ describe('chart result and warnings', () => {
   });
 });
 
-// TODO(#22), TODO(#23), TODO(#24): none of these options has a default.
+// #22 decided (no API default; KPSTLA is the UI preselect only), TODO(#23), TODO(#24): none of these options has a default.
 describe('owner-decision options have no default', () => {
   it('every option field is required', () => {
     expectTypeOf<Required<ChartCalculationOptions>>().toEqualTypeOf<ChartCalculationOptions>();
@@ -154,7 +154,7 @@ describe('owner-decision options have no default', () => {
   });
 });
 
-// TODO(#22): the legacy chart function used to default `ayanamsaType` to 'kp_old'. It is required now
+// #22 decided: the legacy chart function used to default `ayanamsaType` to 'kp_old'. It is required now
 // (final-cleanup, #69). Type-level only: `npm run typecheck` fails if the default comes back.
 describe('calculateKPChart has no ayanamsa default (#22, #69)', () => {
   const input = {

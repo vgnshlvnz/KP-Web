@@ -53,7 +53,7 @@ const diffArcsec = (a: number, b: number): number => {
   return Math.abs(d) * 3600;
 };
 
-// The three decisions that are still open (TODO(#22), TODO(#23), TODO(#24)).
+// The three required options (#22 decided: no API default; TODO(#23), TODO(#24)).
 const OPTIONS: ChartCalculationOptions = {
   ayanamsa: 'kp_old',
   nodeAgentRuleSet: 'none',
@@ -78,7 +78,7 @@ describe('conventions.ts pins the owner decisions of #29 (owner, 2026-11-21)', (
 });
 
 describe('ChartCalculationOptions has exactly the three open decisions', () => {
-  it('keys are ayanamsa, nodeAgentRuleSet and rulingPlanetSet (TODO(#22), TODO(#23), TODO(#24))', () => {
+  it('keys are ayanamsa, nodeAgentRuleSet and rulingPlanetSet (#22 decided; TODO(#23), TODO(#24))', () => {
     expectTypeOf<keyof ChartCalculationOptions>().toEqualTypeOf<
       'ayanamsa' | 'nodeAgentRuleSet' | 'rulingPlanetSet'
     >();
