@@ -28,9 +28,22 @@ import type { AyanamsaMode as CoreAyanamsaMode } from '../src/core/types';
 import type * as Shim from '../src/types';
 
 describe('AyanamsaMode', () => {
-  it('is exactly kp_old | kp_new (no Lahiri, no default member)', () => {
-    expectTypeOf<AyanamsaMode>().toEqualTypeOf<'kp_old' | 'kp_new'>();
-    expectTypeOf<'lahiri'>().not.toMatchTypeOf<AyanamsaMode>();
+  it('is exactly the nine supported ids (#29, owner): no default member, no free string', () => {
+    expectTypeOf<AyanamsaMode>().toEqualTypeOf<
+      | 'kp_old'
+      | 'kp_new'
+      | 'lahiri'
+      | 'raman'
+      | 'fagan_bradley'
+      | 'yukteshwar'
+      | 'jn_bhasin'
+      | 'usha_shashi'
+      | 'nil'
+    >();
+    // 'lahiri' used to be asserted NOT to be a member. The owner decision on #29 (2026-11-21, answer A) added it.
+    expectTypeOf<'lahiri'>().toMatchTypeOf<AyanamsaMode>();
+    expectTypeOf<'lahiri2'>().not.toMatchTypeOf<AyanamsaMode>();
+    expectTypeOf<'default'>().not.toMatchTypeOf<AyanamsaMode>();
     expectTypeOf<'KP_OLD'>().not.toMatchTypeOf<AyanamsaMode>();
     expectTypeOf<string>().not.toMatchTypeOf<AyanamsaMode>();
     expect(true).toBe(true);

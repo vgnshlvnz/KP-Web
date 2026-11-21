@@ -11,7 +11,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import { calculateEphemeris } from '../src/engine/ephemeris.js';
-import type { AyanamsaMode } from '../src/engine/types.js';
+import type { AyanamsaMode as AnyAyanamsaMode } from '../src/engine/types.js';
+
+// The Appendix A fixtures exist for the two KP modes only. The other modes are in ayanamsa-reference.test.ts.
+type AyanamsaMode = Extract<AnyAyanamsaMode, 'kp_old' | 'kp_new'>;
 
 type Reference = { kp_old: number; kp_new: number };
 

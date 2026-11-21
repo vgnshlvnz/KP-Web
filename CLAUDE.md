@@ -48,7 +48,7 @@ That makes Stack B's ephemeris the intended one — but its accuracy is **claime
 ## Rules that hold for every task
 
 - **KP correctness is the product.** Never change a calculation result to make a test pass. If a test and the code disagree, find out which is right (cite the reference value and where it came from) and say so.
-- KP Old and KP New ayanamsa only. **Never fall back to Lahiri silently.**
+- Ayanamsa is an explicit choice from the supported list (KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). **Never fall back silently; there is no default until #22 is decided.**
 - Horary lagna is the **start** of the chosen sub, not the midpoint (midpoint only behind an explicit toggle).
 - Day lord for ruling planets changes at **sunrise**, not midnight.
 - A planet's house comes from Placidus cusps, not its sign.

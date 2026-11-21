@@ -1,4 +1,5 @@
 import { computeTimezoneOffset, isValidTimezone } from './timezone';
+import { AYANAMSA_LABELS, AYANAMSA_MODES, isAyanamsaMode } from '../engine/ayanamsa-defs';
 import { AyanamsaMode, RawBirthInput, ResolvedBirthChartInput, ValidationResult } from './types';
 
 /**
@@ -81,11 +82,14 @@ export function validateCoordinates(lat: number, lon: number): string | null {
 
 /**
  * Validates ayanamsa selection.
- * Explicitly rejects Lahiri or any mode other than 'kp_old' and 'kp_new'.
+ * The ayanamsa must be one of the supported ids (owner decision on #29, 2026-11-21): KP Old, KP New,
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil. There is no default
+ * (TODO(#22)) and no fallback: anything else, including a missing value, is an error.
  */
 export function validateAyanamsa(ayanamsa: unknown): string | null {
-  if (ayanamsa !== 'kp_old' && ayanamsa !== 'kp_new') {
-    return "Ayanamsa must be explicitly selected as either KP Old ('kp_old') or KP New ('kp_new'). Lahiri or silent fallback is not permitted.";
+  if (!isAyanamsaMode(ayanamsa)) {
+    const choices = AYANAMSA_MODES.map((m) => `${AYANAMSA_LABELS[m]} ('${m}')`).join(', ');
+    return `Ayanamsa must be explicitly selected as one of: ${choices}. There is no default and no silent fallback.`;
   }
   return null;
 }

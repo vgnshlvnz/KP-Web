@@ -13,17 +13,32 @@
 // ---------------------------------------------------------------------------
 
 /**
- * KP Old or KP New only. There is deliberately no 'lahiri' member and no 'default' member:
- * an unknown value must be rejected, never mapped to a fallback.
+ * The supported ayanamsa modes (owner decision on #29, 2026-11-21, answer A): KP Old, KP New,
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi and Nil (tropical).
+ * The SE-defined ones are Swiss Ephemeris `SE_SIDM_*` modes taken by name; see
+ * `src/engine/ayanamsa-defs.ts`. `'nil'` is the tropical zodiac: ayanamsa 0 and no nutation term,
+ * so sidereal longitude = tropical longitude.
  *
- * Wire value is lowercase (`'kp_old' | 'kp_new'`), as sent by the live UI and checked by
- * `core/validation.ts`. Stack B's `'KP_OLD' | 'KP_NEW'` stays local to `src/types.ts` until `entrypoint`.
+ * Every mode is an explicit choice. There is no 'default' member, and an unknown value must be
+ * rejected, never mapped to a fallback.
+ *
+ * Wire value is the lowercase id below, as sent by the live UI and checked by `core/validation.ts`.
+ * Stack B's `'KP_OLD' | 'KP_NEW'` stays local to `src/types.ts` until `entrypoint`.
  * TODO(#29 Q13): owner to confirm the lowercase wire value.
  *
  * TODO(#22): the default mode is an owner decision. This type carries no default; any
  * `= 'kp_old'` parameter default elsewhere in the code is the silent default #22 refers to.
  */
-export type AyanamsaMode = 'kp_old' | 'kp_new';
+export type AyanamsaMode =
+  | 'kp_old'
+  | 'kp_new'
+  | 'lahiri'
+  | 'raman'
+  | 'fagan_bradley'
+  | 'yukteshwar'
+  | 'jn_bhasin'
+  | 'usha_shashi'
+  | 'nil';
 
 /** Stack A's original name for `AyanamsaMode`. Same type. */
 export type AyanamsaType = AyanamsaMode;
