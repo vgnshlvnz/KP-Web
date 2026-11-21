@@ -24,7 +24,7 @@
  *
  * Wire value is the lowercase id below, as sent by the live UI and checked by `core/validation.ts`.
  * Stack B's `'KP_OLD' | 'KP_NEW'` (uppercase) was local to its `src/types.ts` and went away with it.
- * TODO(#29 Q13): owner to confirm the lowercase wire value.
+ * The lowercase ids are confirmed (#29, owner, 2026-11-21).
  *
  * TODO(#22): the default mode is an owner decision. This type carries no default; any
  * `= 'kp_old'` parameter default is the silent default #22 refers to; the last one, in

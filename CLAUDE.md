@@ -41,12 +41,12 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 
 | Issue | Decision | Where it applies |
 |---|---|---|
-| #22 | default KP ayanamsa (KP Old vs KP New) | `AyanamsaMode` and `ChartCalculationOptions.ayanamsa` in `src/engine/types.ts`; `calculateAyanamsa` in `src/engine/astronomy.ts`; `requireAyanamsa` in `src/index.ts` |
+| #22 | default ayanamsa (no default until decided; nine explicit ids). #59 to #61 (owner, open) ask the same mode question: default, availability in birth and horary input, labelling. #29 question E ("KP Straightline (Adjusted)": a new mode or the default; it has no Swiss Ephemeris definition) is also still open | `AyanamsaMode` and `ChartCalculationOptions.ayanamsa` in `src/engine/types.ts`; `calculateAyanamsa` in `src/engine/astronomy.ts`; `requireAyanamsa` in `src/index.ts` |
 | #23 | Rahu/Ketu agent rule set | `NodeAgentRuleSet` in `types.ts`; `calculateFourLevelSignificators` in `significators.ts`; `ENGINE_CONFIG.nodeAgentRuleSet` in `src/index.ts` (interim `'none'`, owner answer on #29) |
 | #24 | ruling-planet set | `RulingPlanetSet` in `types.ts`; `calculateRulingPlanets` in `ruling-planets.ts`; `ENGINE_CONFIG.rulingPlanetSet` in `src/index.ts` |
 
 #25 (Swiss Ephemeris licence) is still open, but the engine is `astronomy-engine`, as recorded in `docs/licensing.md`.
-Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q13 ayanamsa wire value, Q16 which boundary flag the UI shows).
+Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q16 which boundary flag the UI shows).
 
 **Open UI issue:** `public/index.html` reads response fields that no API version returns (`julianDate`, `formattedDms`,
 `assignedHouse`, …) and still asks the user to paste planet longitudes. It is **not** fixed; the owner will design the UI/API
