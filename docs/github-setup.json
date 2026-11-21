@@ -1,0 +1,279 @@
+{
+  "labels": [
+    {
+      "name": "feature",
+      "color": "1d76db",
+      "description": "Product feature work"
+    },
+    {
+      "name": "mvp",
+      "color": "0e8a16",
+      "description": "Required for the first shippable app"
+    },
+    {
+      "name": "later",
+      "color": "c5def5",
+      "description": "Post-MVP / later addition"
+    },
+    {
+      "name": "calc-engine",
+      "color": "5319e7",
+      "description": "Ephemeris, cusps, lords, and other calculations"
+    },
+    {
+      "name": "ui",
+      "color": "fbca04",
+      "description": "Charts, tables, and user-facing input"
+    },
+    {
+      "name": "horary",
+      "color": "d93f0b",
+      "description": "KP prashna / horary numbers"
+    },
+    {
+      "name": "privacy",
+      "color": "b60205",
+      "description": "Personal data, consent, PDPA/GDPR"
+    },
+    {
+      "name": "decision",
+      "color": "d4c5f9",
+      "description": "Open rule or licensing decision to settle in writing"
+    }
+  ],
+  "issues": [
+    {
+      "title": "Birth data input: time to the second, place search, timezone offset, ayanamsa toggle",
+      "labels": [
+        "feature",
+        "mvp",
+        "ui"
+      ],
+      "body": "## Summary\n\nCollect natal (or event) data accurately enough for KP sub and sub-sub lords. Birth time must be entered to the **second**. The user must see the timezone offset the app will apply, and must be able to choose **KP Old** or **KP New** ayanamsa. Default ayanamsa is tracked in the related decision issue.\n\n## Acceptance criteria\n\n- [ ] Date, time (hours, minutes, **seconds**), and place can be entered for a natal chart.\n- [ ] Place search resolves to latitude, longitude, and a timezone identifier (IANA).\n- [ ] The computed UTC offset is shown to the user before the chart is calculated (including DST when applicable).\n- [ ] Raw user input (local date/time, place text, coordinates, timezone id, offset) is stored so the chart can be recomputed later.\n- [ ] Ayanamsa toggle offers KP Old and KP New. Lahiri is not used as a silent fallback.\n- [ ] Invalid or incomplete time/place input is rejected with a clear error, not a guessed chart.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [Swiss Ephemeris documentation](https://www.astro.com/swisseph/swisseph.pdf)\n- [IANA tzdb theory (2026b)](https://data.iana.org/time-zones/tzdb-2026b/theory.html)\n"
+    },
+    {
+      "title": "Ephemeris engine and licensing decision",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nAdopt a planetary/house calculation engine precise to arc-seconds. Swiss Ephemeris is the standard, but it is **AGPL**, which also covers hosted web apps. MIT-licensed wrappers still pull in Swiss Ephemeris, so the same licence applies. For a closed-source app, the [Professional licence](https://www.astro.com/swisseph/swephprice_p.htm) is currently **CHF 700 for 6 years** under the November 2026 contract.\n\nThe licence path itself is a `decision` issue and must be recorded before shipping. This issue covers wiring the engine into the app once that path is chosen.\n\n## Acceptance criteria\n\n- [ ] Sidereal planetary positions are computed with a KP ayanamsa (KP Old and KP New).\n- [ ] Positions are available to arc-second precision for planets used in KP (including Rahu/Ketu).\n- [ ] The chosen binding is documented (Python `pyswisseph` / `pysweph`, or Node `sweph`, or equivalent).\n- [ ] Licence path is recorded (AGPL obligations met, or Professional licence obtained) and linked from this issue.\n- [ ] No silent substitution of a different ephemeris or ayanamsa.\n\n## Sources\n\n- [Swiss Ephemeris documentation](https://www.astro.com/swisseph/swisseph.pdf)\n- [Professional licence pricing](https://www.astro.com/swisseph/swephprice_p.htm)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Placidus house cusps",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nCompute Placidus house cusps for the chart location and sidereal time. In KP, a planet's house comes from the **cusps**, not its sign: a planet just before a cusp belongs to the previous house.\n\n## Acceptance criteria\n\n- [ ] All 12 Placidus cusps are computed in the chosen KP ayanamsa, to arc-second precision.\n- [ ] A planet is assigned to the house of the cusp it has passed, not the zodiac sign it occupies.\n- [ ] A planet whose longitude is immediately before a cusp is in the previous house.\n- [ ] Cusps are available to the KP cusp table, significators, and chart wheels.\n- [ ] Results can be checked against Jagannatha Hora / KP Star One on sample charts.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [Swiss Ephemeris documentation](https://www.astro.com/swisseph/swisseph.pdf)\n- [Jagannatha Hora features](http://www.vedicastrologer.org/jh/features.htm)\n"
+    },
+    {
+      "title": "Sub and sub-sub lord computation (1\u2013249 table)",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine",
+        "horary"
+      ],
+      "body": "## Summary\n\nEach of the 27 nakshatras splits into 9 unequal subs sized by the Vimshottari dasha years (243 subs). Six subs cross a sign boundary and are split, producing the standard [1\u2013249 table](https://kpastrologypro.com/kp-horary-numbers-1-249). Every planet and every cusp needs sign lord, star lord, sub lord, and sub-sub lord.\n\n## Acceptance criteria\n\n- [ ] The 1\u2013249 sub table matches the standard KP split, including the six sign-boundary splits.\n- [ ] For every planet and every house cusp, the app computes sign lord, star (nakshatra) lord, sub lord, and sub-sub lord.\n- [ ] Sub arc lengths follow Vimshottari year proportions, not equal 3\u00b020\u2032 slices.\n- [ ] Results are used by the cusp table, planet table, horary module, and boundary warnings.\n- [ ] Sample longitudes, including values near sign and sub boundaries, match a known 1\u2013249 reference table.\n\n## Sources\n\n- [KP horary numbers 1\u2013249](https://kpastrologypro.com/kp-horary-numbers-1-249)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "KP cusp table (sign, star, sub, and sub-sub lords)",
+      "labels": [
+        "feature",
+        "mvp",
+        "ui"
+      ],
+      "body": "## Summary\n\nShow the KP cusp table astrologers actually read: each of the 12 house cusps with longitude and its sign, star, sub, and sub-sub lords.\n\n## Acceptance criteria\n\n- [ ] Table lists all 12 cusps with sidereal longitude (to arc-seconds) and sign.\n- [ ] Each cusp shows sign lord, star lord, sub lord, and sub-sub lord.\n- [ ] Cuspal house numbering is clear (1\u201312).\n- [ ] The table updates when ayanamsa, time, or place changes.\n- [ ] Layout is readable on desktop and usable on mobile (scroll or stacked).\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- Feature benchmarks: [KP Star One](https://www.kpstarone.com/kpstarone-features-new.php), [Jagannatha Hora](http://www.vedicastrologer.org/jh/features.htm)\n"
+    },
+    {
+      "title": "Planet table (cuspal house and lords)",
+      "labels": [
+        "feature",
+        "mvp",
+        "ui"
+      ],
+      "body": "## Summary\n\nShow each planet's sidereal longitude, the **cuspal** house it occupies (not sign-as-house), and its sign, star, sub, and sub-sub lords.\n\n## Acceptance criteria\n\n- [ ] Table includes the planets used in KP (classical planets plus Rahu and Ketu, at minimum).\n- [ ] Each row shows longitude (arc-seconds), sign, cuspal house, sign lord, star lord, sub lord, and sub-sub lord.\n- [ ] House assignment follows Placidus cusps, not the sign the planet is in.\n- [ ] The table updates when ayanamsa, time, or place changes.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [KP Star One features](https://www.kpstarone.com/kpstarone-features-new.php)\n"
+    },
+    {
+      "title": "South and North Indian chart wheels",
+      "labels": [
+        "feature",
+        "mvp",
+        "ui"
+      ],
+      "body": "## Summary\n\nDisplay the chart in both South Indian and North Indian styles, using KP sidereal positions and Placidus-derived house occupancy.\n\n## Acceptance criteria\n\n- [ ] User can switch between South Indian and North Indian charts.\n- [ ] Planets are placed according to sign and remain consistent with the planet table.\n- [ ] House numbers or lagna indication is unambiguous in both styles.\n- [ ] Charts update when input or ayanamsa changes.\n- [ ] Charts remain legible on a typical desktop viewport; mobile has a usable fallback.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [KP Star One features](https://www.kpstarone.com/kpstarone-features-new.php)\n- [Jagannatha Hora features](http://www.vedicastrologer.org/jh/features.htm)\n"
+    },
+    {
+      "title": "Four-level significators (house-wise and planet-wise)",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine",
+        "ui"
+      ],
+      "body": "## Summary\n\nCompute and display KP significators at four levels, from strongest to weakest:\n\n1. Planets in the star of a house's occupants.\n2. The occupants themselves.\n3. Planets in the star of the cusp's sign lord.\n4. That sign lord.\n\nProvide both **house-wise** and **planet-wise** tables. Rahu and Ketu act as agents for the planets they are tied to; schools disagree on the exact rules, so the shipped rule set must be documented (see the related decision issue).\n\n## Acceptance criteria\n\n- [ ] House-wise significator table lists levels 1\u20134 for houses 1\u201312.\n- [ ] Planet-wise table shows which houses each planet signifies, and at which level.\n- [ ] Rahu/Ketu agent rules match the documented, chosen rule set (no silent variation).\n- [ ] A short in-app or docs note states the rule set and links to the decision issue.\n- [ ] Results can be checked against JHora / KP Star One on sample charts.\n\n## Sources\n\n- [Four-level significators explainer](https://astroreads.in/blog/kp-significators-four-levels/)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Ruling planets: birth moment and live now (day lord at sunrise)",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine",
+        "ui"
+      ],
+      "body": "## Summary\n\nShow ruling planets for the birth (or question) moment and a live \"now\" view. The set includes the ascendant's star lord and sign lord, the Moon's star lord and sign lord, and the **day lord**, which changes at **sunrise**, not midnight. Exact inclusion rules (for example nodes) are a related decision issue.\n\n## Acceptance criteria\n\n- [ ] Birth-moment ruling planets are computed from the chart's lagna, Moon, and day lord.\n- [ ] Day lord changes at local sunrise for the chart place, not at civil midnight.\n- [ ] A live \"now\" view computes ruling planets for the current moment at a chosen place.\n- [ ] The displayed set matches the documented rule set from the decision issue.\n- [ ] Sunrise source and timezone handling are documented.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [Swiss Ephemeris documentation](https://www.astro.com/swisseph/swisseph.pdf) (sunrise / house-related calculations)\n"
+    },
+    {
+      "title": "Vimshottari dasha timeline down to antara",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine",
+        "ui"
+      ],
+      "body": "## Summary\n\nCompute Vimshottari dasha, bhukti, and antara from the Moon's nakshatra at birth (or at the horary epoch, as applicable) and present them as a timeline.\n\n## Acceptance criteria\n\n- [ ] Balance of dasha at birth is derived from the Moon's longitude in its nakshatra.\n- [ ] Timeline shows mahadasha, bhukti, and antara with start and end dates.\n- [ ] Periods use the standard Vimshottari year proportions.\n- [ ] The current period (for \"now\") is highlighted when a reference date is given.\n- [ ] Transits are **not** required for this MVP issue (tracked separately as a later feature).\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [Jagannatha Hora features](http://www.vedicastrologer.org/jh/features.htm)\n"
+    },
+    {
+      "title": "Horary 1\u2013249: lagna at start of sub, RAMC inversion, midpoint toggle",
+      "labels": [
+        "feature",
+        "mvp",
+        "horary",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nKP prashna: the querent picks a number from 1 to 249. The ascendant is fixed at the **start** of that sub (for example, number 108 gives 3\u00b000\u2032 Virgo). Invert to the sidereal time (RAMC) that puts that degree on the ascendant for the question's place, build the other Placidus cusps from it, and take planetary positions from the **actual** time and place of the question.\n\nThe open-source [kpastro](https://pypi.org/project/kpastro/) library uses the **midpoint** of the sub by default. Do not copy that without a toggle. Default behaviour must be lagna at the **start** of the sub.\n\n## Acceptance criteria\n\n- [ ] User can enter a horary number 1\u2013249, plus the time and place of the question.\n- [ ] Default lagna is the **start** of the selected sub, matching the standard 1\u2013249 table.\n- [ ] Example: number 108 places lagna at 3\u00b000\u2032 Virgo (start of that sub), not the midpoint.\n- [ ] RAMC is inverted from that lagna and the question's geographic latitude; remaining Placidus cusps are built from it.\n- [ ] Planetary positions use the actual question date, time, and place.\n- [ ] A clearly labelled toggle can use sub midpoint instead (for comparison with libraries such as kpastro).\n- [ ] Split numbers that cross a sign boundary (e.g. 23, 106) are handled correctly and included in validation.\n\n## Sources\n\n- [KP horary numbers 1\u2013249](https://kpastrologypro.com/kp-horary-numbers-1-249)\n- [kpastro on PyPI](https://pypi.org/project/kpastro/) (midpoint default \u2014 do not copy blindly)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Timezone and geocoding layer",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nResolve a place to coordinates and an IANA timezone, using historical timezone data so older birth times are offset correctly. Show the UTC offset applied. Store raw input for later recomputation. IANA warns that data before 1970 is incomplete.\n\n## Acceptance criteria\n\n- [ ] Place search returns latitude, longitude, and an IANA timezone id.\n- [ ] Offset for a given local date/time uses historical IANA data (DST and zone changes), not only the current offset.\n- [ ] The applied UTC offset is shown in the UI.\n- [ ] Raw place text, coordinates, timezone id, and offset are persisted with the chart input.\n- [ ] Births before 1970 show a caution that IANA coverage may be incomplete, and allow a manual offset override.\n- [ ] Manual coordinate and timezone entry is possible if search fails.\n\n## Sources\n\n- [IANA tzdb theory (2026b)](https://data.iana.org/time-zones/tzdb-2026b/theory.html)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Sub-boundary warnings for cusps and planets",
+      "labels": [
+        "feature",
+        "mvp",
+        "ui",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nA cuspal sub-lord can change within about 3 to 9 minutes of birth time, and a sub-sub lord within seconds. Warn the user when a cusp (or relevant planet) sits close to a sub or sub-sub boundary, because a small clock error can change the reading.\n\n## Acceptance criteria\n\n- [ ] The app detects when a cusp longitude is within a documented threshold of a sub or sub-sub boundary.\n- [ ] A visible warning is shown on the cusp table (and similarly for planets when applicable).\n- [ ] The warning states that a small change in birth time may change the sub or sub-sub lord.\n- [ ] Thresholds are documented (and configurable later if needed).\n- [ ] Work remains at arc-second precision so proximity is not an artefact of rounding.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Privacy and consent (PDPA / GDPR)",
+      "labels": [
+        "feature",
+        "mvp",
+        "privacy"
+      ],
+      "body": "## Summary\n\nBirth data is personal data under Malaysia's [PDPA](https://www.pdp.gov.my/en/faq/). Horary questions often touch health or religion, which can count as sensitive data. The MVP must collect consent, explain retention, and support export and deletion.\n\n## Acceptance criteria\n\n- [ ] Before storing or processing a chart, the user is told what data is collected (birth data, place, horary question text if any) and why.\n- [ ] Consent is recorded for storage of personal data; sensitive categories in questions are acknowledged.\n- [ ] A privacy policy covers purpose, retention, sharing (if any), and the user's rights under PDPA, and GDPR where the app is offered to EU/UK users.\n- [ ] The user can export and permanently delete stored chart and question data.\n- [ ] Horary question text is treated as potentially sensitive and is not used for unrelated purposes.\n- [ ] Access to stored charts is limited to the owning user (once accounts exist; for a no-account MVP, data should not be retained longer than needed or should stay on-device / session-scoped unless the user consents to save).\n\n## Sources\n\n- [Malaysia PDPA FAQ](https://www.pdp.gov.my/en/faq/)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Validation against Jagannatha Hora and KP Star One",
+      "labels": [
+        "feature",
+        "mvp",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nBefore shipping, check the engine against [Jagannatha Hora](http://www.vedicastrologer.org/jh/features.htm) and [KP Star One](https://www.kpstarone.com/kpstarone-features-new.php) on a documented set of charts \u2014 especially ones near sub boundaries and split horary numbers such as 23 or 106.\n\n## Acceptance criteria\n\n- [ ] A fixture set of natal and horary charts is checked into the repo (inputs + expected cusps, lords, and key tables), with sources noted.\n- [ ] Automated or scripted comparison covers ayanamsa (KP Old and KP New), Placidus cusps, sub/sub-sub lords, significators, dasha balance, and horary lagna.\n- [ ] Cases include at least one chart near a cuspal sub boundary and split horary numbers 23 and 106.\n- [ ] Discrepancies against JHora / KP Star One are documented (tolerance in arc-seconds, and any known rule-set differences).\n- [ ] Validation is part of the development workflow, not a one-off manual check.\n\n## Sources\n\n- [Jagannatha Hora features](http://www.vedicastrologer.org/jh/features.htm)\n- [KP Star One features](https://www.kpstarone.com/kpstarone-features-new.php)\n- [KP horary numbers 1\u2013249](https://kpastrologypro.com/kp-horary-numbers-1-249)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "PDF reports",
+      "labels": [
+        "feature",
+        "later",
+        "ui"
+      ],
+      "body": "## Summary\n\nLater: generate a printable PDF of a natal or horary chart, including the KP tables (cusps, planets, significators, ruling planets, dasha).\n\n## Acceptance criteria\n\n- [ ] User can download a PDF for the currently computed natal or horary chart.\n- [ ] PDF includes chart wheel(s) and the MVP tables (cusp, planet, significators, ruling planets, dasha to antara).\n- [ ] Horary PDFs include the chosen number, lagna mode (start vs midpoint), and question metadata (without leaking extra personal data beyond what the user included).\n- [ ] Layout is readable when printed on A4.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n- [KP Star One features](https://www.kpstarone.com/kpstarone-features-new.php)\n"
+    },
+    {
+      "title": "Accounts and saved charts",
+      "labels": [
+        "feature",
+        "later",
+        "ui",
+        "privacy"
+      ],
+      "body": "## Summary\n\nLater: optional user accounts so charts can be saved, listed, and recomputed from stored raw input. Must respect the privacy/consent issue (PDPA / GDPR).\n\n## Acceptance criteria\n\n- [ ] A user can create an account and sign in.\n- [ ] Saved charts store raw input (time, place, timezone, ayanamsa, horary number if any), not only rendered output.\n- [ ] The user can list, reopen, update, export, and delete their charts.\n- [ ] Charts are not visible to other users.\n- [ ] Deleting an account deletes stored personal chart data.\n\n## Sources\n\n- [Malaysia PDPA FAQ](https://www.pdp.gov.my/en/faq/)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Transits as a confirming layer",
+      "labels": [
+        "feature",
+        "later",
+        "calc-engine",
+        "ui"
+      ],
+      "body": "## Summary\n\nLater: show transits as a confirming layer on top of the natal or horary chart and the Vimshottari dasha (already in MVP).\n\n## Acceptance criteria\n\n- [ ] User can view planetary transits for a chosen date against the base chart.\n- [ ] Transit positions use the same KP ayanamsa as the base chart.\n- [ ] Transit sub-lords (and optionally significators) are available.\n- [ ] This does not replace dasha; it is a confirming layer.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Birth-time rectification slider",
+      "labels": [
+        "feature",
+        "later",
+        "ui",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nLater: a slider (or equivalent) that nudges birth time by seconds or minutes and immediately shows when cuspal sub or sub-sub lords change, to support rectification.\n\n## Acceptance criteria\n\n- [ ] User can adjust birth time around the recorded time with fine resolution (seconds).\n- [ ] Cusp table, planet table, and warnings update live as the time changes.\n- [ ] Changes of cuspal sub-lord or sub-sub lord are highlighted.\n- [ ] The original recorded time can be restored in one step.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Sub-sub horary numbers 1\u20132193",
+      "labels": [
+        "feature",
+        "later",
+        "horary",
+        "calc-engine"
+      ],
+      "body": "## Summary\n\nLater: extend horary beyond the 1\u2013249 sub table to sub-sub numbers 1\u20132193, with the lagna fixed at the start of the chosen sub-sub (unless the user selects an explicit alternate mode).\n\n## Acceptance criteria\n\n- [ ] User can enter a horary number in the range 1\u20132193.\n- [ ] Lagna is fixed at the start of that sub-sub by default.\n- [ ] RAMC inversion and Placidus cusps work as in the 1\u2013249 module; planets still come from the actual question time and place.\n- [ ] Split / sign-boundary cases are covered in validation.\n- [ ] The 1\u2013249 path remains available and unchanged.\n\n## Sources\n\n- [KP horary numbers 1\u2013249](https://kpastrologypro.com/kp-horary-numbers-1-249)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Extra school and rule-set options",
+      "labels": [
+        "feature",
+        "later",
+        "calc-engine",
+        "ui"
+      ],
+      "body": "## Summary\n\nLater: beyond the documented defaults, let the user select additional KP school options (for example alternate Rahu/Ketu agent rules, ruling-planet variants, or other published house-significator conventions). Each option must be named and documented; none should be a silent default change.\n\n## Acceptance criteria\n\n- [ ] Settings expose only documented, named rule sets.\n- [ ] The active rule set is visible on the chart and in any export/PDF.\n- [ ] Defaults remain the decisions recorded in the `decision` issues unless the user changes them.\n- [ ] Switching rule sets recomputes significators / ruling planets without changing the ephemeris or ayanamsa unless also selected.\n\n## Sources\n\n- [Four-level significators explainer](https://astroreads.in/blog/kp-significators-four-levels/)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Decision: default KP ayanamsa (KP Old vs KP New)",
+      "labels": [
+        "decision",
+        "calc-engine"
+      ],
+      "body": "## Decision needed\n\nWhich KP ayanamsa is the **default** in the UI: KP Old or KP New?\n\nBoth must remain selectable. The app must never silently fall back to Lahiri. KP sits about 4 to 6 arcminutes from Lahiri; the often-quoted fixed gap of 5\u203248\u2033 is only an approximation.\n\n## What to record\n\n- [ ] The default mode (KP Old or KP New) and a one-paragraph rationale.\n- [ ] Confirmation that both modes are always available in birth and horary input.\n- [ ] How the chosen mode is labelled on charts, tables, and exports.\n\n## Sources\n\n- [Swiss Ephemeris documentation](https://www.astro.com/swisseph/swisseph.pdf)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Decision: Rahu/Ketu significator rule set",
+      "labels": [
+        "decision",
+        "calc-engine"
+      ],
+      "body": "## Decision needed\n\nWhich Rahu/Ketu **agent** rules will the app use when building four-level significators?\n\nRahu and Ketu act as agents for the planets they are tied to, but schools disagree on the exact rules. The shipped rule set must be documented in the app and in the significators feature issue.\n\n## What to record\n\n- [ ] A written rule set: which planets a node co-signifies, and at which levels.\n- [ ] Any cases the app will **not** implement in MVP.\n- [ ] The reference (book, school, or software convention) this follows.\n- [ ] How the rule set is named in the UI.\n\n## Sources\n\n- [Four-level significators explainer](https://astroreads.in/blog/kp-significators-four-levels/)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Decision: ruling-planet rule set",
+      "labels": [
+        "decision",
+        "calc-engine"
+      ],
+      "body": "## Decision needed\n\nWhat is the exact membership of the ruling-planet set?\n\nThe research baseline is: the ascendant's star lord and sign lord, the Moon's star lord and sign lord, plus the day lord (which changes at **sunrise**, not midnight). Schools may add or exclude nodes or other planets. The live \"now\" view and the birth-moment view should use the same rule set.\n\n## What to record\n\n- [ ] The exact list of ruling planets and any uniqueness / order rules.\n- [ ] Whether Rahu/Ketu (or others) are included, and under what conditions.\n- [ ] Confirmation that the day lord is taken from sunrise at the relevant place.\n- [ ] The reference this follows.\n\n## Sources\n\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    },
+    {
+      "title": "Decision: Swiss Ephemeris licence path",
+      "labels": [
+        "decision",
+        "calc-engine",
+        "privacy"
+      ],
+      "body": "## Decision needed\n\nHow will KP-Web licence Swiss Ephemeris?\n\nSwiss Ephemeris is **AGPL**, and that copyleft covers hosted web apps. Wrapper libraries labelled MIT still pull in Swiss Ephemeris, so the same licence applies. For a closed-source app, the [Professional licence](https://www.astro.com/swisseph/swephprice_p.htm) is currently **CHF 700 for 6 years** under the November 2026 contract.\n\nThis must be settled before shipping a public or paid hosted app.\n\n## Options\n\n1. **AGPL path:** keep the app's corresponding source available as required by AGPL for network use.\n2. **Professional licence:** purchase the Astrodienst Professional licence (CHF 700 / 6 years as of the Nov 2026 contract) and keep the app closed-source if desired.\n3. **Another engine:** only if it can match KP ayanamsas and Placidus precision; this would need a fresh evaluation.\n\n## What to record\n\n- [ ] The chosen path and date.\n- [ ] If Professional: proof of licence / renewal date.\n- [ ] If AGPL: how source will be offered to users of the hosted app.\n- [ ] Binding used (`pyswisseph`, `pysweph`, `sweph`, or other) and acknowledgement that MIT wrappers do not remove the SE licence.\n\n## Sources\n\n- [Swiss Ephemeris documentation](https://www.astro.com/swisseph/swisseph.pdf)\n- [Professional licence pricing](https://www.astro.com/swisseph/swephprice_p.htm)\n- Research findings, 21 Nov 2026: `docs/research.md`\n"
+    }
+  ]
+}
