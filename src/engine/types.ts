@@ -505,4 +505,8 @@ export interface HoraryDetails {
   invertedRamcDeg: number;
 }
 
-export interface HoraryCalculationResult extends ChartCalculationResult, HoraryDetails {}
+/**
+ * A horary chart: every additive chart field is present (as in `FullChartCalculationResult`),
+ * plus the horary fields. Assignable to `ChartCalculationResult`.
+ */
+export interface HoraryCalculationResult extends FullChartCalculationResult, HoraryDetails {}
