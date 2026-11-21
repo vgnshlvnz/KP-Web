@@ -1,0 +1,33 @@
+{
+  "name": "kp-web",
+  "version": "0.1.0",
+  "description": "KP (Krishnamurti Paddhati) Astrology calculation engine using NASA JPL Ephemeris, compatible with Cloudflare Wrangler",
+  "type": "module",
+  "main": "./dist/worker.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/**/*.test.ts",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "astrology",
+    "kp-astrology",
+    "krishnamurti-paddhati",
+    "ephemeris",
+    "nasa-jpl",
+    "cloudflare-workers",
+    "wrangler"
+  ],
+  "author": "KP-Web Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "astronomy-engine": "^2.1.19"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261121.1",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.166.0"
+  }
+}
