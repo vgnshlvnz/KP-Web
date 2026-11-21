@@ -64,7 +64,7 @@ Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/citie
 ## Rules that hold for every task
 
 - **KP correctness is the product.** Never change a calculation result to make a test pass. If a test and the code disagree, find out which is right (cite the reference value and where it came from) and say so.
-- Ayanamsa is an explicit choice from the supported list (KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). **Never fall back silently; there is no default until #22 is decided.**
+- Ayanamsa is an explicit choice from the supported list (KP Straight Line (Adjusted), KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). The UI preselects KP Straight Line (Adjusted) (#22). **The API never falls back: a request without an ayanamsa is rejected.**
 - Horary lagna is the **start** of the chosen sub, not the midpoint (midpoint only behind an explicit toggle).
 - Day lord for ruling planets changes at **sunrise**, not midnight.
 - A planet's house comes from Placidus cusps, not its sign.

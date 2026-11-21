@@ -26,11 +26,13 @@
  * Stack B's `'KP_OLD' | 'KP_NEW'` (uppercase) was local to its `src/types.ts` and went away with it.
  * The lowercase ids are confirmed (#29, owner, 2026-11-21).
  *
- * TODO(#22): the default mode is an owner decision. This type carries no default; any
- * `= 'kp_old'` parameter default is the silent default #22 refers to; the last one, in
- * `calculateKPChart`, was removed in `final-cleanup` (#69).
+ * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ * This type carries no default member; any `= 'kp_old'` parameter default would be a silent default, and
+ * the last one, in `calculateKPChart`, was removed in `final-cleanup` (#69). `DEFAULT_AYANAMSA_SELECTION`
+ * in `ayanamsa-defs.ts` is for the preselected UI option only.
  */
 export type AyanamsaMode =
+  | 'kp_straight_line_adjusted'
   | 'kp_old'
   | 'kp_new'
   | 'lahiri'
