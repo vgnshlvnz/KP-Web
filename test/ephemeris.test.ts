@@ -1,21 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { calculateEphemeris, calculateMeanLunarNode } from '../src/engine/ephemeris.js';
-import type { AyanamsaMode, NodeMode } from '../src/engine/types.js';
+import type { AyanamsaMode } from '../src/engine/types.js';
 
 /**
  * Re-pointed from Stack B's `calculatePlanetaryPositions(date, 'KP_OLD', 'MEAN')` to the unified
  * `calculateEphemeris` (port-ephemeris, #41). Reference values and tolerances are unchanged.
- * Two things differ by design: the options are explicit (no default for ayanamsa, node mode or outer
- * planets), and sidereal = tropical - (mean ayanamsa + nutation), so the sidereal identity below uses
+ * Two things differ by design: the ayanamsa is an explicit option with no default (TODO(#22)); mean
+ * node only and no outer planets are fixed (#29 (owner, 2026-11-21)); and sidereal = tropical - (mean ayanamsa + nutation), so the sidereal identity below uses
  * `trueAyanamsaDeg` (issue #33).
  */
-function calculatePlanetaryPositions(
-  date: Date,
-  ayanamsa: AyanamsaMode,
-  nodeMode: NodeMode,
-  includeOuterPlanets = true
-) {
-  const r = calculateEphemeris(date, { ayanamsa, nodeMode, includeOuterPlanets });
+function calculatePlanetaryPositions(date: Date, ayanamsa: AyanamsaMode) {
+  const r = calculateEphemeris(date, { ayanamsa });
   return { planets: r.planets, ayanamsaDeg: r.trueAyanamsaDeg, meanAyanamsaDeg: r.meanAyanamsaDeg };
 }
 
@@ -35,13 +30,10 @@ describe('Ephemeris (astronomy-engine)', () => {
       Saturn: 295.24767,
     };
 
-    const { planets, ayanamsaDeg } = calculatePlanetaryPositions(
-      testDate,
-      'kp_old',
-      'MEAN'
-    );
+    const { planets, ayanamsaDeg } = calculatePlanetaryPositions(testDate, 'kp_old');
 
-    expect(planets.length).toBe(12);
+    // Sun to Saturn plus Rahu and Ketu; no outer planets (was 12 with Uranus, Neptune, Pluto).
+    expect(planets.length).toBe(9);
 
     for (const [body, refLon] of Object.entries(refTropical)) {
       const p = planets.find((item) => item.name === body);
@@ -65,7 +57,7 @@ describe('Ephemeris (astronomy-engine)', () => {
 
   it('Retrograde detection and speeds for planets', () => {
     const testDate = new Date(Date.UTC(1990, 4, 15, 14, 30, 0));
-    const { planets } = calculatePlanetaryPositions(testDate, 'kp_old', 'MEAN');
+    const { planets } = calculatePlanetaryPositions(testDate, 'kp_old');
 
     const mercury = planets.find((p) => p.name === 'Mercury')!;
     const saturn = planets.find((p) => p.name === 'Saturn')!;
@@ -85,7 +77,7 @@ describe('Ephemeris (astronomy-engine)', () => {
 
   it('Rahu and Ketu are always exactly 180 degrees opposite', () => {
     const testDate = new Date(Date.UTC(2026, 10, 21, 6, 0, 0));
-    const { planets } = calculatePlanetaryPositions(testDate, 'kp_old', 'MEAN');
+    const { planets } = calculatePlanetaryPositions(testDate, 'kp_old');
 
     const rahu = planets.find((p) => p.name === 'Rahu')!;
     const ketu = planets.find((p) => p.name === 'Ketu')!;
@@ -103,8 +95,8 @@ describe('Ephemeris (astronomy-engine)', () => {
 
   it('Supports both KP Old and KP New ayanamsas without silent fallback', () => {
     const testDate = new Date(Date.UTC(2026, 10, 21, 6, 0, 0));
-    const resOld = calculatePlanetaryPositions(testDate, 'kp_old', 'MEAN');
-    const resNew = calculatePlanetaryPositions(testDate, 'kp_new', 'MEAN');
+    const resOld = calculatePlanetaryPositions(testDate, 'kp_old');
+    const resNew = calculatePlanetaryPositions(testDate, 'kp_new');
 
     // KP New has slightly higher ayanamsa than KP Old (~72 arcseconds)
     expect(resNew.ayanamsaDeg > resOld.ayanamsaDeg).toBe(true);
@@ -119,19 +111,10 @@ describe('Ephemeris (astronomy-engine)', () => {
     expect(Math.abs(sunDiffArcsec - 72.44) < 0.1).toBe(true);
   });
 
-  it('returns Uranus, Neptune and Pluto only when includeOuterPlanets is true (TODO(#29 Q12))', () => {
+  it('returns exactly the nine KP bodies, in order, and no outer planets', () => {
     const testDate = new Date(Date.UTC(1990, 4, 15, 14, 30, 0));
-    const without = calculateEphemeris(testDate, {
-      ayanamsa: 'kp_old',
-      nodeMode: 'MEAN',
-      includeOuterPlanets: false,
-    });
-    const withOuter = calculateEphemeris(testDate, {
-      ayanamsa: 'kp_old',
-      nodeMode: 'MEAN',
-      includeOuterPlanets: true,
-    });
-    expect(without.planets.map((p) => p.name)).toEqual([
+    const r = calculateEphemeris(testDate, { ayanamsa: 'kp_old' });
+    expect(r.planets.map((p) => p.name)).toEqual([
       'Sun',
       'Moon',
       'Mars',
@@ -142,31 +125,14 @@ describe('Ephemeris (astronomy-engine)', () => {
       'Rahu',
       'Ketu',
     ]);
-    expect(withOuter.planets.map((p) => p.name).slice(9)).toEqual(['Uranus', 'Neptune', 'Pluto']);
-    // The classical nine are identical either way.
-    expect(withOuter.planets.slice(0, 9)).toEqual(without.planets);
   });
 
-  it('rejects an unknown ayanamsa or node mode instead of falling back (TODO(#22), TODO(#29 Q6))', () => {
+  it('rejects an unknown ayanamsa instead of falling back (TODO(#22))', () => {
     const testDate = new Date(Date.UTC(1990, 4, 15, 14, 30, 0));
-    const base = { ayanamsa: 'kp_old', nodeMode: 'MEAN', includeOuterPlanets: false } as const;
+    const base = { ayanamsa: 'kp_old' } as const;
     expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: 'lahiri' as never })).toThrow(/ayanamsa/i);
     expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: 'KP_OLD' as never })).toThrow(/ayanamsa/i);
     expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: undefined as never })).toThrow(/ayanamsa/i);
-    expect(() => calculateEphemeris(testDate, { ...base, nodeMode: undefined as never })).toThrow(/node/i);
-  });
-
-  it('mean and true node modes give different but close Rahu, and Ketu stays opposite', () => {
-    const testDate = new Date(Date.UTC(1990, 4, 15, 14, 30, 0));
-    const mean = calculatePlanetaryPositions(testDate, 'kp_old', 'MEAN').planets.find((p) => p.name === 'Rahu')!;
-    const trueNode = calculatePlanetaryPositions(testDate, 'kp_old', 'TRUE').planets.find((p) => p.name === 'Rahu')!;
-    const delta = Math.abs(((trueNode.siderealLongitude - mean.siderealLongitude + 540) % 360) - 180);
-    // True node oscillates within about 1.5 degrees of the mean node.
-    expect(delta).toBeGreaterThan(0.001);
-    expect(delta).toBeLessThan(2);
-    // Ketu stays exactly opposite in true mode too.
-    const ketu = calculatePlanetaryPositions(testDate, 'kp_old', 'TRUE').planets.find((p) => p.name === 'Ketu')!;
-    expect(Math.abs(((ketu.siderealLongitude - trueNode.siderealLongitude + 360) % 360) - 180)).toBeLessThan(1e-10);
   });
 
   it('mean node polynomial gives the IAU value at J2000.0 (125.04455501 deg)', () => {
@@ -176,8 +142,6 @@ describe('Ephemeris (astronomy-engine)', () => {
   it('reports the nutation and obliquity used, from the same model as the planets', () => {
     const r = calculateEphemeris(new Date(Date.UTC(1992, 2, 10, 22, 14, 0)), {
       ayanamsa: 'kp_old',
-      nodeMode: 'MEAN',
-      includeOuterPlanets: false,
     });
     // Appendix A.1: dPsi 17.4325 arcsec, true obliquity 23.4407206 deg.
     expect(Math.abs(r.nutationInLongitudeDeg * 3600 - 17.4325)).toBeLessThan(0.2);

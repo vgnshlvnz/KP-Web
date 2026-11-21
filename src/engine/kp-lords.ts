@@ -232,8 +232,10 @@ export function getHoraryEntry(n: number): Horary249Entry {
 /**
  * Opt-in sub-boundary reporting for `getPositionLords` / `buildKPCusp`.
  *
- * TODO(#29 Q10): the near-boundary threshold is an owner decision (Stack B used 60 arcsec).
- * There is deliberately no default: the caller must pass one.
+ * The near-boundary threshold the chart uses is the fixed `NEAR_BOUNDARY_THRESHOLD_ARCSEC` (60,
+ * `conventions.ts`, #29 (owner, 2026-11-21)); `calculateChart` passes it. This low-level helper
+ * still takes the threshold as an explicit argument so the boundary arithmetic can be tested at
+ * other values; it has no default, so a caller never gets a threshold by accident.
  */
 export interface PositionLordsOptions {
   /**

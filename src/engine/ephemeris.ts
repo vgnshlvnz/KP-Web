@@ -1,8 +1,7 @@
 /**
  * Planetary ephemeris for the unified engine (work package `port-ephemeris`, #41).
  *
- * Sun to Saturn (and, behind an explicit option, Uranus, Neptune, Pluto) come from
- * astronomy-engine, which runs unchanged in Cloudflare Workers. Time, delta-T, nutation and
+ * Sun to Saturn come from astronomy-engine (no Uranus, Neptune or Pluto: #29 (owner, 2026-11-21)), which runs unchanged in Cloudflare Workers. Time, delta-T, nutation and
  * obliquity also come from astronomy-engine, so planets and Placidus cusps share one nutation
  * model.
  *
@@ -13,18 +12,16 @@
  *    leaves the sidereal longitude off by exactly dPsi (up to ~18 arcsec, issue #33).
  *  - The mean ayanamsa is Stack A's polynomial (`calculateAyanamsa`), evaluated at TT.
  *
- * Lunar nodes:
- *  - Mean node: IAU polynomial for the mean longitude of the ascending node (mean equinox of date),
- *    with dPsi added so it is in the same true-equinox frame as every other body.
- *  - True node: from the instantaneous Earth-Moon state vector, with the orbital plane taken in the
- *    true ecliptic of date (issue #34: Stack B read it from a J2000 frame and was up to 41' off).
+ * Lunar nodes: MEAN node only (#29 (owner, 2026-11-21): "Use mean node only"). IAU polynomial for
+ * the mean longitude of the ascending node (mean equinox of date), with dPsi added so it is in the
+ * same true-equinox frame as every other body. There is no true-node code.
  *
  * Not ported from Stack B: `fetchJplHorizonsPosition` (a network call that always returned null).
  */
 
 import * as Astronomy from 'astronomy-engine';
 import { calculateAyanamsa, normalizeDegrees } from './astronomy.js';
-import type { AyanamsaMode, ChartCalculationOptions, NodeMode, PlanetName } from './types.js';
+import type { AyanamsaMode, ChartCalculationOptions, PlanetName } from './types.js';
 
 /** Julian Day of the J2000.0 epoch. */
 const JD_J2000 = 2451545.0;
@@ -33,15 +30,9 @@ const JD_J2000 = 2451545.0;
 const SPEED_WINDOW_HOURS = 1;
 
 /**
- * Explicit inputs. None of them has a default, because each is an open owner decision.
- *  - `ayanamsa`: TODO(#22) default KP ayanamsa.
- *  - `nodeMode`: TODO(#29 Q6) mean vs true node.
- *  - `includeOuterPlanets`: TODO(#29 Q12) whether Uranus, Neptune, Pluto are returned.
+ * Explicit input. `ayanamsa` has no default, because it is an open owner decision: TODO(#22).
  */
-export type EphemerisOptions = Pick<
-  ChartCalculationOptions,
-  'ayanamsa' | 'nodeMode' | 'includeOuterPlanets'
->;
+export type EphemerisOptions = Pick<ChartCalculationOptions, 'ayanamsa'>;
 
 export interface EphemerisPlanet {
   name: PlanetName;
@@ -62,7 +53,6 @@ export interface EphemerisPlanet {
 export interface EphemerisResult {
   planets: EphemerisPlanet[];
   ayanamsa: AyanamsaMode;
-  nodeMode: NodeMode;
   julianDayUt: number;
   julianDayTt: number;
   /** Mean ayanamsa (Stack A polynomial), degrees. */
@@ -89,7 +79,6 @@ const CLASSICAL_BODIES = [
   'Rahu',
   'Ketu',
 ] as const;
-const OUTER_BODIES = ['Uranus', 'Neptune', 'Pluto'] as const;
 
 /**
  * Mean longitude of the Moon's ascending node (mean Rahu), degrees 0-360, from the IAU
@@ -108,30 +97,6 @@ export function calculateMeanLunarNode(jd: number): number {
   return normalizeDegrees(omega);
 }
 
-/**
- * Longitude of the osculating (true) ascending node of the Moon, degrees 0-360, measured in the
- * TRUE ecliptic of date.
- *
- * The Moon's geocentric state vector comes from astronomy-engine in the J2000 mean equator frame
- * (EQJ). Position and velocity are both rotated into the true ecliptic of date (ECT) before the
- * orbital angular momentum h = r x v is formed. The ascending node is the direction z x h.
- */
-export function calculateTrueLunarNode(time: Astronomy.AstroTime): number {
-  const state = Astronomy.GeoMoonState(time);
-  const rotation = Astronomy.Rotation_EQJ_ECT(time);
-  const r = Astronomy.RotateVector(rotation, new Astronomy.Vector(state.x, state.y, state.z, time));
-  const v = Astronomy.RotateVector(
-    rotation,
-    new Astronomy.Vector(state.vx, state.vy, state.vz, time)
-  );
-
-  // h = r x v. In the ecliptic frame the ascending node line is z x h = (-hy, hx, 0).
-  const hx = r.y * v.z - r.z * v.y;
-  const hy = r.z * v.x - r.x * v.z;
-
-  return normalizeDegrees((Math.atan2(hx, -hy) * 180) / Math.PI);
-}
-
 interface TropicalCoordinates {
   lon: number;
   lat: number;
@@ -143,8 +108,7 @@ const NODE_DISTANCE_AU = 0.00257;
 
 function tropicalCoordinates(
   body: PlanetName,
-  time: Astronomy.AstroTime,
-  nodeMode: NodeMode
+  time: Astronomy.AstroTime
 ): TropicalCoordinates {
   switch (body) {
     case 'Sun': {
@@ -157,13 +121,10 @@ function tropicalCoordinates(
     }
     case 'Rahu':
     case 'Ketu': {
-      const rahu =
-        nodeMode === 'TRUE'
-          ? calculateTrueLunarNode(time)
-          : // Mean node is in the mean equinox of date; add dPsi to bring it to the true equinox.
-            normalizeDegrees(
-              calculateMeanLunarNode(time.tt + JD_J2000) + Astronomy.e_tilt(time).dpsi / 3600.0
-            );
+      // Mean node is in the mean equinox of date; add dPsi to bring it to the true equinox.
+      const rahu = normalizeDegrees(
+        calculateMeanLunarNode(time.tt + JD_J2000) + Astronomy.e_tilt(time).dpsi / 3600.0
+      );
       const lon = body === 'Rahu' ? rahu : normalizeDegrees(rahu + 180.0);
       return { lon, lat: 0, dist: NODE_DISTANCE_AU };
     }
@@ -186,12 +147,6 @@ function assertAyanamsa(mode: AyanamsaMode): void {
   }
 }
 
-function assertNodeMode(mode: NodeMode): void {
-  if (mode !== 'MEAN' && mode !== 'TRUE') {
-    throw new Error(`Unsupported node mode: ${String(mode)} (expected 'MEAN' or 'TRUE')`);
-  }
-}
-
 /** Signed difference a - b wrapped into (-180, 180]. */
 function wrapDelta(a: number, b: number): number {
   let d = a - b;
@@ -203,12 +158,10 @@ function wrapDelta(a: number, b: number): number {
 /**
  * Sidereal longitudes, speeds and retrograde flags for the KP bodies at a UTC instant.
  *
- * Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu and Ketu are always returned. Uranus,
- * Neptune and Pluto only when `options.includeOuterPlanets` is true.
+ * Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu (mean node) and Ketu are returned.
  */
 export function calculateEphemeris(date: Date, options: EphemerisOptions): EphemerisResult {
   assertAyanamsa(options.ayanamsa);
-  assertNodeMode(options.nodeMode);
 
   const time = Astronomy.MakeTime(date);
   const julianDayUt = time.ut + JD_J2000;
@@ -225,15 +178,10 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
   const timeBefore = Astronomy.MakeTime(new Date(date.getTime() - halfWindowMs));
   const timeAfter = Astronomy.MakeTime(new Date(date.getTime() + halfWindowMs));
 
-  const bodies: PlanetName[] = [
-    ...CLASSICAL_BODIES,
-    ...(options.includeOuterPlanets ? OUTER_BODIES : []),
-  ];
-
-  const planets: EphemerisPlanet[] = bodies.map((body) => {
-    const now = tropicalCoordinates(body, time, options.nodeMode);
-    const before = tropicalCoordinates(body, timeBefore, options.nodeMode);
-    const after = tropicalCoordinates(body, timeAfter, options.nodeMode);
+  const planets: EphemerisPlanet[] = CLASSICAL_BODIES.map((body) => {
+    const now = tropicalCoordinates(body, time);
+    const before = tropicalCoordinates(body, timeBefore);
+    const after = tropicalCoordinates(body, timeAfter);
 
     const speedDegPerDay = (wrapDelta(after.lon, before.lon) / SPEED_WINDOW_HOURS) * 24;
 
@@ -251,7 +199,6 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
   return {
     planets,
     ayanamsa: options.ayanamsa,
-    nodeMode: options.nodeMode,
     julianDayUt,
     julianDayTt,
     meanAyanamsaDeg,

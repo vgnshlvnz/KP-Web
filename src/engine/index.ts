@@ -19,7 +19,8 @@ import {
   cosd,
   SiderealTimeResult,
 } from './astronomy.js';
-import { calculatePlacidusCusps } from './placidus.js';
+import { calculatePlacidusCusps, PolarLatitudeError } from './placidus.js';
+import { NEAR_BOUNDARY_THRESHOLD_ARCSEC } from './conventions.js';
 import { buildKPCusp } from './kp-lords.js';
 import { assignPlanetsToHouses } from './house-assignment.js';
 import { calculateSignificators, calculateFourLevelSignificators } from './significators.js';
@@ -29,6 +30,7 @@ import { calculateVimshottariDasha } from './dasha.js';
 import { calculateRulingPlanets } from './ruling-planets.js';
 
 export * from './types.js';
+export * from './conventions.js';
 export * from './astronomy.js';
 export * from './placidus.js';
 export * from './house-assignment.js';
@@ -93,6 +95,8 @@ export function calculateKPChart(
     obl.trueObliquity,
     aya.trueAyanamsa
   );
+  // Polar latitudes: Porphyry cusps plus a visible warning (#29 (owner, 2026-11-21)).
+  const warnings: ChartWarning[] = [...placidusResult.chartWarnings];
 
   // Build full KP Cusp objects with lords
   const cusps: KPCusp[] = [];
@@ -141,6 +145,8 @@ export function calculateKPChart(
     planets: assignedPlanets,
     significators,
     chartWheels,
+    isPolarFallback: placidusResult.isPolarFallback,
+    warnings,
   };
 }
 
@@ -148,6 +154,9 @@ export function calculateKPChart(
  * Computes Placidus house cusps directly from ARMC (Right Ascension of Midheaven / Sidereal Time),
  * geographic latitude, obliquity, and ayanamsa.
  * Useful for Horary (Prashna) where Ascendant is fixed at sub start and ARMC is inverted.
+ *
+ * Throws `PolarLatitudeError` where Placidus is undefined: this returns bare cusps and cannot carry
+ * the `polar_fallback` warning, so it never substitutes Porphyry silently.
  */
 export function calculateCuspsFromARMC(
   armcDegrees: number,
@@ -161,6 +170,13 @@ export function calculateCuspsFromARMC(
     obliquityDegrees,
     ayanamsaDegrees
   );
+  if (result.isPolarFallback) {
+    throw new PolarLatitudeError(
+      `Placidus houses cannot be computed at latitude ${latitude}: ${result.warnings?.join(' ') ?? ''}`,
+      latitude,
+      obliquityDegrees
+    );
+  }
 
   const cusps: KPCusp[] = [];
   for (let i = 0; i < 12; i++) {
@@ -176,9 +192,6 @@ export function calculateCuspsFromARMC(
 // calculateChart: the unified chart function (work package `port-chart`, #54)
 // ---------------------------------------------------------------------------
 
-/** Not KP significators. TODO(#29 Q12): whether they appear in chart output at all is undecided. */
-const OUTER_PLANETS: ReadonlySet<string> = new Set(['Uranus', 'Neptune', 'Pluto']);
-
 function assertFiniteNumber(name: string, value: unknown): asserts value is number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new RangeError(`${name} must be a finite number, got ${String(value)}`);
@@ -186,11 +199,9 @@ function assertFiniteNumber(name: string, value: unknown): asserts value is numb
 }
 
 /**
- * Every option is an open owner decision, so none has a default: a missing one is an error, not
- * a silent fallback. Values are validated again by the module that consumes them (ayanamsa,
- * node mode, node-agent rule set, ruling-planet set, dasha year, sunrise definition and the
- * boundary threshold all throw on an unknown value); the checks here cover what no other module
- * would catch, such as `polarHandling` at a non-polar latitude.
+ * The three options still open (ayanamsa, node-agent rule set, ruling-planet set) have no default:
+ * a missing one is an error, not a silent fallback. Values are validated again by the module that
+ * consumes them, which throws on an unknown value.
  */
 function assertChartOptions(options: ChartCalculationOptions): void {
   if (options === null || typeof options !== 'object') {
@@ -198,24 +209,12 @@ function assertChartOptions(options: ChartCalculationOptions): void {
   }
   const required: Array<keyof ChartCalculationOptions> = [
     'ayanamsa', // TODO(#22)
-    'nodeMode', // TODO(#29 Q6)
     'nodeAgentRuleSet', // TODO(#23)
     'rulingPlanetSet', // TODO(#24)
-    'dashaYearDays', // TODO(#29 Q9)
-    'polarHandling', // TODO(#29 Q7)
-    'sunriseDefinition', // TODO(#29 Q8)
-    'nearBoundaryThresholdArcsec', // TODO(#29 Q10)
-    'includeOuterPlanets', // TODO(#29 Q12)
   ];
   const missing = required.filter((k) => options[k] === undefined || options[k] === null);
   if (missing.length > 0) {
     throw new TypeError(`calculateChart: missing required option(s): ${missing.join(', ')}`);
-  }
-  if (options.polarHandling !== 'porphyry_fallback' && options.polarHandling !== 'refuse') {
-    throw new RangeError(`Unknown polarHandling: ${String(options.polarHandling)}`);
-  }
-  if (typeof options.includeOuterPlanets !== 'boolean') {
-    throw new TypeError('includeOuterPlanets must be a boolean');
   }
 }
 
@@ -267,24 +266,24 @@ function chartInstantUtc(input: DateTimeLocation): Date {
 }
 
 /**
- * The one chart function. Every owner decision is an explicit, required option with no default.
+ * The one chart function. The conventions in `conventions.ts` are fixed (#29 (owner, 2026-11-21));
+ * only the three still-open decisions are options, each required with no default:
+ * `ayanamsa` (TODO(#22)), `nodeAgentRuleSet` (TODO(#23)) and `rulingPlanetSet` (TODO(#24)).
  *
- * - Planets come from `calculateEphemeris` (astronomy-engine), in the chosen ayanamsa and node mode
- *   (TODO(#22), TODO(#29 Q6), TODO(#29 Q12)).
- * - Placidus cusps use the same true ayanamsa and nutation as the planets. At polar latitudes
- *   `options.polarHandling` decides between Porphyry plus a warning and an error (TODO(#29 Q7)).
- * - Sign, star, sub and sub-sub lords come from `getPositionLords` with the near-boundary threshold
- *   (TODO(#29 Q10)). A planet's house is the house of the cusp it has passed.
+ * - Planets (Sun to Saturn, mean Rahu and Ketu) come from `calculateEphemeris` (astronomy-engine).
+ * - Placidus cusps use the same true ayanamsa and nutation as the planets. At polar latitudes the
+ *   cusps are Porphyry, `isPolarFallback` is true and a `polar_fallback` warning is returned.
+ * - Sign, star, sub and sub-sub lords come from `getPositionLords` with
+ *   `NEAR_BOUNDARY_THRESHOLD_ARCSEC`. A planet's house is the house of the cusp it has passed.
  * - The four house levels are Stack A's (`significators`); `nodeAgentSignificators` adds the Rahu and
- *   Ketu agents under `options.nodeAgentRuleSet` (TODO(#23)). Uranus, Neptune and Pluto, when
- *   included, are listed with the planets and drawn on the wheels but are NOT significators
- *   (TODO(#29 Q12)).
- * - Dasha uses `options.dashaYearDays` (TODO(#29 Q9), Q17); ruling planets use the day lord at the
- *   most recent sunrise (TODO(#24), TODO(#29 Q8)).
+ *   Ketu agents under `options.nodeAgentRuleSet` (TODO(#23)).
+ * - Dasha uses `DASHA_YEAR_DAYS`; ruling planets use the day lord at the most recent sunrise
+ *   (upper limb, standard refraction; TODO(#24) for the set).
  * - `warnings` carries `polar_fallback` (never dropped), `near_sub_boundary` and `no_sunrise`.
  *
  * `input.utcOffsetHours` is required here (unlike `calculateKPChart`, which treats it as 0).
- * The legacy `calculateKPChart` is unchanged and still used by `src/index.ts` until `entrypoint`.
+ * The legacy `calculateKPChart` is still used by `src/index.ts` until `entrypoint`. Its only change is
+ * at polar latitudes, where it now returns Porphyry cusps plus a `polar_fallback` warning instead of throwing.
  */
 export function calculateChart(
   input: DateTimeLocation,
@@ -353,13 +352,11 @@ export function calculateChartWithArmc(
   assertChartOptions(options);
   const birthUtc = chartInstantUtc(input);
   const coordinates = { latitude: input.latitude, longitude: input.longitude };
-  const threshold = { nearBoundaryThresholdArcsec: options.nearBoundaryThresholdArcsec };
+  const threshold = { nearBoundaryThresholdArcsec: NEAR_BOUNDARY_THRESHOLD_ARCSEC };
 
   // Planets, with the ayanamsa and the nutation that go with them.
   const ephemeris = calculateEphemeris(birthUtc, {
     ayanamsa: options.ayanamsa,
-    nodeMode: options.nodeMode,
-    includeOuterPlanets: options.includeOuterPlanets,
   });
   const jdUT = ephemeris.julianDayUt;
 
@@ -386,8 +383,7 @@ export function calculateChartWithArmc(
     st.armc,
     input.latitude,
     obl.trueObliquity,
-    ephemeris.trueAyanamsaDeg,
-    options.polarHandling
+    ephemeris.trueAyanamsaDeg
   );
 
   const cusps: KPCusp[] = [];
@@ -437,12 +433,11 @@ export function calculateChartWithArmc(
     };
   });
 
-  // Significators: the nine KP bodies only (TODO(#29 Q12)).
-  const classical = planets.filter((p) => !OUTER_PLANETS.has(p.name));
-  const significators = calculateSignificators(cusps, classical);
+  // Significators: the nine KP bodies.
+  const significators = calculateSignificators(cusps, planets);
   const nodeAgentSignificators = calculateFourLevelSignificators(
     cusps,
-    classical,
+    planets,
     options.nodeAgentRuleSet
   );
   const chartWheels = buildChartWheels(cusps, planets);
@@ -452,12 +447,9 @@ export function calculateChartWithArmc(
   if (!moon) {
     throw new Error('Ephemeris returned no Moon'); // cannot happen: the Moon is always computed
   }
-  const dashaBalance = calculateVimshottariDasha(moon.longitude, birthUtc, {
-    dashaYearDays: options.dashaYearDays,
-  });
+  const dashaBalance = calculateVimshottariDasha(moon.longitude, birthUtc);
   const rulingPlanets = calculateRulingPlanets(cusps[0], moon, birthUtc, coordinates, {
     rulingPlanetSet: options.rulingPlanetSet,
-    sunriseDefinition: options.sunriseDefinition,
   });
 
   // Warnings. The polar fallback is never dropped.
@@ -470,8 +462,7 @@ export function calculateChartWithArmc(
       isNearSubSubBoundary?: boolean;
     }
   ): void => {
-    // TODO(#29 Q16): the owner has not said whether the warning is about the sub edge, the
-    // sub-sub edge or both. It is raised when EITHER flag is true.
+    // TODO(#29 Q16): which flag the UI shows is open. The warning is raised when EITHER is true.
     if (p.isNearSubBoundary || p.isNearSubSubBoundary) {
       const which = [
         p.isNearSubBoundary ? 'sub' : null,
@@ -481,7 +472,7 @@ export function calculateChartWithArmc(
         code: 'near_sub_boundary',
         subject,
         message:
-          `${subject} (${lon.toFixed(6)} deg) is within ${options.nearBoundaryThresholdArcsec} arcsec ` +
+          `${subject} (${lon.toFixed(6)} deg) is within ${NEAR_BOUNDARY_THRESHOLD_ARCSEC} arcsec ` +
           `of a ${which} boundary; a small error in the position could change the ${which} lord.`,
       });
     }
@@ -519,7 +510,6 @@ export function calculateChartWithArmc(
     planets,
     significators,
     chartWheels,
-    nodeMode: options.nodeMode,
     planetPositions,
     rulingPlanets,
     dashaBalance,

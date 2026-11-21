@@ -67,7 +67,8 @@ export function getHouseForLongitude(
  * Assigns an array of planets to their cuspal houses in KP,
  * and derives their KP lords (sign, star, sub, sub-sub lord).
  *
- * Pass `options` (TODO(#29 Q10): the near-boundary threshold has no default) to also get the sub
+ * Pass `options` (the near-boundary threshold in arcseconds; `calculateChart` passes
+ * `NEAR_BOUNDARY_THRESHOLD_ARCSEC`) to also get the sub
  * and sub-sub boundary fields on every planet. Without it the output is unchanged.
  */
 export function assignPlanetsToHouses(

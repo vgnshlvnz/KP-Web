@@ -48,15 +48,16 @@ const SUB_START_INSIDE_ARCSEC = 1e-4;
 /**
  * Computes the KP horary chart for a chosen number 1-249.
  *
- * Every option is required and none has a default (TODO(#22), TODO(#23), TODO(#24),
- * TODO(#29 Q6..Q12)); a missing or unknown one throws, as in `calculateChart`.
+ * The options are the same as for `calculateChart`: `ayanamsa` (TODO(#22)), `nodeAgentRuleSet`
+ * (TODO(#23)) and `rulingPlanetSet` (TODO(#24)), each required with no default; a missing or
+ * unknown one throws.
  *
  * Polar latitudes: a horary chart needs a unique ARMC for the Ascendant, and inside the polar
  * circle (|lat| >= 90 - obliquity, about 66.56) the Ascendant is not a one-to-one function of the
- * ARMC. So `calculateHoraryChart` throws `PolarLatitudeError` there for BOTH `polarHandling`
- * values; there is no Porphyry fallback for horary (TODO(#29 Q7): the owner has not decided how
- * polar horary should behave beyond this). Outside the polar circle `polarHandling` is still
- * required and still applies to a Placidus iteration that does not converge.
+ * ARMC. So `calculateHoraryChart` throws `PolarLatitudeError` there; there is no Porphyry fallback
+ * for horary (#29 (owner, 2026-11-21) applies Porphyry to natal charts; #58 keeps horary throwing).
+ * Outside the polar circle a Placidus iteration that does not converge falls back to Porphyry
+ * with a `polar_fallback` warning, as in `calculateChart`.
  */
 export function calculateHoraryChart(
   input: HoraryInput,
