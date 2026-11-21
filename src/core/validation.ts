@@ -82,9 +82,10 @@ export function validateCoordinates(lat: number, lon: number): string | null {
 
 /**
  * Validates ayanamsa selection.
- * The ayanamsa must be one of the supported ids (owner decision on #29, 2026-11-21): KP Old, KP New,
- * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil. There is no default
- * (TODO(#22)) and no fallback: anything else, including a missing value, is an error.
+ * The ayanamsa must be one of the supported ids (owner decision on #29): KP Straight Line (Adjusted),
+ * KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil. #22 decided
+ * (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no
+ * fallback): anything else, including a missing value, is an error.
  */
 export function validateAyanamsa(ayanamsa: unknown): string | null {
   if (!isAyanamsaMode(ayanamsa)) {

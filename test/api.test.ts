@@ -448,15 +448,16 @@ describe('POST /api/horary (horary chart on calculateHoraryChart)', () => {
 });
 
 describe('GET /api/ayanamsa', () => {
-  it('lists the nine supported ids with labels and no default', async () => {
+  it('lists the ten supported ids with labels; defaultSelection is the UI preselect only', async () => {
     const res = await app.request('/api/ayanamsa?date=2026-11-21T06:00:00Z');
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;
     expect(json.ayanamsas.map((a: any) => a.id)).toEqual([
-      'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil',
+      'kp_straight_line_adjusted', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil',
     ]);
     expect(json.ayanamsas.map((a: any) => a.label)).toContain('Lahiri');
     expect(json).not.toHaveProperty('default');
+    expect(json.defaultSelection).toBe('kp_straight_line_adjusted');
     expect(json.dateUtc).toBe('2026-11-21T06:00:00.000Z');
     const nil = json.ayanamsas.find((a: any) => a.id === 'nil');
     expect(nil.meanDegrees).toBe(0);
@@ -518,7 +519,7 @@ describe('GET /api/horary-table', () => {
 });
 
 describe('GET /api/health (folded from worker.test.ts)', () => {
-  it('reports status, engine and the supported ayanamsas; no default is named', async () => {
+  it('reports status, engine, the supported ayanamsas and the UI default selection', async () => {
     const res = await app.request('/api/health');
     const json = (await res.json()) as any;
     expect(json.status).toBe('ok');
@@ -526,7 +527,8 @@ describe('GET /api/health (folded from worker.test.ts)', () => {
     expect(json.service).toBe('KP-Web');
     expect(json.engine).toBe('astronomy-engine');
     expect(String(json.runtime)).toContain('Cloudflare Workers');
-    expect(json.ayanamsas).toHaveLength(9);
+    expect(json.ayanamsas).toHaveLength(10);
+    expect(json.defaultSelection).toBe('kp_straight_line_adjusted');
     expect(json).not.toHaveProperty('defaultAyanamsa');
     expect(json.endpoints).toContain('POST /api/horary');
   });
