@@ -1,5 +1,5 @@
 node_modules/
-dist/
 .wrangler/
-*.log
+dist/
 .DS_Store
+*.log
