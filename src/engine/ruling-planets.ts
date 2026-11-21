@@ -24,10 +24,11 @@
  * ('no_sunrise_polar_night' or 'no_sunrise_polar_day') and no day lord.
  * TODO(#29 Q8): how a chart reports that case, beyond the flag, is undecided.
  *
- * Open owner decisions, all REQUIRED parameters with no default:
- *  - `SunriseDefinition`  TODO(#29 Q8)
- *  - `RulingPlanetSet`    TODO(#24)
+ * Sunrise is fixed (`SUNRISE_DEFINITION` in `conventions.ts`, #29 (owner, 2026-11-21)): the Sun's
+ * upper limb with standard refraction, which is what `Astronomy.SearchRiseSet` does.
  *
+ * Open owner decision, a REQUIRED parameter with no default:
+ *  - `RulingPlanetSet`    TODO(#24)
  * Pure TypeScript apart from `astronomy-engine`; runs in Cloudflare Workers.
  */
 
@@ -38,7 +39,6 @@ import type {
   KPPlanetLord,
   KpLords,
   RulingPlanets,
-  SunriseDefinition,
 } from './types.js';
 
 /** Lord of each weekday, indexed by `Date#getUTCDay()` (0 = Sunday). */
@@ -83,17 +83,6 @@ export interface DayLordNotFound {
 
 export type DayLordResult = DayLordFound | DayLordNotFound;
 
-function assertSunriseDefinition(definition: SunriseDefinition): void {
-  if (definition === 'upper_limb_refraction') return;
-  if (definition === 'disc_center') {
-    // TODO(#29 Q8): 'disc_center' is typed but its exact convention is undecided (centre on the
-    // geometric horizon, or centre at -34' with refraction?). It is not implemented rather than
-    // guessed.
-    throw new Error("SunriseDefinition 'disc_center' is not implemented (TODO(#29 Q8))");
-  }
-  throw new Error(`Unknown SunriseDefinition: ${String(definition)}`);
-}
-
 function assertValidInputs(dateUtc: Date, coordinates: Coordinates): void {
   if (!(dateUtc instanceof Date) || Number.isNaN(dateUtc.getTime())) {
     throw new RangeError('dateUtc must be a valid Date');
@@ -124,16 +113,10 @@ function findMostRecentSunrise(dateUtc: Date, observer: Astronomy.Observer): Dat
 }
 
 /**
- * Day lord at a place and moment.
- *
- * `sunriseDefinition` is required. TODO(#29 Q8): owner to decide the convention.
+ * Day lord at a place and moment. The day lord changes at sunrise (upper limb, standard
+ * refraction: #29 (owner, 2026-11-21)), not at midnight.
  */
-export function calculateDayLord(
-  dateUtc: Date,
-  coordinates: Coordinates,
-  sunriseDefinition: SunriseDefinition,
-): DayLordResult {
-  assertSunriseDefinition(sunriseDefinition);
+export function calculateDayLord(dateUtc: Date, coordinates: Coordinates): DayLordResult {
   assertValidInputs(dateUtc, coordinates);
 
   const observer = new Astronomy.Observer(coordinates.latitude, coordinates.longitude, 0);
@@ -163,11 +146,8 @@ export function calculateDayLord(
   };
 }
 
-/** Options this module needs from `ChartCalculationOptions`. Both are required. */
-export type RulingPlanetOptions = Pick<
-  ChartCalculationOptions,
-  'rulingPlanetSet' | 'sunriseDefinition'
->;
+/** Options this module needs from `ChartCalculationOptions`. Required. */
+export type RulingPlanetOptions = Pick<ChartCalculationOptions, 'rulingPlanetSet'>;
 
 /** Ruling planets with a day lord. */
 export type RulingPlanetsFound = RulingPlanets & { sunriseStatus: 'ok' };
@@ -209,7 +189,7 @@ export function calculateRulingPlanets(
     throw new Error(`Unknown RulingPlanetSet: ${String(options.rulingPlanetSet)}`);
   }
 
-  const day = calculateDayLord(dateUtc, coordinates, options.sunriseDefinition);
+  const day = calculateDayLord(dateUtc, coordinates);
 
   const head: KPPlanetLord[] = [
     ascendant.starLord,

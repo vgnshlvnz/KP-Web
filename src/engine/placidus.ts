@@ -6,7 +6,7 @@ import {
   asind,
   atand,
 } from './astronomy.js';
-import type { ChartWarning, PolarHandling } from './types.js';
+import type { ChartWarning } from './types.js';
 
 const VERY_SMALL = 1.0e-10;
 const VERY_SMALL_PLAC_ITER = 1.0 / 360000.0; // 0.01 arcseconds convergence threshold
@@ -143,9 +143,11 @@ export interface PlacidusCuspsResult {
 }
 
 /**
- * Thrown when Placidus cannot be computed and the caller has not allowed a fallback.
- * TODO(#29 Q7): polar latitudes are an open owner decision, so this is the only outcome when the
- * caller did not choose ('refuse', or `polarHandling` omitted).
+ * Thrown where a Porphyry fallback would be wrong or silent: horary (the Ascendant to ARMC
+ * inversion is not unique inside the polar circle, #58) and `calculateCuspsFromARMC` (which
+ * returns bare cusps and cannot carry the `polar_fallback` warning).
+ * `calculatePlacidusCusps` itself never throws it: it falls back to Porphyry (#29 (owner,
+ * 2026-11-21), `POLAR_HANDLING` in `conventions.ts`).
  */
 export class PolarLatitudeError extends Error {
   readonly latitude: number;
@@ -172,20 +174,16 @@ export function isPolarLatitude(latitude: number, obliquity: number): boolean {
  *
  * Matches Swiss Ephemeris swe_houses / swe_houses_ex to arc-second precision.
  *
- * `polarHandling` says what to do when Placidus is undefined (|lat| >= 90 - obliquity):
- * 'porphyry_fallback' returns Porphyry cusps with `isPolarFallback = true` and a warning (this is
- * what Swiss Ephemeris does); 'refuse' throws `PolarLatitudeError`.
- * TODO(#29 Q7): the owner has not decided, so there is no default. It is typed optional only so
- * that callers outside this package (`src/engine/index.ts`, owned by `port-chart`) still compile;
- * when it is omitted and Placidus is undefined, this throws too rather than choosing for the owner.
- * `port-chart` must pass it explicitly. The latitude is never clamped.
+ * When Placidus is undefined (|lat| >= 90 - obliquity), or an intermediate cusp does not
+ * converge, the result is Porphyry cusps with `isPolarFallback = true` and a `polar_fallback`
+ * warning (what Swiss Ephemeris does). #29 (owner, 2026-11-21): this is the only behaviour; there
+ * is no option and no 'refuse' mode. The latitude is never clamped.
  */
 export function calculatePlacidusCusps(
   armc: number,
   latitude: number,
   obliquity: number,
-  ayanamsa: number = 0.0,
-  polarHandling?: PolarHandling
+  ayanamsa: number = 0.0
 ): PlacidusCuspsResult {
   const th = normalizeDegrees(armc);
   let fi = latitude;
@@ -210,7 +208,6 @@ export function calculatePlacidusCusps(
   let isPolarFallback = false;
   if (isPolarLatitude(fi, ekl)) {
     const message = `Latitude ${fi.toFixed(2)}° is within polar circle. Switched to Porphyry house division.`;
-    requirePolarFallbackAllowed(polarHandling, fi, ekl, message);
     warnings.push(message);
     isPolarFallback = true;
     return calculatePorphyryCusps(ascTrop, mcTrop, ayanamsa, warnings, 'polar_fallback');
@@ -266,8 +263,7 @@ export function calculatePlacidusCusps(
 
       if (!converged) {
         const message = `Placidus iteration for house ${houseIndex + 1} did not converge; using Porphyry fallback.`;
-        requirePolarFallbackAllowed(polarHandling, fi, ekl, message);
-        warnings.push(message);
+            warnings.push(message);
         isPolarFallback = true;
         return calculatePorphyryCusps(ascTrop, mcTrop, ayanamsa, warnings, 'polar_fallback');
       }
@@ -298,25 +294,6 @@ export function calculatePlacidusCusps(
     warnings: warnings.length > 0 ? warnings : undefined,
     chartWarnings: [],
   };
-}
-
-/** Throws unless the caller explicitly chose 'porphyry_fallback'. TODO(#29 Q7). */
-function requirePolarFallbackAllowed(
-  polarHandling: PolarHandling | undefined,
-  latitude: number,
-  obliquity: number,
-  reason: string
-): void {
-  if (polarHandling === 'porphyry_fallback') return;
-  const why =
-    polarHandling === 'refuse'
-      ? 'polarHandling is "refuse"'
-      : 'polarHandling was not specified (TODO(#29 Q7): no default)';
-  throw new PolarLatitudeError(
-    `Placidus houses cannot be computed at latitude ${latitude}: ${reason} ${why}.`,
-    latitude,
-    obliquity
-  );
 }
 
 /**

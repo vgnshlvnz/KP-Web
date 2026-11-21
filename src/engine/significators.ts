@@ -193,9 +193,6 @@ export function calculateNodeAgents(
 
 const KNOWN_PLANET_NAMES = new Set<string>([
   ...AGENT_BODY_ORDER,
-  'Uranus',
-  'Neptune',
-  'Pluto',
 ]);
 
 function asPlanetNames(names: string[]): PlanetName[] {

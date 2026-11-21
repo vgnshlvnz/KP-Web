@@ -7,8 +7,8 @@
  *    elapsed at birth are skipped, the running bhukti is cut to its remaining fraction, and the
  *    running antara inside it is cut the same way. Stack B scaled all nine bhuktis into the
  *    balance, so the running bhukti was always the dasha lord's own.
- * 2. Days per year is a required parameter. There is no hidden constant.
- *    TODO(#29 Q9): owner to decide the dasha year length (365.25, 365.2425 (Stack B), 360, ...).
+ * 2. Days per year is the fixed convention `DASHA_YEAR_DAYS` (365.2425, `conventions.ts`) and a
+ *    month is DASHA_YEAR_DAYS / 12. #29 (owner, 2026-11-21).
  *
  * All period lengths are computed in YEARS first (exact 120-year proportions). Days per year only
  * enters when years are converted to calendar dates, so balance, running bhukti and "years left"
@@ -24,21 +24,21 @@ import {
   TOTAL_DASHA_YEARS,
   VIMSHOTTARI_LORDS,
 } from './kp-lords.js';
+import { DASHA_YEAR_DAYS } from './conventions.js';
 import type {
-  ChartCalculationOptions,
   DashaBalance,
   DashaPeriod,
   KPPlanetLord,
 } from './types.js';
 
 /**
- * Dasha options. `dashaYearDays` has no default: TODO(#29 Q9).
+ * Dasha options. The year length is not an option: it is `DASHA_YEAR_DAYS`.
  * `numDashas` is how many major periods to list, counting the balance dasha (default 9, as in
  * Stack B; because the first one is only a balance, the list then ends short of 120 years).
  */
-export type DashaOptions = Pick<ChartCalculationOptions, 'dashaYearDays'> & {
+export interface DashaOptions {
   numDashas?: number;
-};
+}
 
 /** A period that is already running at birth, with what is left of it. */
 export interface RunningPeriod {
@@ -213,29 +213,23 @@ function buildAntaras(
  *
  * @param moonSiderealLon Moon's sidereal longitude, degrees (caller chose the ayanamsa, TODO(#22))
  * @param birthDateUtc    birth or question instant
- * @param options         `dashaYearDays` is required, TODO(#29 Q9). `numDashas` defaults to 9.
+ * @param options         `numDashas` defaults to 9. Year length is `DASHA_YEAR_DAYS`.
  */
 export function calculateVimshottariDasha(
   moonSiderealLon: number,
   birthDateUtc: Date,
-  options: DashaOptions
+  options: DashaOptions = {}
 ): DashaBalance {
-  const { dashaYearDays } = options;
-  if (!Number.isFinite(dashaYearDays) || dashaYearDays <= 0) {
-    throw new RangeError(`dashaYearDays must be a positive number, got ${dashaYearDays}`);
-  }
   const numDashas = options.numDashas ?? 9;
-  const msPerYear = dashaYearDays * MS_PER_DAY;
+  const msPerYear = DASHA_YEAR_DAYS * MS_PER_DAY;
 
   const birth = getDashaAtBirth(moonSiderealLon);
 
   const balanceYears = Math.floor(birth.balanceYears);
   const remMonths = (birth.balanceYears - balanceYears) * 12;
   const balanceMonths = Math.floor(remMonths);
-  // A dasha month is one twelfth of the dasha year, so the displayed balance follows the one
-  // year-length option. (This used to be a hidden 30.4375 = 365.25 / 12.)
-  // TODO(#29 Q17): owner to confirm that months are derived as dashaYearDays / 12.
-  const daysPerMonth = dashaYearDays / 12;
+  // A dasha month is one twelfth of the dasha year (#29 (owner, 2026-11-21)).
+  const daysPerMonth = DASHA_YEAR_DAYS / 12;
   const balanceDays = Math.round((remMonths - balanceMonths) * daysPerMonth);
 
   const timeline: DashaPeriod[] = [];

@@ -16,8 +16,8 @@ import type {
   DashaBalance,
   HoraryDetails,
   HouseCusp,
-  FourLevelSignificators,
-  PlanetaryPosition,
+  FourLevelSignificators as EngineFourLevelSignificators,
+  PlanetaryPosition as EnginePlanetaryPosition,
   RulingPlanets,
 } from './engine/types.js';
 
@@ -26,16 +26,62 @@ export type {
   DashaBalance,
   DashaPeriod,
   DateTimeInput,
-  FourLevelSignificators,
   HoraryTableEntry,
   HouseCusp,
   KPPlanetLord,
   KpLords,
-  NodeMode,
-  PlanetName,
-  PlanetaryPosition,
   RulingPlanets,
 } from './engine/types.js';
+
+/**
+ * Stack B's own node mode. The unified engine has mean node only (#29 (owner, 2026-11-21)) and no
+ * `NodeMode`; this stays here so Stack B keeps compiling until `entrypoint` deletes it.
+ */
+export type NodeMode = 'MEAN' | 'TRUE';
+
+/**
+ * Stack B's planet names, which still include the outer planets. The unified `PlanetName`
+ * (engine/types.ts) is Sun to Saturn plus Rahu and Ketu only. Deleted with Stack B.
+ */
+export type PlanetName =
+  | 'Sun'
+  | 'Moon'
+  | 'Mars'
+  | 'Mercury'
+  | 'Jupiter'
+  | 'Venus'
+  | 'Saturn'
+  | 'Rahu'
+  | 'Ketu'
+  | 'Uranus'
+  | 'Neptune'
+  | 'Pluto';
+
+/** Stack B's planet record: the unified one with Stack B's wider `PlanetName`. */
+export type PlanetaryPosition = Omit<EnginePlanetaryPosition, 'name'> & { name: PlanetName };
+
+/** Stack B's four-level significators: the unified layout with Stack B's wider `PlanetName`. */
+export interface FourLevelSignificators extends Omit<EngineFourLevelSignificators, 'houseWise' | 'planetWise'> {
+  houseWise: Record<
+    number,
+    {
+      level1: PlanetName[];
+      level2: PlanetName[];
+      level3: PlanetName[];
+      level4: PlanetName[];
+    }
+  >;
+  planetWise: Record<
+    PlanetName,
+    {
+      level1Houses: number[];
+      level2Houses: number[];
+      level3Houses: number[];
+      level4Houses: number[];
+      agentsFor: PlanetName[];
+    }
+  >;
+}
 
 /**
  * Stack B's uppercase ayanamsa value. Local to this shim until `entrypoint`.

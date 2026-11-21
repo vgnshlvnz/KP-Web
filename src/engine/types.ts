@@ -28,19 +28,15 @@ export type AyanamsaMode = 'kp_old' | 'kp_new';
 /** Stack A's original name for `AyanamsaMode`. Same type. */
 export type AyanamsaType = AyanamsaMode;
 
-/**
- * Lunar node model. Wire values match Stack B.
- * TODO(#29 Q6): mean vs true node default is undecided. Both stacks default to 'MEAN' silently
- * today; this type has no default.
- */
-export type NodeMode = 'MEAN' | 'TRUE';
-
 // ---------------------------------------------------------------------------
 // Bodies and lords
 // ---------------------------------------------------------------------------
 
-/** Sun to Saturn plus the two nodes: the nine KP / Vimshottari bodies. */
-export type ClassicalPlanetName =
+/**
+ * Sun to Saturn plus the two nodes (mean node only): the nine KP / Vimshottari bodies.
+ * No Uranus, Neptune or Pluto: #29 (owner, 2026-11-21).
+ */
+export type PlanetName =
   | 'Sun'
   | 'Moon'
   | 'Mars'
@@ -50,15 +46,6 @@ export type ClassicalPlanetName =
   | 'Saturn'
   | 'Rahu'
   | 'Ketu';
-
-/**
- * Uranus, Neptune and Pluto are not KP significators.
- * TODO(#29 Q12): owner to decide whether they stay in chart output. Typed separately so that
- * callers can opt in or out; `PlanetName` still includes them so Stack B keeps compiling.
- */
-export type OuterPlanetName = 'Uranus' | 'Neptune' | 'Pluto';
-
-export type PlanetName = ClassicalPlanetName | OuterPlanetName;
 
 /** The nine Vimshottari / KP lords. */
 export type KPPlanetLord =
@@ -102,15 +89,15 @@ export interface DateTimeLocation {
 
 /**
  * Distance of a longitude from the edges of its KP sub span (Stack B's boundary fields).
- * TODO(#29 Q10): the near-boundary threshold is undecided (Stack B uses 60 arcsec). It is an
- * explicit input to whatever computes `isNearSubBoundary`; there is no default here.
+ * The near-boundary threshold is the constant `NEAR_BOUNDARY_THRESHOLD_ARCSEC` (60, `conventions.ts`),
+ * #29 (owner, 2026-11-21).
  */
 export interface SubBoundaryInfo extends Partial<SubSubBoundaryInfo> {
   subSpanStart: number; // degrees in zodiac (0-360)
   subSpanEnd: number; // degrees in zodiac (0-360)
   distanceFromSubStartArcsec: number;
   distanceToSubEndArcsec: number;
-  isNearSubBoundary: boolean; // within the caller-supplied threshold
+  isNearSubBoundary: boolean; // within the threshold
 }
 
 /**
@@ -124,12 +111,13 @@ export interface SubBoundaryInfo extends Partial<SubSubBoundaryInfo> {
 export interface SubSubBoundaryInfo {
   distanceFromSubSubStartArcsec: number;
   distanceToSubSubEndArcsec: number;
-  isNearSubSubBoundary: boolean; // within the caller-supplied threshold
+  isNearSubSubBoundary: boolean; // within the threshold
 }
 
 /**
  * Stack A's lords record, plus the optional boundary fields. `getPositionLords` fills the boundary
- * fields only when the caller passes the near-boundary threshold (TODO(#29 Q10)). The four lord
+ * fields only when the caller passes a threshold (`calculateChart` passes
+ * `NEAR_BOUNDARY_THRESHOLD_ARCSEC`). The four lord
  * fields are `KPPlanetLord` (narrowed by `port-lords`, #43).
  */
 export interface KPPositionLords extends Partial<SubBoundaryInfo> {
@@ -302,9 +290,9 @@ export interface FourLevelSignificators {
  * Ruling planets.
  * TODO(#24): membership (which entries, duplicates, nodes) is an owner decision; see
  * `RulingPlanetSet`. `rulingPlanetsList` is whatever the chosen set produces.
- * TODO(#29 Q8): `sunriseUtc` is the sunrise that fixed the day lord. How it is defined, and what
- * is reported when the sun does not rise, is undecided; `sunriseStatus` is the explicit flag
- * for that case.
+ * `sunriseUtc` is the sunrise that fixed the day lord: upper limb, standard refraction
+ * (`SUNRISE_DEFINITION`, #29 (owner, 2026-11-21)). When the sun does not rise, `sunriseStatus` is
+ * the explicit flag for that case and stays as it is.
  */
 export interface RulingPlanets {
   ascendantSignLord: KPPlanetLord;
@@ -370,24 +358,6 @@ export interface ChartWarning {
 // ---------------------------------------------------------------------------
 
 /**
- * What to do when Placidus is undefined (|lat| above about 66.56 degrees).
- * TODO(#29 Q7): undecided. Stack A today does 'porphyry_fallback' (matches Swiss Ephemeris) plus a
- * warning; Stack B clamps the latitude silently (#35), which is not an option here.
- */
-export type PolarHandling = 'porphyry_fallback' | 'refuse';
-
-/**
- * Sunrise convention for the day lord.
- * TODO(#29 Q8): undecided. 'upper_limb_refraction' is astronomy-engine's and Swiss Ephemeris's
- * default; 'disc_center' is the alternative. The day lord changes at sunrise, not midnight, in
- * either case (CLAUDE.md).
- * Also TODO(#29 Q8), still unanswered: what to report when the sun does not rise or set. No
- * handling option is typed for it; `RulingPlanets.sunriseStatus` can flag the case, and the
- * silent 06:00-local value Stack B uses is excluded (audit).
- */
-export type SunriseDefinition = 'upper_limb_refraction' | 'disc_center';
-
-/**
  * Rahu/Ketu agent rule set.
  * TODO(#23): undecided. 'none' is Stack A (no agent rules). 'sign_lord_star_lord_same_sign' is
  * Stack B's `agentsFor` (sign lord, star lord, planets in the same sign; its doc string also
@@ -403,28 +373,16 @@ export type NodeAgentRuleSet = 'none' | 'sign_lord_star_lord_same_sign';
 export type RulingPlanetSet = 'asc_star_sign_moon_star_sign_day_lord';
 
 /**
- * Explicit engine options. Every field is REQUIRED: no field has a default, because every one of
- * them is an open owner decision. Packages that only need some of them take a `Pick<...>`.
+ * Explicit engine options: the three decisions that are still open. Every field is REQUIRED and has
+ * no default. Everything else is a fixed convention in `conventions.ts` (#29 (owner, 2026-11-21)).
  */
 export interface ChartCalculationOptions {
   /** TODO(#22): default KP ayanamsa is the owner's decision. */
   ayanamsa: AyanamsaMode;
-  /** TODO(#29 Q6): mean vs true node. */
-  nodeMode: NodeMode;
   /** TODO(#23): Rahu/Ketu agent rules. */
   nodeAgentRuleSet: NodeAgentRuleSet;
   /** TODO(#24): ruling-planet membership. */
   rulingPlanetSet: RulingPlanetSet;
-  /** TODO(#29 Q9): days per dasha year (365.25, 365.2425, 360, ...). Stack B uses 365.2425. */
-  dashaYearDays: number;
-  /** TODO(#29 Q7): polar latitudes. */
-  polarHandling: PolarHandling;
-  /** TODO(#29 Q8): sunrise convention. */
-  sunriseDefinition: SunriseDefinition;
-  /** TODO(#29 Q10): near-sub-boundary warning threshold in arcseconds (Stack B uses 60). */
-  nearBoundaryThresholdArcsec: number;
-  /** TODO(#29 Q12): include Uranus, Neptune, Pluto in the chart output. */
-  includeOuterPlanets: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -455,8 +413,6 @@ export interface ChartCalculationResult {
 
   // --- additive fields (unify-types, #39). All optional until `port-chart` fills them in. ---
 
-  /** Node model used for Rahu/Ketu. TODO(#29 Q6): no default. */
-  nodeMode?: NodeMode;
   /** Computed planets with tropical/sidereal longitude, speed and lords (Stack B record). */
   planetPositions?: PlanetaryPosition[];
   /**
@@ -464,13 +420,13 @@ export interface ChartCalculationResult {
    * The second member is the no-sunrise variant (TODO(#29 Q8)).
    */
   rulingPlanets?: RulingPlanets | RulingPlanetsWithoutSunrise;
-  /** TODO(#29 Q9): timeline depends on the chosen dasha year length. */
+  /** Timeline uses `DASHA_YEAR_DAYS` (365.2425). */
   dashaBalance?: DashaBalance;
   /** Four-level significators with node agents. TODO(#23). */
   nodeAgentSignificators?: FourLevelSignificators;
   /**
    * True when the cusps are Porphyry because Placidus is undefined at this latitude.
-   * Must always reach the API response. TODO(#29 Q7).
+   * Must always reach the API response (#29 (owner, 2026-11-21)).
    */
   isPolarFallback?: boolean;
   /** Polar fallback, near-sub-boundary and no-sunrise warnings. */
@@ -482,7 +438,6 @@ export interface ChartCalculationResult {
  * present. Assignable to `ChartCalculationResult`.
  */
 export interface FullChartCalculationResult extends ChartCalculationResult {
-  nodeMode: NodeMode;
   planets: PlanetHouseAssignment[];
   planetPositions: PlanetaryPosition[];
   significators: SignificatorsResult;
