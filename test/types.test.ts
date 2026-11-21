@@ -25,7 +25,6 @@ import type {
   SubBoundaryInfo,
 } from '../src/engine/types';
 import type { AyanamsaMode as CoreAyanamsaMode } from '../src/core/types';
-import type * as Shim from '../src/types';
 
 describe('AyanamsaMode', () => {
   it('is exactly the nine supported ids (#29, owner): no default member, no free string', () => {
@@ -52,10 +51,6 @@ describe('AyanamsaMode', () => {
   it('AyanamsaType (Stack A name) and core AyanamsaMode are the same type', () => {
     expectTypeOf<AyanamsaType>().toEqualTypeOf<AyanamsaMode>();
     expectTypeOf<CoreAyanamsaMode>().toEqualTypeOf<AyanamsaMode>();
-  });
-
-  it('Stack B shim keeps its uppercase value locally, until entrypoint', () => {
-    expectTypeOf<Shim.AyanamsaMode>().toEqualTypeOf<'KP_OLD' | 'KP_NEW'>();
   });
 
   it('the unified engine has no NodeMode: mean node only (#29 (owner, 2026-11-21))', () => {
@@ -145,30 +140,6 @@ describe('chart result and warnings', () => {
     expectTypeOf<HoraryCalculationResult['useSubMidpoint']>().toEqualTypeOf<boolean>();
     expectTypeOf<HoraryCalculationResult['horaryNumber']>().toEqualTypeOf<number>();
     expectTypeOf<HoraryCalculationResult>().toMatchTypeOf<ChartCalculationResult>();
-  });
-});
-
-describe('Stack B shim re-exports the identical parts', () => {
-  it('re-exported types are the same types as the unified ones', () => {
-    expectTypeOf<Shim.KPPlanetLord>().toEqualTypeOf<KPPlanetLord>();
-    expectTypeOf<Shim.KpLords>().toEqualTypeOf<KpLords>();
-    expectTypeOf<Shim.HouseCusp>().toEqualTypeOf<HouseCusp>();
-    expectTypeOf<Shim.HoraryTableEntry>().toEqualTypeOf<HoraryTableEntry>();
-    expectTypeOf<Shim.RulingPlanets>().toEqualTypeOf<RulingPlanets>();
-    expectTypeOf<Shim.DashaPeriod>().toEqualTypeOf<DashaPeriod>();
-  });
-
-  it('Stack B keeps its own wider PlanetName and NodeMode locally, until entrypoint', () => {
-    expectTypeOf<PlanetName>().toMatchTypeOf<Shim.PlanetName>();
-    expectTypeOf<'Uranus'>().toMatchTypeOf<Shim.PlanetName>();
-    expectTypeOf<Shim.NodeMode>().toEqualTypeOf<'MEAN' | 'TRUE'>();
-    expectTypeOf<PlanetaryPosition>().toMatchTypeOf<Shim.PlanetaryPosition>();
-  });
-
-  it('Stack B result keeps its own flat shape and string warnings', () => {
-    expectTypeOf<Shim.ChartCalculationResult['ayanamsaMode']>().toEqualTypeOf<Shim.AyanamsaMode>();
-    expectTypeOf<Shim.ChartCalculationResult['warnings']>().toEqualTypeOf<string[]>();
-    expectTypeOf<Shim.HoraryCalculationResult>().toMatchTypeOf<Shim.ChartCalculationResult>();
   });
 });
 
