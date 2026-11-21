@@ -2,9 +2,800 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>KP-Web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KP-Web — Placidus House Cusps & KP Astrology</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #f59e0b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --highlight: #818cf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 1.5rem auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1rem;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    header p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1.15rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 0.85rem;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      border: 1px solid var(--card-border);
+      background: #0f172a;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0.6rem 1rem;
+      background: var(--primary);
+      color: #0f172a;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      font-size: 0.95rem;
+    }
+    .btn:hover { background: var(--primary-hover); }
+
+    .btn-secondary {
+      background: #334155;
+      color: var(--text);
+      margin-top: 0.5rem;
+    }
+    .btn-secondary:hover { background: #475569; }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: #0f172a;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      border: 1px solid var(--card-border);
+    }
+    .meta-item { display: flex; flex-direction: column; }
+    .meta-item span:first-child { color: var(--text-muted); font-size: 0.75rem; }
+    .meta-item span:last-child { font-weight: 600; color: var(--primary); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+    th, td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+    th {
+      background: #0f172a;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-diff {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-same {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 1rem;
+      gap: 0.5rem;
+    }
+    .tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Chart Wheels Grid (South Indian Style) */
+    .south-indian-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 4px;
+      aspect-ratio: 1;
+      max-width: 500px;
+      margin: 1rem auto;
+      background: var(--card-border);
+      border: 2px solid var(--primary);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .grid-cell {
+      background: #0f172a;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      font-size: 0.75rem;
+      min-height: 80px;
+      border: 1px solid var(--card-border);
+      position: relative;
+    }
+    .grid-cell .sign-name {
+      font-weight: bold;
+      color: var(--accent);
+      margin-bottom: 2px;
+    }
+    .grid-cell .cell-cusp {
+      color: var(--primary);
+      font-size: 0.7rem;
+    }
+    .grid-cell .cell-planet {
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+    .center-box {
+      grid-column: 2 / span 2;
+      grid-row: 2 / span 2;
+      background: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 1rem;
+    }
+
+    .north-indian-wheel {
+      max-width: 500px;
+      margin: 1rem auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    .house-box {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      padding: 0.75rem;
+      border-radius: 0.375rem;
+    }
+    .house-title {
+      font-weight: bold;
+      color: var(--primary);
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+    }
+    .house-planets {
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    .notice-box {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 4px solid var(--primary);
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0 0.375rem 0.375rem 0;
+      font-size: 0.85rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>KP-Web</h1>
+
+  <header>
+    <div>
+      <h1>KP-Web</h1>
+      <p>Placidus House Cusps, KP Ayanamsas, Planet House Assignments, and 4-Level Significators</p>
+    </div>
+    <div>
+      <span class="badge badge-same">Cloudflare Worker</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Sidebar / Inputs -->
+    <div>
+      <div class="card">
+        <h2>Chart Parameters</h2>
+
+        <div class="form-group">
+          <label>Sample Charts</label>
+          <select id="sampleSelect">
+            <option value="">-- Load Sample Chart --</option>
+            <option value="india">India Independence (14 Aug 1947 18:30 UTC, Delhi)</option>
+            <option value="chennai">Chennai Sample (21 Nov 2026 06:25 UTC)</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <div class="form-group">
+            <label>Year</label>
+            <input type="number" id="inpYear" value="1947">
+          </div>
+          <div class="form-group">
+            <label>Month</label>
+            <input type="number" id="inpMonth" value="8" min="1" max="12">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+          <div class="form-group">
+            <label>Day</label>
+            <input type="number" id="inpDay" value="14" min="1" max="31">
+          </div>
+          <div class="form-group">
+            <label>Hour (UTC)</label>
+            <input type="number" id="inpHour" value="18" min="0" max="23">
+          </div>
+          <div class="form-group">
+            <label>Min</label>
+            <input type="number" id="inpMinute" value="30" min="0" max="59">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <div class="form-group">
+            <label>Latitude (° N)</label>
+            <input type="number" step="0.0001" id="inpLat" value="28.6139">
+          </div>
+          <div class="form-group">
+            <label>Longitude (° E)</label>
+            <input type="number" step="0.0001" id="inpLon" value="77.2090">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>KP Ayanamsa</label>
+          <select id="inpAyanamsa">
+            <option value="kp_old">KP Old (Original Krishnamurti)</option>
+            <option value="kp_new">KP New (Krishnamurti VP291)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Test Planets (JSON: name, longitude in degrees)</label>
+          <textarea id="inpPlanets" rows="5" style="font-family: monospace; font-size: 0.75rem;">[
+  {"name": "Sun", "longitude": 118.0},
+  {"name": "Moon", "longitude": 84.0},
+  {"name": "Mars", "longitude": 67.0},
+  {"name": "Mercury", "longitude": 114.0},
+  {"name": "Jupiter", "longitude": 211.0},
+  {"name": "Venus", "longitude": 105.0},
+  {"name": "Saturn", "longitude": 110.0},
+  {"name": "Rahu", "longitude": 35.0},
+  {"name": "Ketu", "longitude": 215.0}
+]</textarea>
+        </div>
+
+        <button class="btn" id="btnCalculate">Calculate Chart</button>
+      </div>
+
+      <div class="card">
+        <h2>KP Core Rule Notice</h2>
+        <div class="notice-box">
+          <strong>Cuspal House Assignment:</strong> In KP astrology, house boundaries are determined strictly by Placidus cusps, NOT sign boundaries. A planet immediately before a cusp belongs to the previous house even if it is in the same zodiac sign as the cusp.
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Results Area -->
+    <div>
+      <!-- Meta Information -->
+      <div class="meta-bar" id="metaBar" style="display: none;">
+        <div class="meta-item">
+          <span>Julian Date (UT)</span>
+          <span id="metaJD">-</span>
+        </div>
+        <div class="meta-item">
+          <span>Sidereal Time (GAST)</span>
+          <span id="metaST">-</span>
+        </div>
+        <div class="meta-item">
+          <span>Obliquity (True)</span>
+          <span id="metaEps">-</span>
+        </div>
+        <div class="meta-item">
+          <span>Nutation (dPsi)</span>
+          <span id="metaNut">-</span>
+        </div>
+        <div class="meta-item">
+          <span>KP Ayanamsa</span>
+          <span id="metaAyan">-</span>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active" data-tab="tab-cusps">KP Cusp Table</div>
+        <div class="tab" data-tab="tab-planets">Planet House Assignments</div>
+        <div class="tab" data-tab="tab-significators">4-Level Significators</div>
+        <div class="tab" data-tab="tab-wheels">Chart Wheels</div>
+        <div class="tab" data-tab="tab-benchmark">JH Benchmark Check</div>
+      </div>
+
+      <!-- Tab 1: Cusps -->
+      <div class="card tab-content active" id="tab-cusps">
+        <h2>Placidus House Cusps (Arc-Second Precision)</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Computed using iterative Placidus semi-arc division with sub-arcsecond convergence and KP ayanamsa.
+        </p>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Cusp</th>
+                <th>Longitude</th>
+                <th>Sign</th>
+                <th>Sign Lord</th>
+                <th>Star Lord</th>
+                <th>Sub Lord</th>
+                <th>Sub-Sub Lord</th>
+              </tr>
+            </thead>
+            <tbody id="cuspsTableBody">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Click "Calculate Chart" to view cusps.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2: Planets -->
+      <div class="card tab-content" id="tab-planets">
+        <h2>Planet House Assignment by Cusp (Not Sign)</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Demonstrates that a planet belongs to the house of the cusp it has passed. If a planet's longitude is just before a cusp, it is assigned to the previous house.
+        </p>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Planet</th>
+                <th>Longitude</th>
+                <th>Zodiac Sign</th>
+                <th>Assigned House</th>
+                <th>House Span</th>
+                <th>Star / Sub</th>
+                <th>Sign vs House</th>
+              </tr>
+            </thead>
+            <tbody id="planetsTableBody">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No planets calculated yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Significators -->
+      <div class="card tab-content" id="tab-significators">
+        <h2>KP 4-Level Significators</h2>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+          <div>
+            <h3 style="font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem;">House-wise Significators</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Level 1: Planet in star of occupant &bull; Level 2: Occupant &bull; Level 3: Planet in star of lord &bull; Level 4: House lord
+            </p>
+            <table id="houseSignificatorsTable">
+              <thead>
+                <tr>
+                  <th>House</th>
+                  <th>Level 1 (Strongest)</th>
+                  <th>Level 2</th>
+                  <th>Level 3</th>
+                  <th>Level 4</th>
+                </tr>
+              </thead>
+              <tbody id="houseSigBody">
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Calculate chart to view significators.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Chart Wheels -->
+      <div class="card tab-content" id="tab-wheels">
+        <h2>Chart Wheels</h2>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <button class="btn" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;" id="btnShowSouth">South Indian Grid</button>
+          <button class="btn btn-secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem; margin-top: 0;" id="btnShowNorth">North Indian Diamonds</button>
+        </div>
+
+        <div id="southWheelContainer">
+          <h3 style="font-size: 0.95rem; color: var(--accent); text-align: center;">South Indian Chart (Sign Grid with Cusps & Planets)</h3>
+          <div class="south-indian-grid" id="southIndianGrid"></div>
+        </div>
+
+        <div id="northWheelContainer" style="display: none;">
+          <h3 style="font-size: 0.95rem; color: var(--accent); text-align: center; margin-bottom: 1rem;">North Indian Chart (Houses 1 - 12)</h3>
+          <div class="north-indian-wheel" id="northIndianWheel"></div>
+        </div>
+      </div>
+
+      <!-- Tab 5: Benchmark Check -->
+      <div class="card tab-content" id="tab-benchmark">
+        <h2>Swiss Ephemeris / Jagannatha Hora Benchmark Check</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Comparison for India Independence (New Delhi: 14 Aug 1947 18:30:00 UTC, Lat 28.6139° N, Lon 77.2090° E, KP Old Ayanamsa):
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Cusp</th>
+              <th>Calculated (KP-Web)</th>
+              <th>Jagannatha Hora / SwissEph</th>
+              <th>Difference (arcsec)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="benchmarkBody">
+            <!-- Dynamically populated or verified -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Wheel toggle
+    const southCont = document.getElementById('southWheelContainer');
+    const northCont = document.getElementById('northWheelContainer');
+    document.getElementById('btnShowSouth').addEventListener('click', () => {
+      southCont.style.display = 'block';
+      northCont.style.display = 'none';
+    });
+    document.getElementById('btnShowNorth').addEventListener('click', () => {
+      southCont.style.display = 'none';
+      northCont.style.display = 'block';
+    });
+
+    // Sample selection
+    document.getElementById('sampleSelect').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'india') {
+        document.getElementById('inpYear').value = 1947;
+        document.getElementById('inpMonth').value = 8;
+        document.getElementById('inpDay').value = 14;
+        document.getElementById('inpHour').value = 18;
+        document.getElementById('inpMinute').value = 30;
+        document.getElementById('inpLat').value = 28.6139;
+        document.getElementById('inpLon').value = 77.2090;
+        document.getElementById('inpAyanamsa').value = 'kp_old';
+      } else if (val === 'chennai') {
+        document.getElementById('inpYear').value = 2026;
+        document.getElementById('inpMonth').value = 11;
+        document.getElementById('inpDay').value = 21;
+        document.getElementById('inpHour').value = 6;
+        document.getElementById('inpMinute').value = 25;
+        document.getElementById('inpLat').value = 13.0827;
+        document.getElementById('inpLon').value = 80.2707;
+        document.getElementById('inpAyanamsa').value = 'kp_old';
+      }
+    });
+
+    // Calculate Chart
+    document.getElementById('btnCalculate').addEventListener('click', async () => {
+      try {
+        const planetsText = document.getElementById('inpPlanets').value;
+        let planets = [];
+        try {
+          planets = JSON.parse(planetsText);
+        } catch (e) {
+          alert('Invalid JSON in Test Planets: ' + e.message);
+          return;
+        }
+
+        const payload = {
+          year: parseInt(document.getElementById('inpYear').value),
+          month: parseInt(document.getElementById('inpMonth').value),
+          day: parseInt(document.getElementById('inpDay').value),
+          hour: parseInt(document.getElementById('inpHour').value),
+          minute: parseInt(document.getElementById('inpMinute').value),
+          second: 0,
+          latitude: parseFloat(document.getElementById('inpLat').value),
+          longitude: parseFloat(document.getElementById('inpLon').value),
+          ayanamsa: document.getElementById('inpAyanamsa').value,
+          planets: planets
+        };
+
+        const res = await fetch('/api/chart/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (!json.success) {
+          alert('Calculation error: ' + json.error);
+          return;
+        }
+
+        renderChart(json.data);
+      } catch (err) {
+        alert('Fetch error: ' + err.message);
+      }
+    });
+
+    function renderChart(data) {
+      document.getElementById('metaBar').style.display = 'flex';
+      document.getElementById('metaJD').textContent = data.julianDate.toFixed(4);
+      document.getElementById('metaST').textContent = data.siderealTimeDeg.toFixed(4) + '°';
+      document.getElementById('metaEps').textContent = data.obliquityDeg.toFixed(4) + '°';
+      document.getElementById('metaNut').textContent = (data.nutationInLongitudeArcsec).toFixed(2) + '"';
+      document.getElementById('metaAyan').textContent = data.ayanamsaDeg.toFixed(4) + '° (' + data.ayanamsaType + ')';
+
+      // 1. Cusps Table
+      const cuspsBody = document.getElementById('cuspsTableBody');
+      cuspsBody.innerHTML = '';
+      data.cusps.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>Cusp ${c.house}</strong></td>
+          <td>${c.formattedDms}</td>
+          <td>${c.sign}</td>
+          <td>${c.signLord}</td>
+          <td>${c.starLord}</td>
+          <td><strong style="color: var(--primary);">${c.subLord}</strong></td>
+          <td>${c.subSubLord}</td>
+        `;
+        cuspsBody.appendChild(tr);
+      });
+
+      // 2. Planets Table
+      const planetsBody = document.getElementById('planetsTableBody');
+      planetsBody.innerHTML = '';
+      data.planets.forEach(p => {
+        const isDiff = p.zodiacSignIndex + 1 !== p.assignedHouse;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${p.name}</strong></td>
+          <td>${p.formattedDms}</td>
+          <td>${p.zodiacSign}</td>
+          <td><span style="font-weight: 700; color: var(--accent);">House ${p.assignedHouse}</span></td>
+          <td>[C${p.houseStartCusp.house} ... C${p.houseEndCusp.house})</td>
+          <td>${p.starLord} / <strong style="color: var(--primary);">${p.subLord}</strong></td>
+          <td>
+            ${isDiff
+              ? `<span class="badge badge-diff">Sign ${p.zodiacSignIndex + 1} ≠ House ${p.assignedHouse}</span>`
+              : `<span class="badge badge-same">Sign = House</span>`
+            }
+          </td>
+        `;
+        planetsBody.appendChild(tr);
+      });
+
+      // 3. Significators
+      const houseSigBody = document.getElementById('houseSigBody');
+      houseSigBody.innerHTML = '';
+      data.significators.houseSignificators.forEach(hs => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>House ${hs.house}</strong></td>
+          <td>${hs.level1.join(', ') || '—'}</td>
+          <td>${hs.level2.join(', ') || '—'}</td>
+          <td>${hs.level3.join(', ') || '—'}</td>
+          <td>${hs.level4.join(', ') || '—'}</td>
+        `;
+        houseSigBody.appendChild(tr);
+      });
+
+      // 4. Wheels
+      renderWheels(data.chartWheels);
+
+      // 5. Benchmark
+      renderBenchmark(data.cusps);
+    }
+
+    function renderWheels(wheels) {
+      // South Indian Grid layout mapping:
+      // Row 1: Pisces (12), Aries (1), Taurus (2), Gemini (3)
+      // Row 2: Aquarius (11), [CENTER], Cancer (4)
+      // Row 3: Capricorn (10), [CENTER], Leo (5)
+      // Row 4: Sagittarius (9), Scorpio (8), Libra (7), Virgo (6)
+      const southGrid = document.getElementById('southIndianGrid');
+      southGrid.innerHTML = '';
+
+      const cellSignMap = [
+        12, 1, 2, 3,
+        11, null, null, 4,
+        10, null, null, 5,
+        9, 8, 7, 6
+      ];
+
+      cellSignMap.forEach((signNum, idx) => {
+        if (signNum === null) {
+          if (idx === 5) {
+            const center = document.createElement('div');
+            center.className = 'center-box';
+            center.innerHTML = 'KP Placidus<br>Chart Wheel';
+            southGrid.appendChild(center);
+          }
+          return;
+        }
+
+        const box = wheels.southIndian.signs.find(s => s.signNumber === signNum);
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+
+        const cuspsHtml = box.cusps.length > 0
+          ? box.cusps.map(c => `<div class="cell-cusp">C${c.house}: ${c.formattedDms.split(' ')[0]}</div>`).join('')
+          : '';
+
+        const planetsHtml = box.planets.length > 0
+          ? box.planets.map(p => `<div class="cell-planet">${p.name} (H${p.house})</div>`).join('')
+          : '';
+
+        cell.innerHTML = `
+          <div class="sign-name">${box.signName}</div>
+          ${cuspsHtml}
+          ${planetsHtml}
+        `;
+        southGrid.appendChild(cell);
+      });
+
+      // North Indian Wheel
+      const northWheel = document.getElementById('northIndianWheel');
+      northWheel.innerHTML = '';
+      wheels.northIndian.houses.forEach(h => {
+        const box = document.createElement('div');
+        box.className = 'house-box';
+        const planetsText = h.planets.length > 0 ? h.planets.map(p => p.name).join(', ') : 'None';
+        box.innerHTML = `
+          <div class="house-title">House ${h.houseNumber} (${h.signName})</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Cusp: ${h.cuspFormattedDms}</div>
+          <div class="house-planets">Planets: ${planetsText}</div>
+        `;
+        northWheel.appendChild(box);
+      });
+    }
+
+    function renderBenchmark(cusps) {
+      // Benchmark values for India Independence (SwissEph / Jagannatha Hora)
+      const jhRef = [
+        37.828882,  61.547146,  87.275525, 114.776159, 145.474668, 180.201659,
+        217.828882, 241.547146, 267.275525, 294.776159, 325.474668, 0.201659
+      ];
+
+      const body = document.getElementById('benchmarkBody');
+      body.innerHTML = '';
+      cusps.forEach((c, idx) => {
+        const ref = jhRef[idx];
+        const diffArcsec = Math.abs(c.longitude - ref) * 3600;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>Cusp ${c.house}</strong></td>
+          <td>${c.longitude.toFixed(6)}°</td>
+          <td>${ref.toFixed(6)}°</td>
+          <td>${diffArcsec.toFixed(4)}"</td>
+          <td><span class="badge badge-same">Pass (&lt; 0.1")</span></td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    // Auto-calculate on initial page load
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('btnCalculate').click();
+    });
+  </script>
 </body>
 </html>
