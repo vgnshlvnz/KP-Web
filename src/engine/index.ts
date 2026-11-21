@@ -53,7 +53,7 @@ export * from './horary.js';
  */
 export function calculateKPChart(
   input: DateTimeLocation,
-  ayanamsaType: AyanamsaType = 'kp_old',
+  ayanamsaType: AyanamsaType,
   planets: PlanetInput[] = []
 ): ChartCalculationResult {
   // Convert local time to Universal Time (UT)
@@ -282,8 +282,9 @@ function chartInstantUtc(input: DateTimeLocation): Date {
  * - `warnings` carries `polar_fallback` (never dropped), `near_sub_boundary` and `no_sunrise`.
  *
  * `input.utcOffsetHours` is required here (unlike `calculateKPChart`, which treats it as 0).
- * The legacy `calculateKPChart` is still used by `src/index.ts` until `entrypoint`. Its only change is
- * at polar latitudes, where it now returns Porphyry cusps plus a `polar_fallback` warning instead of throwing.
+ * The legacy `calculateKPChart` is still used by the `/api/chart/*` routes in `src/index.ts`. Its only change
+ * is at polar latitudes, where it now returns Porphyry cusps plus a `polar_fallback` warning instead of
+ * throwing. Its `ayanamsaType` argument is required: there is no default (#22).
  */
 export function calculateChart(
   input: DateTimeLocation,

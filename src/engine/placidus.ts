@@ -137,7 +137,7 @@ export interface PlacidusCuspsResult {
   warnings?: string[];
   /**
    * The same warnings in the unified `ChartWarning` shape, always present (empty when none), so
-   * that `port-chart` can return them in `ChartCalculationResult.warnings` unchanged.
+   * that `calculateChart` returns them in `ChartCalculationResult.warnings` unchanged.
    */
   chartWarnings: ChartWarning[];
 }

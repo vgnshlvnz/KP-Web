@@ -212,7 +212,7 @@ export const KP_NEW_J2000_DEG = 23.78036498;
  * zero-padded. Seconds are rounded to the whole second, with carry into minutes and degrees; with
  * `includeArcsecFractions` they keep two decimals (`23°45'36.86"`, no rounding carry).
  *
- * Moved from Stack B's ayanamsa module (deleted by `entrypoint`, #66) with identical
+ * Moved from Stack B's ayanamsa module (deleted in `entrypoint`, #66) with identical
  * output. It is a different formatter from `formatDMS` in `kp-lords.ts`, which zero-pads degrees
  * (`03°40'12"`) and is used by the horary table; the two are not interchangeable.
  */

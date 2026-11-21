@@ -25,6 +25,7 @@ import type {
   SubBoundaryInfo,
 } from '../src/engine/types';
 import type { AyanamsaMode as CoreAyanamsaMode } from '../src/core/types';
+import type { calculateKPChart } from '../src/engine/index';
 
 describe('AyanamsaMode', () => {
   it('is exactly the nine supported ids (#29, owner): no default member, no free string', () => {
@@ -149,5 +150,38 @@ describe('owner-decision options have no default', () => {
     expectTypeOf<Required<ChartCalculationOptions>>().toEqualTypeOf<ChartCalculationOptions>();
     expectTypeOf<ChartCalculationOptions['ayanamsa']>().toEqualTypeOf<AyanamsaMode>();
     expectTypeOf<{}>().not.toMatchTypeOf<ChartCalculationOptions>();
+  });
+});
+
+// TODO(#22): the legacy chart function used to default `ayanamsaType` to 'kp_old'. It is required now
+// (final-cleanup, #69). Type-level only: `npm run typecheck` fails if the default comes back.
+describe('calculateKPChart has no ayanamsa default (#22, #69)', () => {
+  const input = {
+    year: 1992,
+    month: 3,
+    day: 11,
+    hour: 6,
+    minute: 14,
+    second: 0,
+    utcOffsetHours: 8,
+    latitude: 3.139,
+    longitude: 101.6869,
+  };
+
+  it('the ayanamsa parameter is required and not optional', () => {
+    type Params = Parameters<typeof calculateKPChart>;
+    expectTypeOf<Params[1]>().toEqualTypeOf<AyanamsaType>();
+    expectTypeOf<Params[1]>().not.toEqualTypeOf<AyanamsaType | undefined>();
+  });
+
+  it('omitting the ayanamsa is a type error', () => {
+    // Never called: the point is that the next two lines must not type-check.
+    const omitted = (fn: typeof calculateKPChart) => {
+      // @ts-expect-error ayanamsaType is required (no silent 'kp_old')
+      fn(input);
+      // @ts-expect-error `undefined` is not an ayanamsa either
+      fn(input, undefined);
+    };
+    expect(typeof omitted).toBe('function');
   });
 });

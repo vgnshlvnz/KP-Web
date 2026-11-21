@@ -174,8 +174,8 @@ export type RulingPlanetsResult = RulingPlanetsFound | RulingPlanetsNoSunrise;
  * `[AscStar, AscSign, MoonStar, MoonSign, DayLord]`: duplicates kept, no nodes.
  *
  * `ascendant` and `moon` supply only their sign and star lords, so a `HouseCusp` or a
- * `PlanetaryPosition` can be passed. (`getPositionLords` results do not fit yet: their lord
- * fields are typed `string` until `port-lords` narrows them.)
+ * `PlanetaryPosition` can be passed. (The lord fields of `getPositionLords` results were
+ * narrowed to `KPPlanetLord` by `port-lords`, #43.)
  */
 export function calculateRulingPlanets(
   ascendant: Pick<KpLords, 'signLord' | 'starLord'>,

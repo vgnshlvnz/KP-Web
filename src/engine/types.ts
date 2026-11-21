@@ -1,8 +1,8 @@
 /**
  * Unified domain types for the KP-Web engine (work package `unify-types`, #39).
  *
- * This is the single type module. It is the superset of Stack A's original types and Stack B's
- * `src/types.ts`. Everything here is additive: existing Stack A code compiles unchanged.
+ * This is the single type module. It is the superset of the original Stack A types and the Stack B
+ * `src/types.ts` (deleted in `entrypoint`, #66). Everything here was added without breaking the Stack A code.
  *
  * Owner decisions that are still open are typed as explicit options with NO default. Nothing in
  * this file picks a value for them. Code that needs one must take it as a parameter.
@@ -23,11 +23,12 @@
  * rejected, never mapped to a fallback.
  *
  * Wire value is the lowercase id below, as sent by the live UI and checked by `core/validation.ts`.
- * Stack B's `'KP_OLD' | 'KP_NEW'` stays local to `src/types.ts` until `entrypoint`.
+ * Stack B's `'KP_OLD' | 'KP_NEW'` (uppercase) was local to its `src/types.ts` and went away with it.
  * TODO(#29 Q13): owner to confirm the lowercase wire value.
  *
  * TODO(#22): the default mode is an owner decision. This type carries no default; any
- * `= 'kp_old'` parameter default elsewhere in the code is the silent default #22 refers to.
+ * `= 'kp_old'` parameter default is the silent default #22 refers to; the last one, in
+ * `calculateKPChart`, was removed in `final-cleanup` (#69).
  */
 export type AyanamsaMode =
   | 'kp_old'
@@ -118,8 +119,8 @@ export interface SubBoundaryInfo extends Partial<SubSubBoundaryInfo> {
 /**
  * Distance of a longitude from the edges of its KP sub-sub span (`port-chart`, #54). A sub-sub span
  * is as small as 120 arcsec, so this is the boundary that a few arcseconds of ephemeris error
- * flips first. Optional on `SubBoundaryInfo` so Stack B's `KpLords` (which has no such fields)
- * keeps compiling; `getPositionLords(lon, options)` always fills all three.
+ * flips first. Optional on `SubBoundaryInfo` so the `KpLords` record (Stack B's shape, which has no
+ * such fields) keeps compiling; `getPositionLords(lon, options)` always fills all three.
  * TODO(#29 Q16): whether the near-boundary warning follows the sub edge, the sub-sub edge or
  * either is undecided. `calculateChart` warns when either flag is true.
  */
@@ -426,7 +427,8 @@ export interface ChartCalculationResult {
   significators?: SignificatorsResult;
   chartWheels?: ChartWheels;
 
-  // --- additive fields (unify-types, #39). All optional until `port-chart` fills them in. ---
+  // --- additive fields (unify-types, #39). Optional here because the legacy `calculateKPChart`
+  // does not fill them; `calculateChart` always does (`FullChartCalculationResult`). ---
 
   /** Computed planets with tropical/sidereal longitude, speed and lords (Stack B record). */
   planetPositions?: PlanetaryPosition[];
