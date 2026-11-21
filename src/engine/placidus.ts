@@ -6,6 +6,7 @@ import {
   asind,
   atand,
 } from './astronomy.js';
+import type { ChartWarning } from './types.js';
 
 const VERY_SMALL = 1.0e-10;
 const VERY_SMALL_PLAC_ITER = 1.0 / 360000.0; // 0.01 arcseconds convergence threshold
@@ -130,8 +131,41 @@ export interface PlacidusCuspsResult {
   midheavenTropical: number;
   ascendantSidereal: number;
   midheavenSidereal: number;
+  /** True when the cusps are Porphyry because Placidus is undefined (or did not converge). */
   isPolarFallback: boolean;
+  /** Human-readable warnings; absent when there are none. */
   warnings?: string[];
+  /**
+   * The same warnings in the unified `ChartWarning` shape, always present (empty when none), so
+   * that `calculateChart` returns them in `ChartCalculationResult.warnings` unchanged.
+   */
+  chartWarnings: ChartWarning[];
+}
+
+/**
+ * Thrown where a Porphyry fallback would be wrong or silent: horary (the Ascendant to ARMC
+ * inversion is not unique inside the polar circle, #58) and `calculateCuspsFromARMC` (which
+ * returns bare cusps and cannot carry the `polar_fallback` warning).
+ * `calculatePlacidusCusps` itself never throws it: it falls back to Porphyry (#29 (owner,
+ * 2026-11-21), `POLAR_HANDLING` in `conventions.ts`).
+ */
+export class PolarLatitudeError extends Error {
+  readonly latitude: number;
+  readonly obliquity: number;
+  constructor(message: string, latitude: number, obliquity: number) {
+    super(message);
+    this.name = 'PolarLatitudeError';
+    this.latitude = latitude;
+    this.obliquity = obliquity;
+  }
+}
+
+/**
+ * True when Placidus is undefined at this latitude: |lat| >= 90 deg - obliquity (about 66.56 deg).
+ * Below that limit Placidus is valid, so latitudes such as 66.5 N are NOT polar (#35).
+ */
+export function isPolarLatitude(latitude: number, obliquity: number): boolean {
+  return Math.abs(latitude) >= 90.0 - obliquity;
 }
 
 /**
@@ -139,6 +173,11 @@ export interface PlacidusCuspsResult {
  * geographic latitude, obliquity, and sidereal ayanamsa.
  *
  * Matches Swiss Ephemeris swe_houses / swe_houses_ex to arc-second precision.
+ *
+ * When Placidus is undefined (|lat| >= 90 - obliquity), or an intermediate cusp does not
+ * converge, the result is Porphyry cusps with `isPolarFallback = true` and a `polar_fallback`
+ * warning (what Swiss Ephemeris does). #29 (owner, 2026-11-21): this is the only behaviour; there
+ * is no option and no 'refuse' mode. The latitude is never clamped.
  */
 export function calculatePlacidusCusps(
   armc: number,
@@ -167,12 +206,11 @@ export function calculatePlacidusCusps(
 
   // Polar circle check: Placidus fails inside the polar circles (|lat| >= 90 - eps)
   let isPolarFallback = false;
-  if (Math.abs(fi) >= 90.0 - ekl) {
-    warnings.push(
-      `Latitude ${fi.toFixed(2)}° is within polar circle. Switched to Porphyry house division.`
-    );
+  if (isPolarLatitude(fi, ekl)) {
+    const message = `Latitude ${fi.toFixed(2)}° is within polar circle. Switched to Porphyry house division.`;
+    warnings.push(message);
     isPolarFallback = true;
-    return calculatePorphyryCusps(ascTrop, mcTrop, ayanamsa, warnings);
+    return calculatePorphyryCusps(ascTrop, mcTrop, ayanamsa, warnings, 'polar_fallback');
   }
 
   const a = asind(tanfi * tane);
@@ -224,11 +262,10 @@ export function calculatePlacidusCusps(
       }
 
       if (!converged) {
-        warnings.push(
-          `Placidus iteration for house ${houseIndex + 1} did not converge; using Porphyry fallback.`
-        );
+        const message = `Placidus iteration for house ${houseIndex + 1} did not converge; using Porphyry fallback.`;
+            warnings.push(message);
         isPolarFallback = true;
-        return calculatePorphyryCusps(ascTrop, mcTrop, ayanamsa, warnings);
+        return calculatePorphyryCusps(ascTrop, mcTrop, ayanamsa, warnings, 'polar_fallback');
       }
     }
   }
@@ -255,6 +292,7 @@ export function calculatePlacidusCusps(
     midheavenSidereal: mcSid,
     isPolarFallback,
     warnings: warnings.length > 0 ? warnings : undefined,
+    chartWarnings: [],
   };
 }
 
@@ -265,7 +303,8 @@ function calculatePorphyryCusps(
   asc: number,
   mc: number,
   ayanamsa: number,
-  warnings: string[]
+  warnings: string[],
+  code: ChartWarning['code']
 ): PlacidusCuspsResult {
   const tropCusps = new Array<number>(12);
   tropCusps[0] = asc;
@@ -303,5 +342,91 @@ function calculatePorphyryCusps(
     midheavenSidereal: normalizeDegrees(mc - ayanamsa),
     isPolarFallback: true,
     warnings,
+    chartWarnings: warnings.map((message) => ({ code, message })),
   };
+}
+
+/**
+ * Inverts a tropical Ascendant to the ARMC (sidereal time in degrees) that produces it at the
+ * given latitude and obliquity. Used for KP horary (Prashna): the Ascendant is fixed at the START
+ * of the querent's chosen sub and the ARMC is derived from it.
+ *
+ * Algorithm from Stack B's `invertAscendantToRamc` (10-degree grid seed, then Newton-Raphson on
+ * `asc1`), but the latitude is NOT clamped (#35). Throws `PolarLatitudeError` inside the polar
+ * circle (|lat| >= 90 - obliquity), where the Ascendant is not a one-to-one function of the ARMC
+ * and Placidus is undefined; there is no fallback because a horary chart needs a unique ARMC.
+ *
+ * Accuracy: round-trips through `calculatePlacidusCusps` to better than 1e-6 arcsec. Within
+ * about 1e-7 deg of the one degenerate Ascendant at the polar limit (Asc = 0 / ARMC = 270 at
+ * 66.5 N) the Ascendant is so sensitive to ARMC that the double-precision limit is a few
+ * hundredths of an arcsec; this does not occur at KP-relevant latitudes.
+ */
+export function ascendantToArmc(
+  targetAscendantDeg: number,
+  latitudeDeg: number,
+  obliquityDeg: number
+): number {
+  if (isPolarLatitude(latitudeDeg, obliquityDeg)) {
+    throw new PolarLatitudeError(
+      `Cannot invert the Ascendant to ARMC at latitude ${latitudeDeg}: inside the polar circle.`,
+      latitudeDeg,
+      obliquityDeg
+    );
+  }
+
+  const target = normalizeDegrees(targetAscendantDeg);
+  const sine = sind(obliquityDeg);
+  const cose = cosd(obliquityDeg);
+  const signedDiff = (a: number, b: number): number => {
+    let d = a - b;
+    if (d > 180.0) d -= 360.0;
+    if (d < -180.0) d += 360.0;
+    return d;
+  };
+
+  // Closest 10-degree grid point as the initial guess
+  let th = 0.0;
+  let minDiff = Infinity;
+  for (let step = 0; step < 36; step++) {
+    const thTry = step * 10.0;
+    const diff = Math.abs(signedDiff(asc1(thTry + 90.0, latitudeDeg, sine, cose), target));
+    if (diff < minDiff) {
+      minDiff = diff;
+      th = thTry;
+    }
+  }
+
+  // Newton-Raphson iteration
+  for (let iter = 0; iter < 50; iter++) {
+    const val = asc1(th + 90.0, latitudeDeg, sine, cose);
+    const err = signedDiff(val, target);
+    if (Math.abs(err) < 1e-12) break;
+
+    const delta = 0.0001;
+    const valD = asc1(th + delta + 90.0, latitudeDeg, sine, cose);
+    let deriv = signedDiff(valD, val) / delta;
+    if (Math.abs(deriv) < 1e-6) deriv = 1.0;
+
+    th = normalizeDegrees(th - err / deriv);
+  }
+
+  if (Math.abs(signedDiff(asc1(th + 90.0, latitudeDeg, sine, cose), target)) < 1e-10) {
+    return th;
+  }
+
+  // Newton did not settle (the Ascendant changes very fast with ARMC near some values at high
+  // latitudes, e.g. 66.5 N). The Ascendant increases monotonically with ARMC, so bisect instead.
+  const asc0 = asc1(90.0, latitudeDeg, sine, cose);
+  const want = normalizeDegrees(target - asc0);
+  let lo = 0.0;
+  let hi = 360.0;
+  for (let iter = 0; iter < 200; iter++) {
+    const mid = 0.5 * (lo + hi);
+    if (mid === lo || mid === hi) break;
+    const rel = normalizeDegrees(asc1(mid + 90.0, latitudeDeg, sine, cose) - asc0);
+    // rel is monotonic in mid on [0, 360); a wrap to ~0 for the very first values is fine.
+    if (rel < want) lo = mid;
+    else hi = mid;
+  }
+  return normalizeDegrees(0.5 * (lo + hi));
 }

@@ -68,22 +68,42 @@ describe('Birth Data Validation & Integrity', () => {
     });
   });
 
-  describe('Ayanamsa Selection & Prohibition of Silent Lahiri Fallback', () => {
-    it('accepts explicitly selected KP Old and KP New', () => {
-      expect(validateAyanamsa('kp_old')).toBeNull();
-      expect(validateAyanamsa('kp_new')).toBeNull();
+  describe('Ayanamsa Selection (explicit choice, no default, no silent fallback)', () => {
+    it('accepts every supported mode when it is explicitly selected', () => {
+      // Owner decision on #29 (2026-11-21, answer A): KP Old, KP New, Lahiri, Raman, Fagan-Bradley,
+      // Yukteshwar, J.N. Bhasin, Usha-Shashi and Nil (tropical).
+      for (const id of [
+        'kp_old',
+        'kp_new',
+        'lahiri',
+        'raman',
+        'fagan_bradley',
+        'yukteshwar',
+        'jn_bhasin',
+        'usha_shashi',
+        'nil',
+      ]) {
+        expect(validateAyanamsa(id), id).toBeNull();
+      }
     });
 
-    it('strictly rejects Lahiri or unselected ayanamsa without silent fallback', () => {
-      const errLahiri = validateAyanamsa('lahiri');
-      expect(errLahiri).toBeDefined();
-      expect(errLahiri).toContain('Lahiri or silent fallback is not permitted');
+    it('rejects an unknown or missing ayanamsa without silent fallback', () => {
+      // Superseded by the owner decision on #29: this test used to assert that 'lahiri' is rejected
+      // ("Lahiri or silent fallback is not permitted"). Lahiri is now a supported explicit choice, so
+      // the unknown id here is 'lahiri2'. The silent fallback is still prohibited.
+      const errUnknown = validateAyanamsa('lahiri2');
+      expect(errUnknown).toBeDefined();
+      expect(errUnknown).toContain('no silent fallback');
+      for (const bad of ['Lahiri', 'KP_OLD', 'kp-old', 'default']) {
+        expect(validateAyanamsa(bad), bad).toContain('no silent fallback');
+      }
 
       const errEmpty = validateAyanamsa('');
       expect(errEmpty).toContain('KP Old');
 
       const errNull = validateAyanamsa(null);
       expect(errNull).toContain('KP Old');
+      expect(validateAyanamsa(undefined)).toContain('KP Old');
     });
   });
 
@@ -165,7 +185,7 @@ describe('Birth Data Validation & Integrity', () => {
         latitude: 100, // Out of bounds
         longitude: 200,
         timezone: 'Fake/Zone',
-        ayanamsa: 'lahiri', // Prohibited
+        ayanamsa: 'lahiri2', // Not a supported id (was 'lahiri' before the #29 owner decision)
       };
 
       const result = validateBirthInput(payload);

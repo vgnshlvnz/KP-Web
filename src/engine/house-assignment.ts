@@ -1,6 +1,11 @@
 import { normalizeDegrees } from './astronomy.js';
-import { PlanetInput, PlanetHouseAssignment } from './types.js';
-import { getPositionLords } from './kp-lords.js';
+import {
+  PlanetInput,
+  PlanetHouseAssignment,
+  SubBoundaryInfo,
+  SubSubBoundaryInfo,
+} from './types.js';
+import { getPositionLords, PositionLordsOptions } from './kp-lords.js';
 
 /**
  * Checks whether a given longitude falls within the span of house [cusp, nextCusp).
@@ -61,10 +66,24 @@ export function getHouseForLongitude(
 /**
  * Assigns an array of planets to their cuspal houses in KP,
  * and derives their KP lords (sign, star, sub, sub-sub lord).
+ *
+ * Pass `options` (the near-boundary threshold in arcseconds; `calculateChart` passes
+ * `NEAR_BOUNDARY_THRESHOLD_ARCSEC`) to also get the sub
+ * and sub-sub boundary fields on every planet. Without it the output is unchanged.
  */
 export function assignPlanetsToHouses(
   planets: PlanetInput[],
   cusps: number[]
+): PlanetHouseAssignment[];
+export function assignPlanetsToHouses(
+  planets: PlanetInput[],
+  cusps: number[],
+  options: PositionLordsOptions
+): Array<PlanetHouseAssignment & SubBoundaryInfo & SubSubBoundaryInfo>;
+export function assignPlanetsToHouses(
+  planets: PlanetInput[],
+  cusps: number[],
+  options?: PositionLordsOptions
 ): PlanetHouseAssignment[] {
   return planets.map((p) => {
     const lon = normalizeDegrees(p.longitude);
@@ -76,7 +95,7 @@ export function assignPlanetsToHouses(
     const distancePassedCusp = normalizeDegrees(lon - currentCusp);
     const distanceToNextCusp = normalizeDegrees(nextCusp - lon);
 
-    const lords = getPositionLords(lon);
+    const lords = options ? getPositionLords(lon, options) : getPositionLords(lon);
 
     return {
       ...lords,

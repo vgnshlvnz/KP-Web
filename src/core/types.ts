@@ -1,4 +1,7 @@
-export type AyanamsaMode = 'kp_old' | 'kp_new';
+import type { AyanamsaMode } from '../engine/types';
+
+// Single definition lives in `src/engine/types.ts` (unify-types, #39). Re-exported so `core/*` keeps its import path.
+export type { AyanamsaMode };
 
 export interface PlaceResult {
   id: string;

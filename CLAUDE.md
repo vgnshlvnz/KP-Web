@@ -12,31 +12,47 @@ npm test               # vitest run — must pass
 npx wrangler dev       # local server; never run `wrangler deploy`
 ```
 
-## Current state (as of 21 Nov 2026, commit 1ba2a10) — the build is broken
+## Current state (as of 21 Nov 2026, `build/integration` @ 6f21469) — build fixed, one app
 
-The repo contains **two parallel apps** that were generated separately:
+The two parallel stacks are merged into one. `npm run typecheck` and `npm test` are green on a clean `npm ci`
+(all tests on vitest, importing from `src/`).
 
-| | Stack A (live) | Stack B (orphaned) |
+- **One entrypoint:** `src/index.ts` (Hono), matching `wrangler.jsonc`. `public/index.html` is served as static assets.
+  Routes: `GET /api/health`, `/api/chart/sample`, `/api/horary/table`, `/api/horary-table`, `/api/ayanamsa`;
+  `POST /api/chart/cusps`, `/api/chart/calculate`, `/api/calculate`, `/api/horary`.
+- **One engine, `src/engine/*`:** `astronomy.ts` (ayanamsa, nutation, obliquity, sidereal time), `ephemeris.ts`
+  (planets on `astronomy-engine`), `placidus.ts`, `kp-lords.ts`, `significators.ts`, `house-assignment.ts`, `chart-wheels.ts`,
+  `dasha.ts`, `ruling-planets.ts`, `horary.ts`, `ayanamsa-defs.ts`, one types module `types.ts`, and `index.ts`
+  (`calculateChart`, `calculateKPChart`). The old Stack B files (`src/worker.ts`, `src/types.ts`, `src/ephemeris/*`,
+  `src/houses/*`, `src/kp/*`) are deleted; what they uniquely provided is ported and tested.
+- **Fixed conventions** (owner decisions on #29) are constants in `src/engine/conventions.ts`, not options: mean node only,
+  no outer planets, Porphyry fallback with a visible `polar_fallback` warning (horary at polar latitude throws),
+  sunrise = upper limb with standard refraction, dasha year 365.2425 days, near-boundary threshold 60 arcsec.
+- **Ayanamsa:** nine explicit ids (`kp_old`, `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`,
+  `usha_shashi`, `nil`), defined as Swiss Ephemeris defines them, in `src/engine/ayanamsa-defs.ts`. **No default** and no
+  fallback: `calculateChart`, `calculateKPChart`, `calculateAyanamsa`, `calculateEphemeris` and every API route require it;
+  missing or unknown is an error (HTTP 400).
+- **Accuracy of `astronomy-engine` vs Swiss Ephemeris 2.10.03** (audit, #53; local comparison only, SE is not a dependency):
+  mean ayanamsa 0.0002″, Sun 0.90″, Moon 4.37″, Mercury to Saturn up to 10.21″ (Saturn 2026), mean node 0.23″, Placidus
+  cusps up to 0.10″. A 10″ error flips the sub-sub lord for about 1.7% of positions (about 0.3% at the mean residual),
+  which is why charts carry `near_sub_boundary` warnings. Tolerances are pinned in `test/*-reference.test.ts`; never loosen them.
+
+**Open owner decisions — keep as explicit options with `TODO(#NN)`, do not pick defaults:**
+
+| Issue | Decision | Where it applies |
 |---|---|---|
-| Entrypoint | `src/index.ts` (Hono) — `wrangler.jsonc` `main` | `src/worker.ts` (plain fetch handler) |
-| Ephemeris | `src/engine/astronomy.ts` (hand-rolled, no deps) | `src/ephemeris/jpl-ephemeris.ts` (`astronomy-engine`) + `src/ephemeris/ayanamsa.ts` |
-| Houses | `src/engine/placidus.ts` | `src/houses/placidus.ts` |
-| Lords | `src/engine/kp-lords.ts` | `src/kp/sub-lords.ts` |
-| Significators | `src/engine/significators.ts` | `src/kp/significators.ts` |
-| Only in this stack | `house-assignment.ts`, `chart-wheels.ts` | `dasha.ts`, `ruling-planets.ts`, `horary.ts`, `horary-table.ts`, `engine.ts` |
-| Types | `src/engine/types.ts` | `src/types.ts` |
-| Tests | vitest, import from `src/` — passing | `node:test` + `node:assert`, import from `../dist/` — failing |
+| #22 | default ayanamsa (no default until decided; nine explicit ids). #59 to #61 (owner, open) ask the same mode question: default, availability in birth and horary input, labelling. #29 question E ("KP Straightline (Adjusted)": a new mode or the default; it has no Swiss Ephemeris definition) is also still open | `AyanamsaMode` and `ChartCalculationOptions.ayanamsa` in `src/engine/types.ts`; `calculateAyanamsa` in `src/engine/astronomy.ts`; `requireAyanamsa` in `src/index.ts` |
+| #23 | Rahu/Ketu agent rule set | `NodeAgentRuleSet` in `types.ts`; `calculateFourLevelSignificators` in `significators.ts`; `ENGINE_CONFIG.nodeAgentRuleSet` in `src/index.ts` (interim `'none'`, owner answer on #29) |
+| #24 | ruling-planet set | `RulingPlanetSet` in `types.ts`; `calculateRulingPlanets` in `ruling-planets.ts`; `ENGINE_CONFIG.rulingPlanetSet` in `src/index.ts` |
 
-Not wired into either app: `src/core/*` (timezone, places, validation, storage), `src/data/cities.ts`, `src/client/html.ts`.
-`public/index.html` is the UI served as static assets; it calls `POST /api/chart/calculate`.
+#25 (Swiss Ephemeris licence) is still open, but the engine is `astronomy-engine`, as recorded in `docs/licensing.md`.
+Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q16 which boundary flag the UI shows).
 
-Known breakages:
-1. `astronomy-engine` is imported by Stack B but missing from `package.json`.
-2. Five test files (`ayanamsa`, `ephemeris`, `horary`, `significators-and-dasha`, `worker`) use `node:test` and import from `dist/`, which is never built (`noEmit: true`, `dist/` is gitignored).
-3. `tsc --noEmit` fails on the above.
-
-`docs/licensing.md` records the decision to use NASA JPL / `astronomy-engine` instead of Swiss Ephemeris.
-That makes Stack B's ephemeris the intended one — but its accuracy is **claimed, not measured**.
+**Open UI issue:** `public/index.html` reads response fields that no API version returns (`julianDate`, `formattedDms`,
+`assignedHouse`, …) and still asks the user to paste planet longitudes. It is **not** fixed; the owner will design the UI/API
+contract later (#29 answer 10). See #68. `src/client/html.ts` is unused and calls routes that do not exist.
+Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/cities.ts`, `src/client/html.ts`
+(only `src/core/validation.ts` is used).
 
 ## Target state
 
@@ -48,7 +64,7 @@ That makes Stack B's ephemeris the intended one — but its accuracy is **claime
 ## Rules that hold for every task
 
 - **KP correctness is the product.** Never change a calculation result to make a test pass. If a test and the code disagree, find out which is right (cite the reference value and where it came from) and say so.
-- KP Old and KP New ayanamsa only. **Never fall back to Lahiri silently.**
+- Ayanamsa is an explicit choice from the supported list (KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). **Never fall back silently; there is no default until #22 is decided.**
 - Horary lagna is the **start** of the chosen sub, not the midpoint (midpoint only behind an explicit toggle).
 - Day lord for ruling planets changes at **sunrise**, not midnight.
 - A planet's house comes from Placidus cusps, not its sign.

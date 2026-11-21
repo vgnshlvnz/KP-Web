@@ -142,3 +142,39 @@ describe('KP Cuspal House Assignment Rules', () => {
     expect(saturn.house).toBe(12);
   });
 });
+
+describe('assignPlanetsToHouses boundary options (port-chart, #54)', () => {
+  const cusps = [35, 65, 92, 118, 145, 175, 215, 245, 272, 298, 325, 355];
+  const planets = [
+    { name: 'Sun', longitude: 32.0 },
+    { name: 'Moon', longitude: 42.0295069, speed: 13.2 },
+    { name: 'Rahu', longitude: 252.4479023, speed: -0.05 },
+  ];
+
+  it('without options the result has no boundary fields (unchanged)', () => {
+    for (const p of assignPlanetsToHouses(planets, cusps)) {
+      expect('isNearSubBoundary' in p).toBe(false);
+      expect('isNearSubSubBoundary' in p).toBe(false);
+    }
+  });
+
+  it('with options every planet carries the sub and sub-sub boundary fields, and the same house and lords', () => {
+    const plain = assignPlanetsToHouses(planets, cusps);
+    const withOptions = assignPlanetsToHouses(planets, cusps, { nearBoundaryThresholdArcsec: 60 });
+    expect(withOptions).toHaveLength(3);
+    withOptions.forEach((p, i) => {
+      expect(p.house).toBe(plain[i].house);
+      expect(p.subLord).toBe(plain[i].subLord);
+      expect(p.subSubLord).toBe(plain[i].subSubLord);
+      expect(p.distancePassedCusp).toBe(plain[i].distancePassedCusp);
+      expect(typeof p.isNearSubBoundary).toBe('boolean');
+      expect(typeof p.isNearSubSubBoundary).toBe('boolean');
+      expect(p.distanceFromSubSubStartArcsec).toBeGreaterThanOrEqual(0);
+    });
+    expect(withOptions[2].isRetrograde).toBe(true);
+  });
+
+  it('rejects an invalid threshold instead of defaulting', () => {
+    expect(() => assignPlanetsToHouses(planets, cusps, { nearBoundaryThresholdArcsec: -1 })).toThrow(RangeError);
+  });
+});

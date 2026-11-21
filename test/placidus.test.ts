@@ -3,8 +3,13 @@ import {
   calculatePlacidusCusps,
   armcToMC,
   mcToArmc,
+  ascendantToArmc,
+  isPolarLatitude,
+  PolarLatitudeError,
 } from '../src/engine/placidus.js';
 import { calculateKPChart, calculateCuspsFromARMC } from '../src/engine/index.js';
+import { calculateSiderealTime } from '../src/engine/astronomy.js';
+import { getHorary249Table } from '../src/engine/kp-lords.js';
 
 describe('Placidus House Cusps Engine', () => {
   // Benchmark 1: India Independence Chart
@@ -221,5 +226,179 @@ describe('Placidus House Cusps Engine', () => {
     expect(res.warnings).toBeDefined();
     expect(res.warnings![0]).toContain('polar circle');
     expect(res.siderealCusps).toHaveLength(12);
+  });
+});
+
+/** Smallest signed angular difference in arcseconds. */
+function diffArcsec(a: number, b: number): number {
+  let d = (a - b) % 360;
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return Math.abs(d) * 3600;
+}
+
+// Reference values: docs/build-fix/audit.md Appendix A.6, Swiss Ephemeris 2.10.03 `swe.houses_armc`,
+// tropical Placidus, obliquity 23.4392911 deg. Columns: lat, ARMC, cusps 1, 2, 3, 10, 11, 12.
+const SE_OBLIQUITY = 23.4392911;
+const A6_GRID: Array<[number, number, number[]]> = [
+  [-45, 0, [68.3084674, 102.2994706, 142.8840281, 0.0, 28.3182515, 50.0048535]],
+  [-45, 97.5, [194.3058654, 232.9354674, 256.9150125, 96.8873229, 118.0648988, 146.6374783]],
+  [-45, 187.5, [297.5644853, 316.1481854, 338.6827317, 188.1658174, 225.7277992, 264.9933645]],
+  [-45, 292.5, [17.0807576, 43.8518146, 75.5184276, 290.8084689, 324.7569829, 353.660501]],
+  [13.0827, 0, [95.2813581, 121.0022923, 148.7934982, 0.0, 33.2117756, 65.3687714]],
+  [13.0827, 97.5, [187.4213532, 217.6336621, 247.5384713, 96.8873229, 126.6080323, 157.1754352]],
+  [13.0827, 187.5, [271.5782203, 302.0581272, 334.8967936, 188.1658174, 218.7420453, 245.925486]],
+  [13.0827, 292.5, [26.8726391, 57.9418728, 84.8763667, 290.8084689, 318.8682538, 351.2496285]],
+  [51.4779, 0, [116.5503215, 132.613878, 152.5492778, 0.0, 38.6456608, 82.4156256]],
+  [51.4779, 97.5, [185.2914671, 209.7980281, 240.4606563, 96.8873229, 132.5796178, 162.0532274]],
+  [51.4779, 187.5, [249.033088, 285.2186046, 330.6123644, 188.1658174, 214.1760072, 233.2379916]],
+  [51.4779, 292.5, [47.7205587, 74.7813954, 93.1904654, 290.8084689, 312.4778882, 347.2348034]],
+  [60, 0, [124.5656857, 137.0211068, 154.0526789, 0.0, 41.9529351, 92.2106985]],
+  [60, 97.5, [184.6678545, 207.0591278, 237.1562495, 96.8873229, 135.169854, 163.6990366]],
+  [60, 187.5, [240.1387231, 274.8031711, 328.0211833, 188.1658174, 212.3068886, 228.2501182]],
+  [60, 292.5, [67.4795575, 85.1968289, 97.7962457, 290.8084689, 308.5648161, 343.7803099]],
+  [66.5, 0, [132.45305, 141.5753356, 155.6841208, 0.0, 47.3818585, 106.4097675]],
+  [66.5, 97.5, [184.0921089, 204.3268367, 233.071298, 96.8873229, 138.1531719, 165.3189111]],
+  [66.5, 187.5, [231.2728275, 257.8327824, 323.9920702, 188.1658174, 210.2476401, 223.0076513]],
+  [66.5, 292.5, [99.9570879, 102.1672176, 105.4264285, 290.8084689, 301.6289038, 335.8471844]],
+];
+const GRID_CUSP_INDEX = [0, 1, 2, 9, 10, 11]; // cusps 1, 2, 3, 10, 11, 12
+
+describe('Placidus vs Swiss Ephemeris houses_armc (Appendix A.6)', () => {
+  for (const [lat, armc, expected] of A6_GRID) {
+    it(`lat ${lat}, ARMC ${armc}: cusps 1, 2, 3, 10, 11, 12 within 0.01 arcsec; mirrored cusps are +180`, () => {
+      const r = calculatePlacidusCusps(armc, lat, SE_OBLIQUITY, 0.0);
+      expect(r.isPolarFallback).toBe(false);
+      expect(r.chartWarnings).toEqual([]);
+      GRID_CUSP_INDEX.forEach((idx, k) => {
+        expect(diffArcsec(r.tropicalCusps[idx], expected[k])).toBeLessThanOrEqual(0.01);
+      });
+      // Cusps 4-9 are the opposites of 10, 11, 12, 1, 2, 3 (as in Swiss Ephemeris).
+      const opposite: Array<[number, number]> = [[3, 9], [4, 10], [5, 11], [6, 0], [7, 1], [8, 2]];
+      for (const [i, j] of opposite) {
+        expect(diffArcsec(r.tropicalCusps[i], r.tropicalCusps[j] + 180)).toBeLessThan(1e-6);
+      }
+    });
+  }
+
+  it('66.5 N is computed as Placidus and is NOT clamped to 66 N (regression for #35)', () => {
+    expect(isPolarLatitude(66.5, SE_OBLIQUITY)).toBe(false);
+    const r = calculatePlacidusCusps(0, 66.5, SE_OBLIQUITY, 0.0);
+    expect(r.isPolarFallback).toBe(false);
+    const atClamp = calculatePlacidusCusps(0, 66.0, SE_OBLIQUITY, 0.0);
+    // The clamped latitude gives a visibly different Ascendant (#35: errors of several degrees).
+    expect(diffArcsec(r.ascendantTropical, atClamp.ascendantTropical)).toBeGreaterThan(1000);
+    expect(diffArcsec(r.ascendantTropical, 132.45305)).toBeLessThanOrEqual(0.01);
+  });
+});
+
+describe('Polar latitudes: Tromso 69.6492 N (Appendix A.5)', () => {
+  // 2010-12-21 03:00:00 UTC: JD 2455551.625, dPsi 17.0466", true obliquity 23.4378170 deg.
+  // KP Old true ayanamsa 23.91821112, KP New 23.93833535. Swiss Ephemeris switches to Porphyry.
+  const LAT = 69.6492;
+  const LON = 18.9553;
+  const D_PSI = 17.0466 / 3600;
+  const TRUE_OBL = 23.437817;
+  const armc = calculateSiderealTime(2455551.625, LON, D_PSI, TRUE_OBL).armc;
+  const cases: Array<[string, number, number[]]> = [
+    [
+      'KP Old',
+      23.91821112,
+      [187.231406, 227.355269, 267.479133, 307.602996, 327.479133, 347.355269,
+        7.231406, 47.355269, 87.479133, 127.602996, 147.479133, 167.355269],
+    ],
+    [
+      'KP New',
+      23.93833535,
+      [187.211282, 227.335145, 267.459009, 307.582872, 327.459009, 347.335145,
+        7.211282, 47.335145, 87.459009, 127.582872, 147.459009, 167.335145],
+    ],
+  ];
+
+  for (const [name, ayanamsa, expected] of cases) {
+    it(`${name}: Porphyry cusps within 0.1 arcsec of Swiss Ephemeris, flagged as fallback`, () => {
+      const r = calculatePlacidusCusps(armc, LAT, TRUE_OBL, ayanamsa);
+      expect(r.isPolarFallback).toBe(true);
+      expect(r.warnings?.[0]).toContain('polar circle');
+      expect(r.chartWarnings).toHaveLength(1);
+      expect(r.chartWarnings[0].code).toBe('polar_fallback');
+      expect(r.siderealCusps).toHaveLength(12);
+      expected.forEach((exp, i) => {
+        expect(diffArcsec(r.siderealCusps[i], exp)).toBeLessThanOrEqual(0.1);
+      });
+    });
+  }
+
+  it('southern polar latitudes are treated the same way', () => {
+    expect(isPolarLatitude(-69.65, TRUE_OBL)).toBe(true);
+    const r = calculatePlacidusCusps(armc, -69.65, TRUE_OBL, 23.9);
+    expect(r.isPolarFallback).toBe(true);
+    expect(r.chartWarnings[0].code).toBe('polar_fallback');
+  });
+
+  it('a non-polar latitude is never a fallback', () => {
+    const r = calculatePlacidusCusps(armc, 51.4779, TRUE_OBL, 23.9);
+    expect(r.isPolarFallback).toBe(false);
+    expect(r.chartWarnings).toEqual([]);
+  });
+});
+
+describe('ascendantToArmc (horary Asc -> ARMC inversion)', () => {
+  const KL_LAT = 3.139;
+  const KL_OBL = 23.4407206; // Appendix A.1 true obliquity
+  const KL_AYANAMSA = 23.65598842; // KP Old true ayanamsa at the KL 1992 instant
+  const table = getHorary249Table();
+
+  it('has all 249 horary entries to draw from', () => {
+    expect(table).toHaveLength(249);
+  });
+
+  it('round-trips with calculatePlacidusCusps to 1e-6 arcsec for sub starts 1, 100, 145, 249', () => {
+    for (const n of [1, 100, 145, 249]) {
+      const startSidereal = table[n - 1].startLongitude;
+      const ascTropical = (startSidereal + KL_AYANAMSA) % 360;
+      const armc = ascendantToArmc(ascTropical, KL_LAT, KL_OBL);
+      const r = calculatePlacidusCusps(armc, KL_LAT, KL_OBL, KL_AYANAMSA);
+      expect(r.isPolarFallback).toBe(false);
+      expect(diffArcsec(r.ascendantTropical, ascTropical)).toBeLessThan(1e-6);
+      // Asc is the START of the sub (not the midpoint).
+      expect(diffArcsec(r.ascendantSidereal, startSidereal)).toBeLessThan(1e-6);
+    }
+  });
+
+  it('round-trips for every horary sub start, at equatorial, mid and high (66.5 N) latitudes', () => {
+    for (const lat of [3.139, -33.9, 51.4779, 66.5]) {
+      for (const entry of table) {
+        const asc = (entry.startLongitude + KL_AYANAMSA) % 360;
+        const armc = ascendantToArmc(asc, lat, KL_OBL);
+        const r = calculatePlacidusCusps(armc, lat, KL_OBL, KL_AYANAMSA);
+        expect(r.isPolarFallback).toBe(false);
+        expect(diffArcsec(r.ascendantTropical, asc)).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it('inverts a dense sweep of Ascendants, including 0 / 360 and 66.5 N where Asc moves fast', () => {
+    const targets = [0, 359.99, 90, 180, 270];
+    for (let a = 0; a < 360; a += 0.37) targets.push(a);
+    for (const lat of [0, 30, 66.5, -66.5]) {
+      for (const asc of targets) {
+        const armc = ascendantToArmc(asc, lat, SE_OBLIQUITY);
+        const r = calculatePlacidusCusps(armc, lat, SE_OBLIQUITY, 0.0);
+        expect(r.isPolarFallback).toBe(false);
+        expect(diffArcsec(r.ascendantTropical, asc)).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it('does not clamp the latitude: 66.5 N inverts exactly (regression for #35)', () => {
+    // Appendix A.6: ARMC 97.5 at 66.5 N gives Asc 184.0921089 (Swiss Ephemeris).
+    const armc = ascendantToArmc(184.0921089, 66.5, SE_OBLIQUITY);
+    expect(diffArcsec(armc, 97.5)).toBeLessThan(0.01);
+  });
+
+  it('throws inside the polar circle (no fallback, no clamp)', () => {
+    expect(() => ascendantToArmc(100, 69.6492, 23.4378)).toThrow(PolarLatitudeError);
+    expect(() => ascendantToArmc(100, -80, 23.4378)).toThrow(PolarLatitudeError);
   });
 });

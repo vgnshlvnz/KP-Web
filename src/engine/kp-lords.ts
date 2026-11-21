@@ -1,7 +1,20 @@
 import { normalizeDegrees } from './astronomy.js';
-import { KPPositionLords, KPCusp } from './types.js';
+import {
+  KPPositionLords,
+  KPCusp,
+  KPPlanetLord,
+  SubBoundaryInfo,
+  SubSubBoundaryInfo,
+} from './types.js';
 
-export const ZODIAC_SIGNS = [
+/**
+ * KP lords module: the single source of sign, star, sub and sub-sub lords for the engine.
+ *
+ * Exported constant names and values (`ZODIAC_SIGNS`, `VIMSHOTTARI_LORDS`, `DASHA_YEARS`,
+ * `NAKSHATRAS`, `NAKSHATRA_SPAN_DEG`, `TOTAL_DASHA_YEARS`) are imported by other modules; keep them stable.
+ */
+
+export const ZODIAC_SIGNS: ReadonlyArray<{ name: string; abbrev: string; lord: KPPlanetLord }> = [
   { name: 'Aries', abbrev: 'Ari', lord: 'Mars' },
   { name: 'Taurus', abbrev: 'Tau', lord: 'Venus' },
   { name: 'Gemini', abbrev: 'Gem', lord: 'Mercury' },
@@ -28,7 +41,8 @@ export const VIMSHOTTARI_LORDS = [
   'Mercury',
 ] as const;
 
-export type PlanetLord = (typeof VIMSHOTTARI_LORDS)[number];
+/** Same type as `KPPlanetLord` in `types.ts`; kept as an alias for existing importers. */
+export type PlanetLord = KPPlanetLord;
 
 export const DASHA_YEARS: Record<PlanetLord, number> = {
   Ketu: 7,
@@ -45,7 +59,7 @@ export const DASHA_YEARS: Record<PlanetLord, number> = {
 export const TOTAL_DASHA_YEARS = 120;
 export const NAKSHATRA_SPAN_DEG = 40.0 / 3.0; // 13°20' = 13.3333333333°
 
-export const NAKSHATRAS = [
+export const NAKSHATRAS: ReadonlyArray<{ number: number; name: string; lord: KPPlanetLord }> = [
   { number: 1, name: 'Ashwini', lord: 'Ketu' },
   { number: 2, name: 'Bharani', lord: 'Venus' },
   { number: 3, name: 'Krittika', lord: 'Sun' },
@@ -76,7 +90,9 @@ export const NAKSHATRAS = [
 ];
 
 /**
- * Formats a decimal degree into degrees, minutes, and seconds.
+ * Formats a decimal degree into degrees, minutes, and seconds (seconds rounded to the nearest
+ * whole second, with carry). This is the one DMS formatter in the engine; the horary table's
+ * `startDms` / `endDms` use it too. Output is zero-padded, e.g. `03°40'12"`.
  */
 export function formatDMS(deg: number): {
   degrees: number;
@@ -121,11 +137,15 @@ export interface Horary249Entry {
   endLongitude: number;
   signIndex: number;
   signName: string;
-  signLord: string;
+  signLord: KPPlanetLord;
   starNumber: number;
   starName: string;
-  starLord: string;
-  subLord: string;
+  starLord: KPPlanetLord;
+  subLord: KPPlanetLord;
+  /** `startLongitude` as degrees/minutes/seconds, e.g. `00°00'00"`. */
+  startDms: string;
+  /** `endLongitude` as degrees/minutes/seconds. The last entry ends at `360°00'00"`. */
+  endDms: string;
 }
 
 // Cached 1-249 Horary table
@@ -142,13 +162,34 @@ export function getHorary249Table(): Horary249Entry[] {
   }
 
   const table: Horary249Entry[] = [];
-  let subCount = 0;
+
+  const push = (
+    signIndex: number,
+    nak: (typeof NAKSHATRAS)[number],
+    subLord: KPPlanetLord,
+    startLongitude: number,
+    endLongitude: number
+  ) => {
+    table.push({
+      number: table.length + 1,
+      startLongitude,
+      endLongitude,
+      signIndex,
+      signName: ZODIAC_SIGNS[signIndex].name,
+      signLord: ZODIAC_SIGNS[signIndex].lord,
+      starNumber: nak.number,
+      starName: nak.name,
+      starLord: nak.lord,
+      subLord,
+      startDms: formatDMS(startLongitude).formatted,
+      endDms: formatDMS(endLongitude).formatted,
+    });
+  };
 
   for (let nakIdx = 0; nakIdx < 27; nakIdx++) {
     const nak = NAKSHATRAS[nakIdx];
     const nakStart = nakIdx * NAKSHATRA_SPAN_DEG;
-    const starLord = nak.lord as PlanetLord;
-    const startLordIdx = VIMSHOTTARI_LORDS.indexOf(starLord);
+    const startLordIdx = VIMSHOTTARI_LORDS.indexOf(nak.lord);
 
     let curr = nakStart;
 
@@ -161,50 +202,12 @@ export function getHorary249Table(): Horary249Entry[] {
       const signEnd = Math.floor((end - 1e-9) / 30.0);
 
       if (signCurr !== signEnd) {
-        // Crosses sign boundary: split into two entries
+        // Crosses a sign boundary: split into two entries
         const splitDeg = (signCurr + 1) * 30.0;
-
-        subCount++;
-        table.push({
-          number: subCount,
-          startLongitude: curr,
-          endLongitude: splitDeg,
-          signIndex: signCurr,
-          signName: ZODIAC_SIGNS[signCurr].name,
-          signLord: ZODIAC_SIGNS[signCurr].lord,
-          starNumber: nak.number,
-          starName: nak.name,
-          starLord: nak.lord,
-          subLord,
-        });
-
-        subCount++;
-        table.push({
-          number: subCount,
-          startLongitude: splitDeg,
-          endLongitude: end,
-          signIndex: signEnd,
-          signName: ZODIAC_SIGNS[signEnd].name,
-          signLord: ZODIAC_SIGNS[signEnd].lord,
-          starNumber: nak.number,
-          starName: nak.name,
-          starLord: nak.lord,
-          subLord,
-        });
+        push(signCurr, nak, subLord, curr, splitDeg);
+        push(signEnd, nak, subLord, splitDeg, end);
       } else {
-        subCount++;
-        table.push({
-          number: subCount,
-          startLongitude: curr,
-          endLongitude: end,
-          signIndex: signCurr,
-          signName: ZODIAC_SIGNS[signCurr].name,
-          signLord: ZODIAC_SIGNS[signCurr].lord,
-          starNumber: nak.number,
-          starName: nak.name,
-          starLord: nak.lord,
-          subLord,
-        });
+        push(signCurr, nak, subLord, curr, end);
       }
 
       curr = end;
@@ -216,10 +219,63 @@ export function getHorary249Table(): Horary249Entry[] {
 }
 
 /**
+ * Returns one entry of the 1–249 horary table.
+ * @throws RangeError if `n` is not an integer from 1 to 249.
+ */
+export function getHoraryEntry(n: number): Horary249Entry {
+  if (!Number.isInteger(n) || n < 1 || n > 249) {
+    throw new RangeError(`Horary number must be an integer between 1 and 249. Received: ${n}`);
+  }
+  return getHorary249Table()[n - 1];
+}
+
+/**
+ * Opt-in sub-boundary reporting for `getPositionLords` / `buildKPCusp`.
+ *
+ * The near-boundary threshold the chart uses is the fixed `NEAR_BOUNDARY_THRESHOLD_ARCSEC` (60,
+ * `conventions.ts`, #29 (owner, 2026-11-21)); `calculateChart` passes it. This low-level helper
+ * still takes the threshold as an explicit argument so the boundary arithmetic can be tested at
+ * other values; it has no default, so a caller never gets a threshold by accident.
+ */
+export interface PositionLordsOptions {
+  /**
+   * Arcseconds from either edge of the sub span (`isNearSubBoundary`) or of the sub-sub span
+   * (`isNearSubSubBoundary`) within which the flag is true.
+   */
+  nearBoundaryThresholdArcsec: number;
+}
+
+function assertThreshold(arcsec: number): void {
+  if (!Number.isFinite(arcsec) || arcsec < 0) {
+    throw new RangeError(
+      `nearBoundaryThresholdArcsec must be a finite number >= 0. Received: ${arcsec}`
+    );
+  }
+}
+
+/**
  * Derives sign lord, star lord, sub lord, sub-sub lord, and 1-249 horary number
  * for any sidereal longitude (0° to 360°).
+ *
+ * Without `options` the result has no sub-boundary fields (the shape existing callers rely on).
+ * With `options`, `subSpanStart`, `subSpanEnd`, `distanceFromSubStartArcsec`,
+ * `distanceToSubEndArcsec` and `isNearSubBoundary` are filled in. They describe the **sub** span.
+ * `distanceFromSubSubStartArcsec`, `distanceToSubSubEndArcsec` and `isNearSubSubBoundary` are
+ * filled in for the **sub-sub** span, which is the one that flips first when a longitude is off by
+ * a few arcseconds. TODO(#29 Q16): which of the two flags drives a warning is the owner's choice.
  */
-export function getPositionLords(longitude: number): KPPositionLords {
+export function getPositionLords(longitude: number): KPPositionLords;
+export function getPositionLords(
+  longitude: number,
+  options: PositionLordsOptions
+): KPPositionLords & SubBoundaryInfo & SubSubBoundaryInfo;
+export function getPositionLords(
+  longitude: number,
+  options?: PositionLordsOptions
+): KPPositionLords | (KPPositionLords & SubBoundaryInfo & SubSubBoundaryInfo) {
+  if (options) {
+    assertThreshold(options.nearBoundaryThresholdArcsec);
+  }
   const lon = normalizeDegrees(longitude);
 
   // 1. Sign
@@ -235,11 +291,11 @@ export function getPositionLords(longitude: number): KPPositionLords {
   const degreeInStar = lon - starIndex * NAKSHATRA_SPAN_DEG;
 
   // 3. Sub Lord
-  const starLord = nak.lord as PlanetLord;
+  const starLord = nak.lord;
   const starLordIdx = VIMSHOTTARI_LORDS.indexOf(starLord);
 
   let accumulatedSubSpan = 0.0;
-  let subLord: string = starLord;
+  let subLord: KPPlanetLord = starLord;
   let subSpan = 0.0;
   let subStartInStar = 0.0;
 
@@ -258,10 +314,12 @@ export function getPositionLords(longitude: number): KPPositionLords {
 
   // 4. Sub-Sub Lord
   const degreeInSub = degreeInStar - subStartInStar;
-  const subLordIdx = VIMSHOTTARI_LORDS.indexOf(subLord as PlanetLord);
+  const subLordIdx = VIMSHOTTARI_LORDS.indexOf(subLord);
 
   let accumulatedSubSubSpan = 0.0;
-  let subSubLord: string = subLord;
+  let subSubLord: KPPlanetLord = subLord;
+  let subSubSpan = 0.0;
+  let subSubStartInSub = 0.0;
 
   for (let ss = 0; ss < 9; ss++) {
     const candidateSubSubLord = VIMSHOTTARI_LORDS[(subLordIdx + ss) % 9];
@@ -269,6 +327,8 @@ export function getPositionLords(longitude: number): KPPositionLords {
 
     if (degreeInSub < accumulatedSubSubSpan + curSubSubSpan || ss === 8) {
       subSubLord = candidateSubSubLord;
+      subSubSpan = curSubSubSpan;
+      subSubStartInSub = accumulatedSubSubSpan;
       break;
     }
     accumulatedSubSubSpan += curSubSubSpan;
@@ -285,7 +345,7 @@ export function getPositionLords(longitude: number): KPPositionLords {
     }
   }
 
-  return {
+  const lords: KPPositionLords = {
     longitude: lon,
     signIndex,
     signName: sign.name,
@@ -303,18 +363,54 @@ export function getPositionLords(longitude: number): KPPositionLords {
     subSubLord,
     horary249Number,
   };
+
+  if (!options) {
+    return lords;
+  }
+
+  // 6. Sub-boundary info (Stack B's fields), distances in arcseconds, never negative.
+  const subSpanStart = starIndex * NAKSHATRA_SPAN_DEG + subStartInStar;
+  const subSpanEnd = subSpanStart + subSpan;
+  const distanceFromSubStartArcsec = Math.max(0, (lon - subSpanStart) * 3600);
+  const distanceToSubEndArcsec = Math.max(0, (subSpanEnd - lon) * 3600);
+
+  // 7. Sub-sub boundary info, same convention, for the sub-sub span the longitude falls in.
+  const subSubSpanStart = subSpanStart + subSubStartInSub;
+  const subSubSpanEnd = subSubSpanStart + subSubSpan;
+  const distanceFromSubSubStartArcsec = Math.max(0, (lon - subSubSpanStart) * 3600);
+  const distanceToSubSubEndArcsec = Math.max(0, (subSubSpanEnd - lon) * 3600);
+
+  return {
+    ...lords,
+    subSpanStart,
+    subSpanEnd,
+    distanceFromSubStartArcsec,
+    distanceToSubEndArcsec,
+    isNearSubBoundary:
+      distanceFromSubStartArcsec < options.nearBoundaryThresholdArcsec ||
+      distanceToSubEndArcsec < options.nearBoundaryThresholdArcsec,
+    distanceFromSubSubStartArcsec,
+    distanceToSubSubEndArcsec,
+    isNearSubSubBoundary:
+      distanceFromSubSubStartArcsec < options.nearBoundaryThresholdArcsec ||
+      distanceToSubSubEndArcsec < options.nearBoundaryThresholdArcsec,
+  };
 }
 
 /**
  * Builds a complete KPCusp object given its house number (1..12),
  * cusp longitude, and next cusp longitude.
+ * Pass `options` to also get the sub-boundary fields (see `getPositionLords`).
  */
 export function buildKPCusp(
   house: number,
   cuspLongitude: number,
-  nextCuspLongitude: number
+  nextCuspLongitude: number,
+  options?: PositionLordsOptions
 ): KPCusp {
-  const lords = getPositionLords(cuspLongitude);
+  const lords = options
+    ? getPositionLords(cuspLongitude, options)
+    : getPositionLords(cuspLongitude);
   const houseSpan = normalizeDegrees(nextCuspLongitude - cuspLongitude);
 
   return {
