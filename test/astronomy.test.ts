@@ -95,4 +95,41 @@ describe('Astronomical Calculations', () => {
     const diffSec = (newAya.meanAyanamsa - oldAya.meanAyanamsa) * 3600.0;
     expect(diffSec).toBeCloseTo(72.4, 0);
   });
+
+  // --- port-ephemeris (#41): nutation, obliquity and sidereal time now delegate to astronomy-engine.
+  // Reference: audit.md Appendix A (Swiss Ephemeris 2.10.03).
+  const REFERENCE = [
+    { label: 'KL 1992', jd: 2448692.426388889, lon: 101.6869, dPsiArcsec: 17.4325, trueObl: 23.4407206, armc: 244.0203059 },
+    { label: 'Greenwich 2000', jd: 2451545.0, lon: -0.0015, dPsiArcsec: -13.9315, trueObl: 23.4376767, armc: 280.4555724 },
+    { label: 'Chennai 1950', jd: 2433448.270486111, lon: 80.2707, dPsiArcsec: -1.2657, trueObl: 23.4480701, armc: 261.1123491 },
+    { label: 'Petaling Jaya 2026', jd: 2461365.541666667, lon: 101.6067, dPsiArcsec: 8.1737, trueObl: 23.4378255, armc: 176.6604417 },
+  ];
+
+  it.each(REFERENCE)('nutation, true obliquity and ARMC agree with Swiss Ephemeris: $label', (c) => {
+    const nut = calculateNutation(c.jd);
+    expect(Math.abs(nut.dPsi * 3600 - c.dPsiArcsec)).toBeLessThan(0.2);
+
+    const obl = calculateObliquity(c.jd, nut.dEps);
+    expect(Math.abs(obl.trueObliquity - c.trueObl) * 3600).toBeLessThan(0.1);
+
+    const st = calculateSiderealTime(c.jd, c.lon, nut.dPsi, obl.trueObliquity);
+    const err = ((((st.armc - c.armc) % 360) + 540) % 360) - 180;
+    expect(Math.abs(err) * 3600).toBeLessThan(0.2);
+  });
+
+  it('keeps the exported shapes: true obliquity = mean + dEps, GAST = GMST + dPsi*cos(eps)', () => {
+    const jd = 2461365.541666667;
+    const nut = calculateNutation(jd);
+    const obl = calculateObliquity(jd, nut.dEps);
+    expect(obl.trueObliquity - obl.meanObliquity).toBeCloseTo(nut.dEps, 12);
+    // Default dEps = 0 returns the mean obliquity as the true one.
+    expect(calculateObliquity(jd).trueObliquity).toBe(calculateObliquity(jd).meanObliquity);
+
+    const noNut = calculateSiderealTime(jd, 101.6067);
+    expect(noNut.gastDegrees).toBeCloseTo(noNut.gmstDegrees, 12);
+    const withNut = calculateSiderealTime(jd, 101.6067, nut.dPsi, obl.trueObliquity);
+    expect(withNut.gastDegrees - withNut.gmstDegrees).toBeCloseTo(nut.dPsi * Math.cos((obl.trueObliquity * Math.PI) / 180), 10);
+    expect(withNut.armc).toBeCloseTo(((withNut.gastDegrees + 101.6067) % 360 + 360) % 360, 10);
+    expect(withNut.lstHours * 15).toBeCloseTo(withNut.armc, 10);
+  });
 });
