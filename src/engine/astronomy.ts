@@ -207,6 +207,39 @@ export function calculateSiderealTime(
 export const KP_OLD_J2000_DEG = 23.76024004;
 export const KP_NEW_J2000_DEG = 23.78036498;
 
+/**
+ * Formats decimal degrees (normalised to 0-360) as `D°MM'SS"`, e.g. `23°45'37"`. Degrees are not
+ * zero-padded. Seconds are rounded to the whole second, with carry into minutes and degrees; with
+ * `includeArcsecFractions` they keep two decimals (`23°45'36.86"`, no rounding carry).
+ *
+ * Moved from Stack B's ayanamsa module (deleted by `entrypoint`, #66) with identical
+ * output. It is a different formatter from `formatDMS` in `kp-lords.ts`, which zero-pads degrees
+ * (`03°40'12"`) and is used by the horary table; the two are not interchangeable.
+ */
+export function formatDms(deg: number, includeArcsecFractions = false): string {
+  const normalized = ((deg % 360) + 360) % 360;
+  const d = Math.floor(normalized);
+  const remMinutes = (normalized - d) * 60;
+  const m = Math.floor(remMinutes);
+  const remSeconds = (remMinutes - m) * 60;
+
+  if (includeArcsecFractions) {
+    const s = remSeconds.toFixed(2).padStart(5, '0');
+    return `${d}°${String(m).padStart(2, '0')}'${s}"`;
+  }
+  const s = Math.round(remSeconds);
+  if (s === 60) {
+    let newM = m + 1;
+    let newD = d;
+    if (newM === 60) {
+      newM = 0;
+      newD = (d + 1) % 360;
+    }
+    return `${newD}°${String(newM).padStart(2, '0')}'00"`;
+  }
+  return `${d}°${String(m).padStart(2, '0')}'${String(s).padStart(2, '0')}"`;
+}
+
 export interface AyanamsaResult {
   type: AyanamsaType;
   name: string;

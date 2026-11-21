@@ -4,11 +4,11 @@ import {
   julianDayToDate,
   KP_NEW_J2000_DEG,
   KP_OLD_J2000_DEG,
+  formatDms,
   toJulianDate as dateToJulianDay,
 } from '../src/engine/astronomy.js';
-// Re-pointed from `src/ephemeris/ayanamsa.js` to `src/engine/astronomy.js` (port-ephemeris, #41).
-// `formatDms` has no unified home yet; it keeps importing Stack B until `entrypoint`.
-import { formatDms } from '../src/ephemeris/ayanamsa.js';
+// Re-pointed from Stack B's ayanamsa module to `src/engine/astronomy.js` (port-ephemeris, #41).
+// `formatDms` moved to `src/engine/astronomy.ts` with identical output (entrypoint, #66).
 
 /** Mean ayanamsa in degrees, the quantity Stack B's `calculateKpAyanamsa(jd, 'KP_OLD' | 'KP_NEW')` returned. */
 function calculateKpAyanamsa(jd: number, mode: 'KP_OLD' | 'KP_NEW'): number {
