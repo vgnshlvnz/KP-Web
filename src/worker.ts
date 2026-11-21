@@ -202,8 +202,8 @@ export default {
 
       return errorResponse(`Route not found: ${path}`, 404);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return errorResponse(msg, 500);
+      console.error('Calculation error:', err);
+      return errorResponse('An internal error occurred while processing the request.', 500);
     }
   },
 };
