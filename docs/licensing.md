@@ -30,3 +30,4 @@ KP-Web formally adopts **NASA JPL Ephemeris** data and models:
 
 4. **Attribution & Compliance:**
    - Proper attribution to NASA, Caltech, and Jet Propulsion Laboratory is maintained in the codebase, adhering to NASA data use and attribution guidelines.
+   - Third-party licence texts (astronomy-engine, MIT) are in [`THIRD_PARTY_LICENSES.md`](../THIRD_PARTY_LICENSES.md).
