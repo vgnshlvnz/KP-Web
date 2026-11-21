@@ -119,48 +119,6 @@ export interface SubBoundaryInfo {
  * tables and is not owned by this package. `port-lords` should narrow them to `KPPlanetLord`
  * (`KpLords` below is already narrow) once it owns that file.
  */
-/** Stack B's civil-time input (explicit UTC offset). */
-export interface DateTimeInput {
-  year: number;
-  month: number; // 1-12
-  day: number;
-  hour: number; // 0-23
-  minute: number; // 0-59
-  second: number; // 0-59
-  timezoneOffsetHours: number; // e.g. +5.5 for IST, +8.0 for Malaysia/MYT
-}
-
-export interface DateTimeLocation {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-  second: number;
-  utcOffsetHours?: number; // e.g., +5.5 for IST (India)
-  latitude: number;        // in degrees, positive North
-  longitude: number;       // in degrees, positive East
-}
-
-/**
- * Distance of a longitude from the edges of its KP sub span (Stack B's boundary fields).
- * TODO(#29 Q10): the near-boundary threshold is undecided (Stack B uses 60 arcsec). It is an
- * explicit input to whatever computes `isNearSubBoundary`; there is no default here.
- */
-export interface SubBoundaryInfo {
-  subSpanStart: number; // degrees in zodiac (0-360)
-  subSpanEnd: number; // degrees in zodiac (0-360)
-  distanceFromSubStartArcsec: number;
-  distanceToSubEndArcsec: number;
-  isNearSubBoundary: boolean; // within the caller-supplied threshold
-}
-
-/**
- * Stack A's lords record, unchanged apart from the optional boundary fields (filled in by
- * `port-lords`). Lord fields stay `string` here: `kp-lords.ts` builds them from `string` lookup
- * tables and is not owned by this package. `port-lords` should narrow them to `KPPlanetLord`
- * (`KpLords` below is already narrow) once it owns that file.
- */
 export interface KPPositionLords extends Partial<SubBoundaryInfo> {
   longitude: number;
   signIndex: number;       // 0 = Aries, 11 = Pisces
@@ -396,14 +354,11 @@ export type PolarHandling = 'porphyry_fallback' | 'refuse';
  * TODO(#29 Q8): undecided. 'upper_limb_refraction' is astronomy-engine's and Swiss Ephemeris's
  * default; 'disc_center' is the alternative. The day lord changes at sunrise, not midnight, in
  * either case (CLAUDE.md).
+ * Also TODO(#29 Q8), still unanswered: what to report when the sun does not rise or set. No
+ * handling option is typed for it; `RulingPlanets.sunriseStatus` can flag the case, and the
+ * silent 06:00-local value Stack B uses is excluded (audit).
  */
 export type SunriseDefinition = 'upper_limb_refraction' | 'disc_center';
-
-/**
- * What to do when the sun does not rise or set.
- * TODO(#29 Q8): undecided. Stack B silently uses 06:00 local, which is not an option here.
- */
-export type NoSunriseHandling = 'error_flag';
 
 /**
  * Rahu/Ketu agent rule set.
@@ -439,8 +394,6 @@ export interface ChartCalculationOptions {
   polarHandling: PolarHandling;
   /** TODO(#29 Q8): sunrise convention. */
   sunriseDefinition: SunriseDefinition;
-  /** TODO(#29 Q8): no-sunrise handling. */
-  noSunriseHandling: NoSunriseHandling;
   /** TODO(#29 Q10): near-sub-boundary warning threshold in arcseconds (Stack B uses 60). */
   nearBoundaryThresholdArcsec: number;
   /** TODO(#29 Q12): include Uranus, Neptune, Pluto in the chart output. */
