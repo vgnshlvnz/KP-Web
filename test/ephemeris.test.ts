@@ -130,7 +130,7 @@ describe('Ephemeris (astronomy-engine)', () => {
   it('rejects an unknown ayanamsa instead of falling back (TODO(#22))', () => {
     const testDate = new Date(Date.UTC(1990, 4, 15, 14, 30, 0));
     const base = { ayanamsa: 'kp_old' } as const;
-    expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: 'lahiri' as never })).toThrow(/ayanamsa/i);
+    expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: 'lahiri2' as never })).toThrow(/ayanamsa/i);
     expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: 'KP_OLD' as never })).toThrow(/ayanamsa/i);
     expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: undefined as never })).toThrow(/ayanamsa/i);
   });

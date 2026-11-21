@@ -26,11 +26,14 @@ import { getHoraryEntry, getHorary249Table, getPositionLords } from '../src/engi
 import { assignPlanetsToHouses } from '../src/engine/house-assignment.js';
 import { normalizeDegrees, sind, cosd, tand, atan2d } from '../src/engine/astronomy.js';
 import type {
-  AyanamsaMode,
+  AyanamsaMode as AnyAyanamsaMode,
   ChartCalculationOptions,
   DateTimeLocation,
   HoraryCalculationResult,
 } from '../src/engine/types.js';
+
+// The SE fixtures below exist for the two KP modes only.
+type AyanamsaMode = Extract<AnyAyanamsaMode, 'kp_old' | 'kp_new'>;
 
 const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
   ayanamsa, // TODO(#22): fixture, not a default
@@ -325,7 +328,7 @@ describe('inputs and options are checked, never defaulted', () => {
     expect(calculateHoraryChart({ questionTime: KL.input, horaryNumber: 249 }, OPTIONS('kp_old')).horaryNumber).toBe(249);
   });
 
-  it('a missing option throws, and Lahiri is rejected (no silent fallback)', () => {
+  it('a missing option throws, and an unknown ayanamsa is rejected (no silent fallback)', () => {
     const { ayanamsa: _omit, ...rest } = OPTIONS('kp_old');
     expect(() =>
       calculateHoraryChart({ questionTime: KL.input, horaryNumber: 1 }, rest as unknown as ChartCalculationOptions)
@@ -333,7 +336,7 @@ describe('inputs and options are checked, never defaulted', () => {
     expect(() =>
       calculateHoraryChart(
         { questionTime: KL.input, horaryNumber: 1 },
-        { ...OPTIONS('kp_old'), ayanamsa: 'lahiri' as unknown as AyanamsaMode }
+        { ...OPTIONS('kp_old'), ayanamsa: 'lahiri2' as unknown as AyanamsaMode }
       )
     ).toThrow();
     expect(() =>

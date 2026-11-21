@@ -112,11 +112,13 @@ describe('KP ayanamsa', () => {
     expect(formatDms(29.999999)).toBe("30°00'00\"");
   });
 
-  it('rejects anything but kp_old / kp_new: no silent KP Old, no Lahiri (TODO(#22))', () => {
+  it('rejects an unknown id: no silent KP Old, no silent Lahiri (TODO(#22))', () => {
+    // 'lahiri' used to be in this list. It is a supported mode since #29 (owner, 2026-11-21, answer A),
+    // so the unknown ids are now near-misses of the supported ones.
     const jd = 2451545.0;
-    expect(() => calculateAyanamsa(jd, 'lahiri' as never)).toThrow(/ayanamsa/i);
-    expect(() => calculateAyanamsa(jd, 'KP_OLD' as never)).toThrow(/ayanamsa/i);
-    expect(() => calculateAyanamsa(jd, undefined as never)).toThrow(/ayanamsa/i);
+    for (const bad of ['lahiri2', 'Lahiri', 'KP_OLD', 'kp-old', '', 'default', undefined, null, 5]) {
+      expect(() => calculateAyanamsa(jd, bad as never), String(bad)).toThrow(/ayanamsa/i);
+    }
   });
 
   it('true ayanamsa is the mean plus the nutation passed in', () => {

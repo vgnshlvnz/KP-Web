@@ -750,7 +750,7 @@ describe('calculateChart: every option is required, none has a default', () => {
   });
 
   it('there is no Lahiri fallback: an unknown ayanamsa throws (#22)', () => {
-    for (const bad of ['lahiri', 'KP_OLD', 'default', '']) {
+    for (const bad of ['lahiri2', 'Lahiri', 'KP_OLD', 'default', '']) {
       expect(() =>
         // @ts-expect-error not an AyanamsaMode
         calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), ayanamsa: bad })
