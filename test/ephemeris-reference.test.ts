@@ -6,11 +6,12 @@
  * Swiss Ephemeris was used only to generate these numbers; it is not a dependency.
  *
  * Tolerances (arcseconds): Sun 2, Moon 6, Mercury..Saturn 12 (measured maximum plus margin; the owner
- * may tighten them, #29 Q10), mean ayanamsa 0.01, mean node 1, true node 5.
+ * may tighten them), mean ayanamsa 0.01, mean node 1. Mean node only (#29 (owner, 2026-11-21)); the
+ * true-node rows of Appendix A are no longer used.
  */
 import { describe, it, expect } from 'vitest';
 import { calculateEphemeris } from '../src/engine/ephemeris.js';
-import type { AyanamsaMode, NodeMode } from '../src/engine/types.js';
+import type { AyanamsaMode } from '../src/engine/types.js';
 
 type Reference = { kp_old: number; kp_new: number };
 
@@ -162,36 +163,26 @@ const TOLERANCE_ARCSEC: Record<string, number> = {
 };
 const MEAN_AYANAMSA_ARCSEC = 0.01;
 const MEAN_NODE_ARCSEC = 1;
-const TRUE_NODE_TARGET_ARCSEC = 5;
-/** Current measured accuracy of the true node (max 7.45"); a ceiling so #34 (2470") cannot return. */
-const TRUE_NODE_CEILING_ARCSEC = 8;
 
-/**
- * Cases where astronomy-engine's true node is more than 5" from Swiss Ephemeris (3.58" to 7.45").
- * See engine-mismatch issue #52. `it.fails` keeps the 5" assertion at its specified tolerance and
- * turns red when the node gets better, so the entry can be removed.
- */
-const TRUE_NODE_MISSES_TARGET = new Set(['KL 1992', 'Greenwich 2000', 'Chennai 1950', 'Petaling Jaya 2026']);
-
-function run(c: ReferenceCase, ayanamsa: AyanamsaMode, nodeMode: NodeMode) {
-  return calculateEphemeris(new Date(c.utc), { ayanamsa, nodeMode, includeOuterPlanets: false });
+function run(c: ReferenceCase, ayanamsa: AyanamsaMode) {
+  return calculateEphemeris(new Date(c.utc), { ayanamsa });
 }
 
 describe.each(CASES)('ephemeris vs Swiss Ephemeris: $label', (c) => {
   it('reference JD matches the instant (fixture sanity)', () => {
-    expect(run(c, 'kp_old', 'MEAN').julianDayUt).toBeCloseTo(c.jdUt, 8);
+    expect(run(c, 'kp_old').julianDayUt).toBeCloseTo(c.jdUt, 8);
   });
 
   describe.each(MODES)('%s', (mode) => {
     it(`mean ayanamsa within ${MEAN_AYANAMSA_ARCSEC}"`, () => {
-      const r = run(c, mode, 'MEAN');
+      const r = run(c, mode);
       expect(Math.abs(r.meanAyanamsaDeg - c.ayanamsa[mode].mean) * 3600).toBeLessThanOrEqual(
         MEAN_AYANAMSA_ARCSEC
       );
     });
 
     it('true ayanamsa = mean + nutation in longitude, and nutation agrees with Swiss Ephemeris to 0.2"', () => {
-      const r = run(c, mode, 'MEAN');
+      const r = run(c, mode);
       expect(r.trueAyanamsaDeg - r.meanAyanamsaDeg).toBeCloseTo(r.nutationInLongitudeDeg, 12);
       // astronomy-engine's IAU 2000B nutation vs the dPsi in Appendix A: same model family, <0.14".
       expect(Math.abs(r.nutationInLongitudeDeg * 3600 - c.dPsiArcsec)).toBeLessThan(0.2);
@@ -200,32 +191,17 @@ describe.each(CASES)('ephemeris vs Swiss Ephemeris: $label', (c) => {
 
     for (const [name, tol] of Object.entries(TOLERANCE_ARCSEC)) {
       it(`${name} within ${tol}"`, () => {
-        const p = run(c, mode, 'MEAN').planets.find((x) => x.name === name)!;
+        const p = run(c, mode).planets.find((x) => x.name === name)!;
         expect(Math.abs(diffArcsec(p.siderealLongitude, c.bodies[name][mode]))).toBeLessThanOrEqual(tol);
       });
     }
 
     for (const name of ['Rahu', 'Ketu'] as const) {
       it(`${name} (mean node) within ${MEAN_NODE_ARCSEC}"`, () => {
-        const p = run(c, mode, 'MEAN').planets.find((x) => x.name === name)!;
+        const p = run(c, mode).planets.find((x) => x.name === name)!;
         expect(
           Math.abs(diffArcsec(p.siderealLongitude, c.bodies[`${name} (mean)`][mode]))
         ).toBeLessThanOrEqual(MEAN_NODE_ARCSEC);
-      });
-
-      const trueNodeTarget = TRUE_NODE_MISSES_TARGET.has(c.label) ? it.fails : it;
-      trueNodeTarget(`${name} (true node) within ${TRUE_NODE_TARGET_ARCSEC}" [target, #52]`, () => {
-        const p = run(c, mode, 'TRUE').planets.find((x) => x.name === name)!;
-        expect(
-          Math.abs(diffArcsec(p.siderealLongitude, c.bodies[`${name} (true)`][mode]))
-        ).toBeLessThanOrEqual(TRUE_NODE_TARGET_ARCSEC);
-      });
-
-      it(`${name} (true node) within ${TRUE_NODE_CEILING_ARCSEC}" [current accuracy, #34 regression]`, () => {
-        const p = run(c, mode, 'TRUE').planets.find((x) => x.name === name)!;
-        expect(
-          Math.abs(diffArcsec(p.siderealLongitude, c.bodies[`${name} (true)`][mode]))
-        ).toBeLessThanOrEqual(TRUE_NODE_CEILING_ARCSEC);
       });
     }
   });
@@ -235,7 +211,7 @@ describe('regressions', () => {
   const kl = CASES[0];
 
   it('#33: sidereal Sun, KL 1992, KP Old = 326.94407 deg +/- 2" (was 326.94887, off by dPsi)', () => {
-    const sun = run(kl, 'kp_old', 'MEAN').planets.find((p) => p.name === 'Sun')!;
+    const sun = run(kl, 'kp_old').planets.find((p) => p.name === 'Sun')!;
     expect(Math.abs(diffArcsec(sun.siderealLongitude, 326.94407))).toBeLessThanOrEqual(2);
     // The old value omitted dPsi (+17.43"); make sure we are nowhere near it.
     expect(Math.abs(diffArcsec(sun.siderealLongitude, 326.94887))).toBeGreaterThan(10);
@@ -244,20 +220,11 @@ describe('regressions', () => {
   it('#33: sidereal = tropical - (mean ayanamsa + dPsi) for every body, not tropical - mean ayanamsa', () => {
     for (const c of CASES) {
       for (const mode of MODES) {
-        const r = run(c, mode, 'TRUE');
+        const r = run(c, mode);
         for (const p of r.planets) {
           expect(diffArcsec(p.tropicalLongitude - (r.meanAyanamsaDeg + r.nutationInLongitudeDeg), p.siderealLongitude)).toBeCloseTo(0, 6);
         }
       }
     }
-  });
-
-  it('#34: the true node is in the ecliptic of date, not J2000 (old error up to 2470")', () => {
-    // Chennai 1950 was the worst case: 2470.5" off with the J2000 frame.
-    const chennai = CASES.find((c) => c.label === 'Chennai 1950')!;
-    const rahu = run(chennai, 'kp_old', 'TRUE').planets.find((p) => p.name === 'Rahu')!;
-    expect(Math.abs(diffArcsec(rahu.siderealLongitude, chennai.bodies['Rahu (true)'].kp_old))).toBeLessThan(
-      TRUE_NODE_CEILING_ARCSEC
-    );
   });
 });

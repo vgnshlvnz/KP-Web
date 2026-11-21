@@ -8,19 +8,14 @@ import type { ChartCalculationOptions } from '../src/engine/types.js';
  * Re-pointed from the Stack B `calculateNatalChart` (src/kp/engine) to `calculateChart` (#54).
  *
  * Every option below is a test fixture, not a default: each is an open owner decision.
- * They reproduce what Stack B did here (KP Old, mean node, its Rahu/Ketu agents, its 5-entry
- * ruling-planet list, 365.2425-day dasha year, 60 arcsec boundary threshold, outer planets listed).
+ * They reproduce what Stack B did here (KP Old, its Rahu/Ketu agents, its 5-entry ruling-planet
+ * list). Mean node, 365.2425-day dasha year, 60 arcsec threshold and upper-limb sunrise are fixed
+ * conventions; the outer planets (Stack B returned 12 planets) are removed (#29 (owner, 2026-11-21)).
  */
 const OPTIONS: ChartCalculationOptions = {
   ayanamsa: 'kp_old',
-  nodeMode: 'MEAN',
   nodeAgentRuleSet: 'sign_lord_star_lord_same_sign', // TODO(#23)
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord', // TODO(#24)
-  dashaYearDays: 365.2425, // TODO(#29 Q9)
-  polarHandling: 'porphyry_fallback', // TODO(#29 Q7)
-  sunriseDefinition: 'upper_limb_refraction', // TODO(#29 Q8)
-  nearBoundaryThresholdArcsec: 60, // TODO(#29 Q10)
-  includeOuterPlanets: true, // TODO(#29 Q12): Stack B returned 12 planets
 };
 
 describe('Natal chart engine', () => {
@@ -41,7 +36,7 @@ describe('Natal chart engine', () => {
     );
 
     // Verify chart basics
-    expect(chart.planets.length).toBe(12);
+    expect(chart.planets.length).toBe(9); // was 12: no outer planets
     expect(chart.cusps.length).toBe(12);
     expect(chart.ayanamsaType).toBe('kp_old');
     expect(chart.ayanamsaValue > 23.6 && chart.ayanamsaValue < 23.7).toBe(true);

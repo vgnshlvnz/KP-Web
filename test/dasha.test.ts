@@ -4,6 +4,7 @@ import {
   getBhuktiYears,
   getDashaAtBirth,
 } from '../src/engine/dasha.js';
+import { DASHA_YEAR_DAYS } from '../src/engine/conventions.js';
 import { DASHA_YEARS, TOTAL_DASHA_YEARS, VIMSHOTTARI_LORDS } from '../src/engine/kp-lords.js';
 import type { DashaPeriod, KPPlanetLord } from '../src/engine/types.js';
 
@@ -12,9 +13,8 @@ import type { DashaPeriod, KPPlanetLord } from '../src/engine/types.js';
  * Moon longitudes are the KP Old column of A.1 to A.5.
  *
  * Days per year: the A.7 values are in YEARS (exact 120-year proportions), so they assume NO
- * days-per-year value and `getDashaAtBirth` takes none. Only the dated timeline needs one.
- * TODO(#29 Q9): owner has not chosen it. Stack B used 365.2425; the tests below pass both
- * 365.2425 and 365.25 explicitly and check that years-based results do not depend on it.
+ * days-per-year value and `getDashaAtBirth` takes none. Only the dated timeline needs one: the
+ * fixed convention `DASHA_YEAR_DAYS` = 365.2425 (#29 (owner, 2026-11-21)).
  */
 const TOL_YEARS = 1e-6;
 
@@ -76,7 +76,7 @@ const CASES: Case[] = [
   },
 ];
 
-const YEAR_DAYS = [365.2425, 365.25];
+const YEAR_DAYS = [DASHA_YEAR_DAYS];
 const MS_PER_DAY = 86_400_000;
 const day = (iso: string): number => Date.parse(`${iso}T00:00:00Z`) / MS_PER_DAY;
 
@@ -168,9 +168,9 @@ function flatten(p: DashaPeriod): DashaPeriod[] {
 
 describe('Dated timeline', () => {
   for (const days of YEAR_DAYS) {
-    describe(`dashaYearDays = ${days}`, () => {
+    describe(`DASHA_YEAR_DAYS = ${days}`, () => {
       for (const c of CASES) {
-        const tl = () => calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: days });
+        const tl = () => calculateVimshottariDasha(c.moonKpOld, c.birthUtc);
 
         it(`${c.id}: lord, balance and first running bhukti`, () => {
           const r = tl();
@@ -232,35 +232,15 @@ describe('Dated timeline', () => {
 
   it('numDashas defaults to 9 and can be changed', () => {
     const c = CASES[0];
-    expect(calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: 365.25 }).dashaTimeline).toHaveLength(9);
+    expect(calculateVimshottariDasha(c.moonKpOld, c.birthUtc).dashaTimeline).toHaveLength(9);
     expect(
-      calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: 365.25, numDashas: 3 }).dashaTimeline.map((d) => d.lord)
+      calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { numDashas: 3 }).dashaTimeline.map((d) => d.lord)
     ).toEqual(['Moon', 'Mars', 'Rahu']);
-  });
-
-  it('day length changes dates but not lords or balance', () => {
-    const c = CASES[0];
-    const a = calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: 365.2425 });
-    const b = calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: 360 });
-    expect(a.balanceYears).toBe(b.balanceYears);
-    expect(a.balanceMonths).toBe(b.balanceMonths);
-    expect(a.dashaTimeline.map((d) => d.lord)).toEqual(b.dashaTimeline.map((d) => d.lord));
-    expect(a.dashaTimeline[3].endDate).not.toBe(b.dashaTimeline[3].endDate);
-  });
-
-  it('dashaYearDays is required: no hidden default', () => {
-    const c = CASES[0];
-    // @ts-expect-error dashaYearDays is a required option
-    expect(() => calculateVimshottariDasha(c.moonKpOld, c.birthUtc, {})).toThrow(RangeError);
-    // @ts-expect-error options object is required
-    expect(() => calculateVimshottariDasha(c.moonKpOld, c.birthUtc)).toThrow();
-    expect(() => calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: 0 })).toThrow(RangeError);
-    expect(() => calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: NaN })).toThrow(RangeError);
   });
 
   it('flattening a timeline yields 3 levels only', () => {
     const c = CASES[1];
-    const r = calculateVimshottariDasha(c.moonKpOld, c.birthUtc, { dashaYearDays: 365.2425 });
+    const r = calculateVimshottariDasha(c.moonKpOld, c.birthUtc);
     expect(new Set(r.dashaTimeline.flatMap(flatten).map((p) => p.level))).toEqual(new Set(['dasha', 'bhukti', 'antara']));
   });
 });

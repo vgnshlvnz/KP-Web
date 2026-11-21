@@ -16,18 +16,13 @@ import type { ChartCalculationOptions } from '../src/engine/types.js';
  *   chart.ascendant.signName / starLord / subLord -> chart.cusps[0].signName / starLord / subLord
  *
  * The engine options below are a TEST FIXTURE, not defaults: each one is an open owner decision
- * (#22, #23, #24, #29 Q6..Q12) and `calculateHoraryChart` has no default for any of them.
+ * (#22, #23, #24) and `calculateHoraryChart` has no default for any of them. Everything else is a
+ * fixed convention (`src/engine/conventions.ts`).
  */
 const OPTIONS: ChartCalculationOptions = {
   ayanamsa: 'kp_old', // TODO(#22): fixture, not a default
-  nodeMode: 'MEAN', // TODO(#29 Q6): fixture
   nodeAgentRuleSet: 'sign_lord_star_lord_same_sign', // TODO(#23): fixture
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord', // TODO(#24): fixture
-  dashaYearDays: 365.2425, // TODO(#29 Q9): fixture
-  polarHandling: 'porphyry_fallback', // TODO(#29 Q7): fixture
-  sunriseDefinition: 'upper_limb_refraction', // TODO(#29 Q8): fixture
-  nearBoundaryThresholdArcsec: 60, // TODO(#29 Q10): fixture
-  includeOuterPlanets: false, // TODO(#29 Q12): fixture
 };
 
 const QUESTION_TIME = {

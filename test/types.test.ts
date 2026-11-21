@@ -11,7 +11,6 @@ import type {
   ChartCalculationOptions,
   ChartCalculationResult,
   ChartWarning,
-  ClassicalPlanetName,
   DashaBalance,
   DashaPeriod,
   HoraryCalculationResult,
@@ -20,8 +19,6 @@ import type {
   KPPlanetLord,
   KPPositionLords,
   KpLords,
-  NodeMode,
-  OuterPlanetName,
   PlanetName,
   PlanetaryPosition,
   RulingPlanets,
@@ -48,23 +45,19 @@ describe('AyanamsaMode', () => {
     expectTypeOf<Shim.AyanamsaMode>().toEqualTypeOf<'KP_OLD' | 'KP_NEW'>();
   });
 
-  it('NodeMode is MEAN | TRUE', () => {
-    expectTypeOf<NodeMode>().toEqualTypeOf<'MEAN' | 'TRUE'>();
+  it('the unified engine has no NodeMode: mean node only (#29 (owner, 2026-11-21))', () => {
+    // @ts-expect-error NodeMode was removed from engine/types
+    type _NoNodeMode = import('../src/engine/types').NodeMode;
+    expect(true).toBe(true);
   });
 });
 
 describe('PlanetName and KPPlanetLord', () => {
-  it('PlanetName covers Sun..Saturn, Rahu, Ketu', () => {
-    expectTypeOf<ClassicalPlanetName>().toEqualTypeOf<
+  it('PlanetName is exactly Sun..Saturn, Rahu, Ketu: no outer planets (#29 (owner, 2026-11-21))', () => {
+    expectTypeOf<PlanetName>().toEqualTypeOf<
       'Sun' | 'Moon' | 'Mars' | 'Mercury' | 'Jupiter' | 'Venus' | 'Saturn' | 'Rahu' | 'Ketu'
     >();
-    expectTypeOf<ClassicalPlanetName>().toMatchTypeOf<PlanetName>();
-  });
-
-  // TODO(#29 Q12): outer planets stay typed but separate until the owner decides.
-  it('outer planets are a separate, opt-in type', () => {
-    expectTypeOf<OuterPlanetName>().toEqualTypeOf<'Uranus' | 'Neptune' | 'Pluto'>();
-    expectTypeOf<PlanetName>().toEqualTypeOf<ClassicalPlanetName | OuterPlanetName>();
+    expectTypeOf<'Uranus'>().not.toMatchTypeOf<PlanetName>();
   });
 
   it('KPPlanetLord is the nine Vimshottari lords', () => {
@@ -125,7 +118,6 @@ describe('chart result and warnings', () => {
     expectTypeOf<ChartCalculationResult['cusps']>().not.toBeNever();
     expectTypeOf<ChartCalculationResult['warnings']>().toEqualTypeOf<ChartWarning[] | undefined>();
     expectTypeOf<ChartCalculationResult['isPolarFallback']>().toEqualTypeOf<boolean | undefined>();
-    expectTypeOf<ChartCalculationResult['nodeMode']>().toEqualTypeOf<NodeMode | undefined>();
     expectTypeOf<ChartCalculationResult['planetPositions']>().toEqualTypeOf<
       PlanetaryPosition[] | undefined
     >();
@@ -146,14 +138,18 @@ describe('chart result and warnings', () => {
 describe('Stack B shim re-exports the identical parts', () => {
   it('re-exported types are the same types as the unified ones', () => {
     expectTypeOf<Shim.KPPlanetLord>().toEqualTypeOf<KPPlanetLord>();
-    expectTypeOf<Shim.PlanetName>().toEqualTypeOf<PlanetName>();
-    expectTypeOf<Shim.NodeMode>().toEqualTypeOf<NodeMode>();
     expectTypeOf<Shim.KpLords>().toEqualTypeOf<KpLords>();
-    expectTypeOf<Shim.PlanetaryPosition>().toEqualTypeOf<PlanetaryPosition>();
     expectTypeOf<Shim.HouseCusp>().toEqualTypeOf<HouseCusp>();
     expectTypeOf<Shim.HoraryTableEntry>().toEqualTypeOf<HoraryTableEntry>();
     expectTypeOf<Shim.RulingPlanets>().toEqualTypeOf<RulingPlanets>();
     expectTypeOf<Shim.DashaPeriod>().toEqualTypeOf<DashaPeriod>();
+  });
+
+  it('Stack B keeps its own wider PlanetName and NodeMode locally, until entrypoint', () => {
+    expectTypeOf<PlanetName>().toMatchTypeOf<Shim.PlanetName>();
+    expectTypeOf<'Uranus'>().toMatchTypeOf<Shim.PlanetName>();
+    expectTypeOf<Shim.NodeMode>().toEqualTypeOf<'MEAN' | 'TRUE'>();
+    expectTypeOf<PlanetaryPosition>().toMatchTypeOf<Shim.PlanetaryPosition>();
   });
 
   it('Stack B result keeps its own flat shape and string warnings', () => {
@@ -163,14 +159,11 @@ describe('Stack B shim re-exports the identical parts', () => {
   });
 });
 
-// TODO(#22), TODO(#23), TODO(#24), TODO(#29 Q6-Q10, Q12): none of these options has a default.
+// TODO(#22), TODO(#23), TODO(#24): none of these options has a default.
 describe('owner-decision options have no default', () => {
   it('every option field is required', () => {
     expectTypeOf<Required<ChartCalculationOptions>>().toEqualTypeOf<ChartCalculationOptions>();
     expectTypeOf<ChartCalculationOptions['ayanamsa']>().toEqualTypeOf<AyanamsaMode>();
-    expectTypeOf<ChartCalculationOptions['nodeMode']>().toEqualTypeOf<NodeMode>();
-    expectTypeOf<ChartCalculationOptions['dashaYearDays']>().toEqualTypeOf<number>();
-    expectTypeOf<ChartCalculationOptions['nearBoundaryThresholdArcsec']>().toEqualTypeOf<number>();
     expectTypeOf<{}>().not.toMatchTypeOf<ChartCalculationOptions>();
   });
 });

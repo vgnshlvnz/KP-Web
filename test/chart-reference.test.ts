@@ -13,7 +13,7 @@
  * cusps 0.5, Sun 2, Moon 6, Mars/Mercury/Jupiter/Venus/Saturn 12, mean node 1.
  */
 import { describe, it, expect, expectTypeOf } from 'vitest';
-import { calculateChart, PolarLatitudeError, getPositionLords, getDashaAtBirth } from '../src/engine/index.js';
+import { calculateChart, getPositionLords, getDashaAtBirth } from '../src/engine/index.js';
 import { calculateSignificators, calculateFourLevelSignificators } from '../src/engine/significators.js';
 import { calculateVimshottariDasha } from '../src/engine/dasha.js';
 import type {
@@ -86,20 +86,14 @@ const CASES: Record<CaseId, ReferenceCase> = {
 };
 
 /**
- * Fixture options. NOT defaults: each value is one of the open owner decisions.
- *  - nodeMode 'MEAN' because Appendix A's mean-node rows are what this test pins (TODO(#29 Q6)).
- *  - polarHandling 'porphyry_fallback' because that is what SE does for Tromso (TODO(#29 Q7)).
+ * Fixture options: only the three decisions that are still open (TODO(#22), TODO(#23), TODO(#24)).
+ * Mean node, Porphyry at polar latitudes, upper-limb sunrise, 365.2425 and 60 arcsec are fixed
+ * conventions (`src/engine/conventions.ts`), not options.
  */
 const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
   ayanamsa,
-  nodeMode: 'MEAN',
   nodeAgentRuleSet: 'sign_lord_star_lord_same_sign',
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord',
-  dashaYearDays: 365.2425,
-  polarHandling: 'porphyry_fallback',
-  sunriseDefinition: 'upper_limb_refraction',
-  nearBoundaryThresholdArcsec: 60,
-  includeOuterPlanets: false,
 });
 
 const chartCache = new Map<string, FullChartCalculationResult>();
@@ -501,11 +495,8 @@ describe('calculateChart: cusps, houses and consistency', () => {
     }
   });
 
-  it('66.5 N is Placidus, not clamped or treated as polar (#35), even with polarHandling "refuse"', () => {
-    const chart = calculateChart(
-      { ...CASES.kl1992.input, latitude: 66.5 },
-      { ...OPTIONS('kp_old'), polarHandling: 'refuse' }
-    );
+  it('66.5 N is Placidus, not clamped or treated as polar (#35)', () => {
+    const chart = calculateChart({ ...CASES.kl1992.input, latitude: 66.5 }, OPTIONS('kp_old'));
     expect(chart.isPolarFallback).toBe(false);
     expect(chart.warnings.filter((w) => w.code === 'polar_fallback')).toHaveLength(0);
   });
@@ -515,7 +506,7 @@ describe('calculateChart: cusps, houses and consistency', () => {
 // polar latitude
 // ---------------------------------------------------------------------------
 
-describe('calculateChart: polar latitude (#29 Q7)', () => {
+describe('calculateChart: polar latitude (#29 (owner, 2026-11-21): Porphyry fallback + warning)', () => {
   it('Tromso 69.65 N returns Porphyry cusps with isPolarFallback and a polar_fallback warning', () => {
     for (const mode of ['kp_old', 'kp_new'] as const) {
       const chart = chartFor('tromso2010', mode);
@@ -534,21 +525,6 @@ describe('calculateChart: polar latitude (#29 Q7)', () => {
     }
   });
 
-  it("'refuse' throws PolarLatitudeError at Tromso", () => {
-    expect(() =>
-      calculateChart(CASES.tromso2010.input, { ...OPTIONS('kp_old'), polarHandling: 'refuse' })
-    ).toThrow(PolarLatitudeError);
-  });
-
-  it('an unknown polarHandling throws even at a non-polar latitude (no silent default)', () => {
-    expect(() =>
-      calculateChart(CASES.kl1992.input, {
-        ...OPTIONS('kp_old'),
-        // @ts-expect-error not a PolarHandling
-        polarHandling: 'clamp',
-      })
-    ).toThrow(/polarHandling/);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -633,7 +609,7 @@ describe('calculateChart: ruling planets (#36) and dasha (#37)', () => {
     ]);
   });
 
-  it('dasha months follow dashaYearDays / 12, not a hidden 30.4375 (#29 Q17)', () => {
+  it('dasha months follow DASHA_YEAR_DAYS / 12 (365.2425 / 12), not a hidden 30.4375', () => {
     const moonLon = chartFor('kl1992', 'kp_old').planets.find((p) => p.name === 'Moon')!.longitude;
     const birth = getDashaAtBirth(moonLon);
     const whole = Math.floor(birth.balanceYears);
@@ -641,22 +617,12 @@ describe('calculateChart: ruling planets (#36) and dasha (#37)', () => {
     const wholeMonths = Math.floor(months);
     const frac = months - wholeMonths;
     const at = new Date('1992-03-10T22:14:00Z');
-    for (const yearDays of [360, 365.25, 365.2425, 720]) {
-      const d = calculateVimshottariDasha(moonLon, at, { dashaYearDays: yearDays });
-      expect(d.balanceYears).toBe(whole);
-      expect(d.balanceMonths).toBe(wholeMonths);
-      expect(d.balanceDays).toBe(Math.round(frac * (yearDays / 12)));
-    }
+    const d = calculateVimshottariDasha(moonLon, at);
+    expect(d.balanceYears).toBe(whole);
+    expect(d.balanceMonths).toBe(wholeMonths);
+    expect(d.balanceDays).toBe(Math.round(frac * (365.2425 / 12)));
   });
 
-  it('the chart passes dashaYearDays through to the timeline dates', () => {
-    const input = CASES.kl1992.input;
-    const a = calculateChart(input, { ...OPTIONS('kp_old'), dashaYearDays: 360 });
-    const b = calculateChart(input, { ...OPTIONS('kp_old'), dashaYearDays: 365.25 });
-    const lastA = a.dashaBalance.dashaTimeline.at(-1)!.endDate;
-    const lastB = b.dashaBalance.dashaTimeline.at(-1)!.endDate;
-    expect(lastA < lastB).toBe(true);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -677,15 +643,10 @@ describe('calculateChart: significators', () => {
     }
   });
 
-  it('planet names come from PlanetName, so asPlanetNames drops nothing (also with the outer planets)', () => {
+  it('planet names come from PlanetName, so asPlanetNames drops nothing', () => {
     // asPlanetNames is private to significators.ts. A name it dropped would be missing from the
-    // Stack B layout but present in Stack A's lists, so compare every level, with and without
-    // Uranus, Neptune and Pluto in the planets passed in.
-    const chart = calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), includeOuterPlanets: true });
-    const outerNames = ['Uranus', 'Neptune', 'Pluto'];
-    expect(chart.planets.map((p) => p.name)).toEqual(
-      expect.arrayContaining(outerNames)
-    );
+    // Stack B layout but present in Stack A's lists, so compare every level.
+    const chart = chartFor('kl1992', 'kp_old');
     for (const set of ['none', 'sign_lord_star_lord_same_sign'] as const) {
       const a = calculateSignificators(chart.cusps, chart.planets);
       const b = calculateFourLevelSignificators(chart.cusps, chart.planets, set);
@@ -698,7 +659,7 @@ describe('calculateChart: significators', () => {
     }
     // every name in a chart is a PlanetName
     for (const p of chart.planetPositions) {
-      expect(['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu', ...outerNames]).toContain(p.name);
+      expect(['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu']).toContain(p.name);
     }
   });
 
@@ -711,20 +672,6 @@ describe('calculateChart: significators', () => {
     expect(none.nodeAgentSignificators.planetWise.Ketu.agentsFor).toEqual([]);
     // the four house levels do not depend on the rule set
     expect(none.significators).toEqual(chartFor('kl1992', 'kp_old').significators);
-  });
-
-  it('the outer planets, when included, are listed and drawn but are not significators (#29 Q12)', () => {
-    const without = chartFor('kl1992', 'kp_old');
-    const withOuter = calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), includeOuterPlanets: true });
-    expect(without.planets).toHaveLength(9);
-    expect(withOuter.planets).toHaveLength(12);
-    expect(withOuter.planetPositions).toHaveLength(12);
-    expect(withOuter.significators).toEqual(without.significators);
-    expect(withOuter.nodeAgentSignificators).toEqual(without.nodeAgentSignificators);
-    // the first nine planets are unchanged by including them
-    expect(withOuter.planets.slice(0, 9)).toEqual(without.planets);
-    const drawn = withOuter.chartWheels.northIndian.flatMap((h) => h.planets.map((p) => p.name));
-    expect(drawn).toEqual(expect.arrayContaining(['Uranus', 'Neptune', 'Pluto']));
   });
 
   it('KL 1992 house 12 level 1 has Mercury, Jupiter and Venus (A.1 cusps, Stack A order)', () => {
@@ -761,13 +708,6 @@ describe('calculateChart: near_sub_boundary warnings (#29 Q10, Q16)', () => {
     expect(saturn.isNearSubSubBoundary).toBe(true);
   });
 
-  it('threshold 0 raises no near-boundary warning; a huge threshold flags every point', () => {
-    const none = calculateChart(CASES.chn1950.input, { ...OPTIONS('kp_old'), nearBoundaryThresholdArcsec: 0 });
-    expect(none.warnings.some((w) => w.code === 'near_sub_boundary')).toBe(false);
-    const all = calculateChart(CASES.chn1950.input, { ...OPTIONS('kp_old'), nearBoundaryThresholdArcsec: 1e6 });
-    expect(all.warnings.filter((w) => w.code === 'near_sub_boundary')).toHaveLength(12 + 9);
-  });
-
   it('the polar fallback warning comes first and is never dropped when other warnings exist', () => {
     const chart = chartFor('tromso2010', 'kp_old');
     expect(chart.warnings[0].code).toBe('polar_fallback');
@@ -781,14 +721,8 @@ describe('calculateChart: near_sub_boundary warnings (#29 Q10, Q16)', () => {
 
 const ALL_OPTION_KEYS = [
   'ayanamsa',
-  'nodeMode',
   'nodeAgentRuleSet',
   'rulingPlanetSet',
-  'dashaYearDays',
-  'polarHandling',
-  'sunriseDefinition',
-  'nearBoundaryThresholdArcsec',
-  'includeOuterPlanets',
 ] as const satisfies ReadonlyArray<keyof ChartCalculationOptions>;
 
 describe('calculateChart: every option is required, none has a default', () => {
@@ -825,20 +759,10 @@ describe('calculateChart: every option is required, none has a default', () => {
   });
 
   it.each([
-    ['nodeMode', 'MEDIAN'],
     ['nodeAgentRuleSet', 'aspects'],
     ['rulingPlanetSet', 'with_nodes'],
-    ['sunriseDefinition', 'astronomical'],
   ] as const)('an unknown %s (%s) throws and is never mapped to another value', (key, bad) => {
     expect(() => calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), [key]: bad } as never)).toThrow();
-  });
-
-  it.each([0, -365, NaN, Infinity])('dashaYearDays %s is rejected', (days) => {
-    expect(() => calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), dashaYearDays: days })).toThrow();
-  });
-
-  it.each([-1, NaN])('nearBoundaryThresholdArcsec %s is rejected', (t) => {
-    expect(() => calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), nearBoundaryThresholdArcsec: t })).toThrow();
   });
 
   it('a missing UTC offset is an error, not UTC', () => {
@@ -853,15 +777,5 @@ describe('calculateChart: every option is required, none has a default', () => {
     expect(() => calculateChart({ ...base, latitude: 91 }, OPTIONS('kp_old'))).toThrow(/latitude/);
     expect(() => calculateChart({ ...base, longitude: 181 }, OPTIONS('kp_old'))).toThrow(/longitude/);
     expect(() => calculateChart({ ...base, year: NaN }, OPTIONS('kp_old'))).toThrow(/year/);
-  });
-
-  it('the node mode is passed through: TRUE and MEAN Rahu differ (KL 1992: about +0.45 deg)', () => {
-    const mean = chartFor('kl1992', 'kp_old').planets.find((p) => p.name === 'Rahu')!;
-    const trueNode = calculateChart(CASES.kl1992.input, { ...OPTIONS('kp_old'), nodeMode: 'TRUE' });
-    const rahu = trueNode.planets.find((p) => p.name === 'Rahu')!;
-    expect(trueNode.nodeMode).toBe('TRUE');
-    expect(chartFor('kl1992', 'kp_old').nodeMode).toBe('MEAN');
-    expect(rahu.longitude - mean.longitude).toBeGreaterThan(0.4);
-    expect(rahu.longitude - mean.longitude).toBeLessThan(0.5);
   });
 });

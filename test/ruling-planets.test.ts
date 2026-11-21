@@ -12,9 +12,7 @@ import {
   calculateRulingPlanets,
   type RulingPlanetOptions,
 } from '../src/engine/ruling-planets.js';
-import type { Coordinates, SunriseDefinition } from '../src/engine/types.js';
-
-const UPPER_LIMB: SunriseDefinition = 'upper_limb_refraction';
+import type { Coordinates } from '../src/engine/types.js';
 
 const KL: Coordinates = { latitude: 3.139, longitude: 101.6869 };
 const GREENWICH: Coordinates = { latitude: 51.4779, longitude: -0.0015 };
@@ -27,7 +25,6 @@ const jdToMs = (jd: number): number => Math.round((jd - 2440587.5) * 86400000);
 
 const RP_OPTIONS: RulingPlanetOptions = {
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord',
-  sunriseDefinition: UPPER_LIMB,
 };
 
 interface DayCase {
@@ -86,7 +83,7 @@ describe('DAY_LORDS', () => {
 describe('calculateDayLord: Swiss Ephemeris reference cases (Appendix A.7)', () => {
   for (const c of CASES) {
     it(`${c.name}: day lord ${c.dayLord}, sunrise within 60 s of SE`, () => {
-      const r = calculateDayLord(new Date(c.moment), c.coords, UPPER_LIMB);
+      const r = calculateDayLord(new Date(c.moment), c.coords);
       expect(r.sunriseStatus).toBe('ok');
       if (r.sunriseStatus !== 'ok') return; // narrow
       expect(r.dayLord).toBe(c.dayLord);
@@ -96,7 +93,7 @@ describe('calculateDayLord: Swiss Ephemeris reference cases (Appendix A.7)', () 
   }
 
   it('Kuala Lumpur 1992 06:14 is Mars, not Mercury (#36: Stack B returned Wednesday)', () => {
-    const r = calculateDayLord(new Date('1992-03-11T06:14:00+08:00'), KL, UPPER_LIMB);
+    const r = calculateDayLord(new Date('1992-03-11T06:14:00+08:00'), KL);
     expect(r.dayLord).toBe('Mars');
     expect(r.dayLord).not.toBe('Mercury');
     // The sunrise that fixed it is the one of 1992-03-09 23:21 UTC, the day BEFORE the
@@ -108,62 +105,53 @@ describe('calculateDayLord: Swiss Ephemeris reference cases (Appendix A.7)', () 
 describe('calculateDayLord: changes at sunrise, not midnight', () => {
   it('flips exactly across the sunrise and not across local midnight (Kuala Lumpur, 1992-03-10)', () => {
     const sunriseMs = jdToMs(2448691.472913 + 1); // sunrise of the following morning, 1992-03-10 23:21 UTC
-    const before = calculateDayLord(new Date(sunriseMs - 90_000), KL, UPPER_LIMB);
-    const after = calculateDayLord(new Date(sunriseMs + 90_000), KL, UPPER_LIMB);
+    const before = calculateDayLord(new Date(sunriseMs - 90_000), KL);
+    const after = calculateDayLord(new Date(sunriseMs + 90_000), KL);
     expect(before.dayLord).toBe('Mars'); // Tuesday's day, still running although it is Wednesday
     expect(after.dayLord).toBe('Mercury'); // Wednesday's day has begun
 
     // Local midnight (mean time) between the two: still Mars.
     const localMidnight = Date.UTC(1992, 2, 10, 0, 0, 0) - (KL.longitude / 15) * 3600_000 + 86_400_000;
-    expect(calculateDayLord(new Date(localMidnight + 60_000), KL, UPPER_LIMB).dayLord).toBe('Mars');
+    expect(calculateDayLord(new Date(localMidnight + 60_000), KL).dayLord).toBe('Mars');
   });
 
   it('flips one second either side of its own reported sunrise', () => {
-    const found = calculateDayLord(new Date('2000-01-01T12:00:00Z'), GREENWICH, UPPER_LIMB);
+    const found = calculateDayLord(new Date('2000-01-01T12:00:00Z'), GREENWICH);
     expect(found.sunriseStatus).toBe('ok');
     if (found.sunriseStatus !== 'ok') return;
     expect(found.dayLord).toBe('Saturn');
     // The next sunrise (Sunday) is the one after; the previous day's lord is Friday's.
     const sunriseMs = new Date(found.sunriseUtc).getTime();
-    expect(calculateDayLord(new Date(sunriseMs - 2000), GREENWICH, UPPER_LIMB).dayLord).toBe('Venus');
-    expect(calculateDayLord(new Date(sunriseMs + 2000), GREENWICH, UPPER_LIMB).dayLord).toBe('Saturn');
+    expect(calculateDayLord(new Date(sunriseMs - 2000), GREENWICH).dayLord).toBe('Venus');
+    expect(calculateDayLord(new Date(sunriseMs + 2000), GREENWICH).dayLord).toBe('Saturn');
   });
 });
 
 describe('calculateDayLord: no sunrise is explicit, never 06:00 local', () => {
   it('Tromso 2010-12-21 03:00 UTC: polar night, no day lord, no sunrise time', () => {
-    const r = calculateDayLord(new Date('2010-12-21T03:00:00Z'), TROMSO, UPPER_LIMB);
+    const r = calculateDayLord(new Date('2010-12-21T03:00:00Z'), TROMSO);
     expect(r).toEqual({ sunriseStatus: 'no_sunrise_polar_night', dayLord: null, sunriseUtc: null });
   });
 
   it('Tromso 2010-06-21 12:00 UTC: polar day (midnight sun), no day lord, no sunrise time', () => {
-    const r = calculateDayLord(new Date('2010-06-21T12:00:00Z'), TROMSO, UPPER_LIMB);
+    const r = calculateDayLord(new Date('2010-06-21T12:00:00Z'), TROMSO);
     expect(r).toEqual({ sunriseStatus: 'no_sunrise_polar_day', dayLord: null, sunriseUtc: null });
   });
 
   it('southern hemisphere mirrors it: Antarctic latitude in June is polar night', () => {
-    const r = calculateDayLord(new Date('2010-06-21T12:00:00Z'), { latitude: -75, longitude: 0 }, UPPER_LIMB);
+    const r = calculateDayLord(new Date('2010-06-21T12:00:00Z'), { latitude: -75, longitude: 0 });
     expect(r.sunriseStatus).toBe('no_sunrise_polar_night');
   });
 });
 
-describe('calculateDayLord: required parameters and validation', () => {
+describe('calculateDayLord: validation', () => {
   const moment = new Date('2000-01-01T12:00:00Z');
 
-  it("'disc_center' is not implemented and says so (TODO(#29 Q8))", () => {
-    expect(() => calculateDayLord(moment, GREENWICH, 'disc_center')).toThrow(/not implemented/);
-  });
-
-  it('an unknown sunrise definition throws instead of falling back', () => {
-    expect(() => calculateDayLord(moment, GREENWICH, 'bogus' as SunriseDefinition)).toThrow(/Unknown SunriseDefinition/);
-    expect(() => calculateDayLord(moment, GREENWICH, undefined as unknown as SunriseDefinition)).toThrow();
-  });
-
   it('rejects an invalid date and out-of-range coordinates', () => {
-    expect(() => calculateDayLord(new Date('nope'), GREENWICH, UPPER_LIMB)).toThrow(RangeError);
-    expect(() => calculateDayLord(moment, { latitude: 91, longitude: 0 }, UPPER_LIMB)).toThrow(RangeError);
-    expect(() => calculateDayLord(moment, { latitude: 0, longitude: 181 }, UPPER_LIMB)).toThrow(RangeError);
-    expect(() => calculateDayLord(moment, { latitude: NaN, longitude: 0 }, UPPER_LIMB)).toThrow(RangeError);
+    expect(() => calculateDayLord(new Date('nope'), GREENWICH)).toThrow(RangeError);
+    expect(() => calculateDayLord(moment, { latitude: 91, longitude: 0 })).toThrow(RangeError);
+    expect(() => calculateDayLord(moment, { latitude: 0, longitude: 181 })).toThrow(RangeError);
+    expect(() => calculateDayLord(moment, { latitude: NaN, longitude: 0 })).toThrow(RangeError);
   });
 });
 
@@ -207,18 +195,7 @@ describe('calculateRulingPlanets', () => {
   it('requires a known ruling-planet set: no silent default (TODO(#24))', () => {
     const moment = new Date('1992-03-11T06:14:00+08:00');
     expect(() =>
-      calculateRulingPlanets(asc, moon, moment, KL, {
-        sunriseDefinition: UPPER_LIMB,
-      } as unknown as RulingPlanetOptions),
+      calculateRulingPlanets(asc, moon, moment, KL, {} as unknown as RulingPlanetOptions),
     ).toThrow(/Unknown RulingPlanetSet/);
-  });
-
-  it("passes 'disc_center' through to the day lord, which refuses it (TODO(#29 Q8))", () => {
-    expect(() =>
-      calculateRulingPlanets(asc, moon, new Date('1992-03-11T06:14:00+08:00'), KL, {
-        ...RP_OPTIONS,
-        sunriseDefinition: 'disc_center',
-      }),
-    ).toThrow(/not implemented/);
   });
 });

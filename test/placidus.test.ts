@@ -221,7 +221,7 @@ describe('Placidus House Cusps Engine', () => {
 
   it('falls back to Porphyry inside polar circle with a warning', () => {
     const polarLat = 75.0; // Arctic circle
-    const res = calculatePlacidusCusps(100.0, polarLat, 23.44, 24.0, 'porphyry_fallback');
+    const res = calculatePlacidusCusps(100.0, polarLat, 23.44, 24.0);
     expect(res.isPolarFallback).toBe(true);
     expect(res.warnings).toBeDefined();
     expect(res.warnings![0]).toContain('polar circle');
@@ -267,7 +267,7 @@ const GRID_CUSP_INDEX = [0, 1, 2, 9, 10, 11]; // cusps 1, 2, 3, 10, 11, 12
 describe('Placidus vs Swiss Ephemeris houses_armc (Appendix A.6)', () => {
   for (const [lat, armc, expected] of A6_GRID) {
     it(`lat ${lat}, ARMC ${armc}: cusps 1, 2, 3, 10, 11, 12 within 0.01 arcsec; mirrored cusps are +180`, () => {
-      const r = calculatePlacidusCusps(armc, lat, SE_OBLIQUITY, 0.0, 'refuse');
+      const r = calculatePlacidusCusps(armc, lat, SE_OBLIQUITY, 0.0);
       expect(r.isPolarFallback).toBe(false);
       expect(r.chartWarnings).toEqual([]);
       GRID_CUSP_INDEX.forEach((idx, k) => {
@@ -283,9 +283,9 @@ describe('Placidus vs Swiss Ephemeris houses_armc (Appendix A.6)', () => {
 
   it('66.5 N is computed as Placidus and is NOT clamped to 66 N (regression for #35)', () => {
     expect(isPolarLatitude(66.5, SE_OBLIQUITY)).toBe(false);
-    const r = calculatePlacidusCusps(0, 66.5, SE_OBLIQUITY, 0.0, 'refuse');
+    const r = calculatePlacidusCusps(0, 66.5, SE_OBLIQUITY, 0.0);
     expect(r.isPolarFallback).toBe(false);
-    const atClamp = calculatePlacidusCusps(0, 66.0, SE_OBLIQUITY, 0.0, 'refuse');
+    const atClamp = calculatePlacidusCusps(0, 66.0, SE_OBLIQUITY, 0.0);
     // The clamped latitude gives a visibly different Ascendant (#35: errors of several degrees).
     expect(diffArcsec(r.ascendantTropical, atClamp.ascendantTropical)).toBeGreaterThan(1000);
     expect(diffArcsec(r.ascendantTropical, 132.45305)).toBeLessThanOrEqual(0.01);
@@ -317,7 +317,7 @@ describe('Polar latitudes: Tromso 69.6492 N (Appendix A.5)', () => {
 
   for (const [name, ayanamsa, expected] of cases) {
     it(`${name}: Porphyry cusps within 0.1 arcsec of Swiss Ephemeris, flagged as fallback`, () => {
-      const r = calculatePlacidusCusps(armc, LAT, TRUE_OBL, ayanamsa, 'porphyry_fallback');
+      const r = calculatePlacidusCusps(armc, LAT, TRUE_OBL, ayanamsa);
       expect(r.isPolarFallback).toBe(true);
       expect(r.warnings?.[0]).toContain('polar circle');
       expect(r.chartWarnings).toHaveLength(1);
@@ -329,31 +329,17 @@ describe('Polar latitudes: Tromso 69.6492 N (Appendix A.5)', () => {
     });
   }
 
-  it("'refuse' throws PolarLatitudeError at Tromso", () => {
-    expect(() => calculatePlacidusCusps(armc, LAT, TRUE_OBL, 23.9, 'refuse')).toThrow(
-      PolarLatitudeError
-    );
-  });
-
-  it('with no polarHandling chosen it throws instead of picking a default (TODO(#29 Q7))', () => {
-    expect(() => calculatePlacidusCusps(armc, LAT, TRUE_OBL, 23.9)).toThrow(/polarHandling/);
-  });
-
   it('southern polar latitudes are treated the same way', () => {
     expect(isPolarLatitude(-69.65, TRUE_OBL)).toBe(true);
-    expect(() => calculatePlacidusCusps(armc, -69.65, TRUE_OBL, 23.9, 'refuse')).toThrow(
-      PolarLatitudeError
-    );
-    const r = calculatePlacidusCusps(armc, -69.65, TRUE_OBL, 23.9, 'porphyry_fallback');
+    const r = calculatePlacidusCusps(armc, -69.65, TRUE_OBL, 23.9);
     expect(r.isPolarFallback).toBe(true);
+    expect(r.chartWarnings[0].code).toBe('polar_fallback');
   });
 
-  it('polarHandling does not matter at non-polar latitudes', () => {
-    const a = calculatePlacidusCusps(armc, 51.4779, TRUE_OBL, 23.9, 'refuse');
-    const b = calculatePlacidusCusps(armc, 51.4779, TRUE_OBL, 23.9, 'porphyry_fallback');
-    const c = calculatePlacidusCusps(armc, 51.4779, TRUE_OBL, 23.9);
-    expect(a.siderealCusps).toEqual(b.siderealCusps);
-    expect(a.siderealCusps).toEqual(c.siderealCusps);
+  it('a non-polar latitude is never a fallback', () => {
+    const r = calculatePlacidusCusps(armc, 51.4779, TRUE_OBL, 23.9);
+    expect(r.isPolarFallback).toBe(false);
+    expect(r.chartWarnings).toEqual([]);
   });
 });
 
@@ -372,7 +358,8 @@ describe('ascendantToArmc (horary Asc -> ARMC inversion)', () => {
       const startSidereal = table[n - 1].startLongitude;
       const ascTropical = (startSidereal + KL_AYANAMSA) % 360;
       const armc = ascendantToArmc(ascTropical, KL_LAT, KL_OBL);
-      const r = calculatePlacidusCusps(armc, KL_LAT, KL_OBL, KL_AYANAMSA, 'refuse');
+      const r = calculatePlacidusCusps(armc, KL_LAT, KL_OBL, KL_AYANAMSA);
+      expect(r.isPolarFallback).toBe(false);
       expect(diffArcsec(r.ascendantTropical, ascTropical)).toBeLessThan(1e-6);
       // Asc is the START of the sub (not the midpoint).
       expect(diffArcsec(r.ascendantSidereal, startSidereal)).toBeLessThan(1e-6);
@@ -384,7 +371,8 @@ describe('ascendantToArmc (horary Asc -> ARMC inversion)', () => {
       for (const entry of table) {
         const asc = (entry.startLongitude + KL_AYANAMSA) % 360;
         const armc = ascendantToArmc(asc, lat, KL_OBL);
-        const r = calculatePlacidusCusps(armc, lat, KL_OBL, KL_AYANAMSA, 'refuse');
+        const r = calculatePlacidusCusps(armc, lat, KL_OBL, KL_AYANAMSA);
+        expect(r.isPolarFallback).toBe(false);
         expect(diffArcsec(r.ascendantTropical, asc)).toBeLessThan(1e-6);
       }
     }
@@ -396,7 +384,8 @@ describe('ascendantToArmc (horary Asc -> ARMC inversion)', () => {
     for (const lat of [0, 30, 66.5, -66.5]) {
       for (const asc of targets) {
         const armc = ascendantToArmc(asc, lat, SE_OBLIQUITY);
-        const r = calculatePlacidusCusps(armc, lat, SE_OBLIQUITY, 0.0, 'refuse');
+        const r = calculatePlacidusCusps(armc, lat, SE_OBLIQUITY, 0.0);
+        expect(r.isPolarFallback).toBe(false);
         expect(diffArcsec(r.ascendantTropical, asc)).toBeLessThan(1e-6);
       }
     }

@@ -34,14 +34,8 @@ import type {
 
 const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
   ayanamsa, // TODO(#22): fixture, not a default
-  nodeMode: 'MEAN', // TODO(#29 Q6): fixture (Appendix A mean-node rows)
   nodeAgentRuleSet: 'sign_lord_star_lord_same_sign', // TODO(#23): fixture
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord', // TODO(#24): fixture
-  dashaYearDays: 365.2425, // TODO(#29 Q9): fixture
-  polarHandling: 'porphyry_fallback', // TODO(#29 Q7): fixture
-  sunriseDefinition: 'upper_limb_refraction', // TODO(#29 Q8): fixture
-  nearBoundaryThresholdArcsec: 60, // TODO(#29 Q10): fixture
-  includeOuterPlanets: false, // TODO(#29 Q12): fixture
 });
 
 /** Swiss Ephemeris true obliquity and true ayanamsa per case, from Appendix A.1 to A.4. */
@@ -92,8 +86,7 @@ function seSiderealAsc(c: SeCase, ayanamsa: AyanamsaMode, armc: number): number 
     armc,
     c.input.latitude,
     c.trueObliquity,
-    c.trueAyanamsa[ayanamsa],
-    'porphyry_fallback'
+    c.trueAyanamsa[ayanamsa]
   ).ascendantSidereal;
 }
 
@@ -119,8 +112,7 @@ describe('horary lagna at the start of the sub, KL 1992 (Appendix A.1, KP Old)',
           chart.armc,
           KL.input.latitude,
           chart.obliquityTrue,
-          chart.ayanamsaValue,
-          'porphyry_fallback'
+          chart.ayanamsaValue
         );
         const d = diffArcsec(again.ascendantSidereal, entry.startLongitude);
         expect(d).toBeGreaterThanOrEqual(0);
@@ -234,7 +226,6 @@ describe('the sky is the question instant, computed like calculateChart', () => 
     expect(horary.rulingPlanets.dayLord).toBe('Mars'); // A.7, #36: sunrise, not midnight
     expect(horary.ayanamsaValue).toBe(natal.ayanamsaValue);
     expect(horary.julianDateUT).toBe(natal.julianDateUT);
-    expect(horary.nodeMode).toBe('MEAN');
   });
 
   it('planets match Appendix A.1 (Sun within 2", Moon within 6")', () => {
@@ -362,36 +353,25 @@ describe('inputs and options are checked, never defaulted', () => {
   });
 });
 
-describe('polar question place (#35, #29 Q7)', () => {
+describe('polar question place (#35, #58)', () => {
   const TROMSO: DateTimeLocation = {
     year: 2010, month: 12, day: 21, hour: 3, minute: 0, second: 0, utcOffsetHours: 0, latitude: 69.6492, longitude: 18.9553,
   };
 
-  it('polarHandling "refuse" throws PolarLatitudeError', () => {
-    expect(() =>
-      calculateHoraryChart(
-        { questionTime: TROMSO, horaryNumber: 100 },
-        { ...OPTIONS('kp_old'), polarHandling: 'refuse' }
-      )
-    ).toThrow(PolarLatitudeError);
-  });
-
-  it('polarHandling "porphyry_fallback" also throws PolarLatitudeError: horary has no Porphyry fallback', () => {
+  it('throws PolarLatitudeError: horary has no Porphyry fallback (#58)', () => {
     // Documented in `calculateHoraryChart`: the Ascendant is not one-to-one in the ARMC inside the
-    // polar circle, so there is no unique ARMC to build the chart from. TODO(#29 Q7).
+    // polar circle, so there is no unique ARMC to build the chart from. #29 (owner, 2026-11-21)
+    // makes Porphyry the polar behaviour of natal charts only.
     expect(isPolarLatitude(TROMSO.latitude, 23.4378)).toBe(true);
     expect(() =>
-      calculateHoraryChart(
-        { questionTime: TROMSO, horaryNumber: 100 },
-        { ...OPTIONS('kp_old'), polarHandling: 'porphyry_fallback' }
-      )
+      calculateHoraryChart({ questionTime: TROMSO, horaryNumber: 100 }, OPTIONS('kp_old'))
     ).toThrow(PolarLatitudeError);
   });
 
   it('66.5 N is not polar: Placidus, lagna on the sub start, no clamp (#35)', () => {
     const chart = calculateHoraryChart(
       { questionTime: { ...TROMSO, latitude: 66.5 }, horaryNumber: 100 },
-      { ...OPTIONS('kp_old'), polarHandling: 'refuse' }
+      OPTIONS('kp_old')
     );
     expect(chart.isPolarFallback).toBe(false);
     expect(chart.cusps[0].horary249Number).toBe(100);
