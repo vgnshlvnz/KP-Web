@@ -15,6 +15,9 @@ import {
   calculateObliquity,
   calculateSiderealTime,
   calculateAyanamsa,
+  normalizeDegrees,
+  cosd,
+  SiderealTimeResult,
 } from './astronomy.js';
 import { calculatePlacidusCusps } from './placidus.js';
 import { buildKPCusp } from './kp-lords.js';
@@ -35,6 +38,7 @@ export * from './chart-wheels.js';
 export * from './ephemeris.js';
 export * from './dasha.js';
 export * from './ruling-planets.js';
+export * from './horary.js';
 
 /**
  * Main engine entrypoint: Computes Placidus house cusps and chart data for KP astrology.
@@ -286,6 +290,66 @@ export function calculateChart(
   input: DateTimeLocation,
   options: ChartCalculationOptions
 ): FullChartCalculationResult {
+  return calculateChartWithArmc(input, options);
+}
+
+/**
+ * Sidereal time fields for a given ARMC (used when the ARMC is derived, not read from the clock):
+ * GAST = ARMC - longitude, GMST = GAST - equation of the equinoxes.
+ */
+function siderealTimeForArmc(
+  armc: number,
+  longitudeDeg: number,
+  dPsiDeg: number,
+  trueObliquityDeg: number
+): SiderealTimeResult {
+  assertFiniteNumber('ARMC', armc);
+  const armcNorm = normalizeDegrees(armc);
+  const eqEquinoxesDeg = dPsiDeg * cosd(trueObliquityDeg);
+  const gastDegrees = normalizeDegrees(armcNorm - longitudeDeg);
+  const gmstDegrees = normalizeDegrees(gastDegrees - eqEquinoxesDeg);
+  return {
+    gmstHours: gmstDegrees / 15.0,
+    gmstDegrees,
+    gastHours: gastDegrees / 15.0,
+    gastDegrees,
+    lstHours: armcNorm / 15.0,
+    lstDegrees: armcNorm,
+    armc: armcNorm,
+  };
+}
+
+/**
+ * What `calculateChartWithArmc` tells its ARMC resolver: the sidereal time of the clock instant
+ * and the true ayanamsa and obliquity that the cusps will use.
+ */
+export interface ArmcContext {
+  /** ARMC of the input instant and place (what `calculateChart` uses), degrees. */
+  clockArmc: number;
+  /** Mean ayanamsa + dPsi, degrees: the value subtracted from tropical longitudes. */
+  trueAyanamsaDeg: number;
+  /** True obliquity of date, degrees. */
+  trueObliquityDeg: number;
+}
+
+/**
+ * Internal "chart from ARMC" helper shared by `calculateChart` and `calculateHoraryChart`.
+ * Not part of the public API surface that `src/index.ts` should use; prefer the two callers.
+ *
+ * It does everything `calculateChart` documents. The only difference is where the ARMC comes
+ * from. Without `resolveArmc` the ARMC is the sidereal time at `input` (a natal or event chart).
+ * With it, the planets, dasha and ruling planets are still computed for the instant `input`, but
+ * the houses are built from the ARMC the resolver returns (a KP horary chart, where the Ascendant
+ * is fixed by the querent's number and the ARMC is derived from it). In that case the sidereal
+ * time fields of the result (`armc`, `localSiderealTime*`, `greenwichApparentSiderealTime`,
+ * `greenwichMeanSiderealTime`) describe the ARMC the houses were built from, so that they agree
+ * with the cusps; the planets stay at the question instant.
+ */
+export function calculateChartWithArmc(
+  input: DateTimeLocation,
+  options: ChartCalculationOptions,
+  resolveArmc?: (context: ArmcContext) => number
+): FullChartCalculationResult {
   assertChartOptions(options);
   const birthUtc = chartInstantUtc(input);
   const coordinates = { latitude: input.latitude, longitude: input.longitude };
@@ -303,8 +367,20 @@ export function calculateChart(
   const nutInLon = ephemeris.nutationInLongitudeDeg;
   const nutInObl = ephemeris.nutationInObliquityDeg;
   const obl = calculateObliquity(jdUT, nutInObl);
-  const st = calculateSiderealTime(jdUT, input.longitude, nutInLon, obl.trueObliquity);
+  const clockSt = calculateSiderealTime(jdUT, input.longitude, nutInLon, obl.trueObliquity);
   const aya = calculateAyanamsa(jdUT, options.ayanamsa, nutInLon);
+  const st = resolveArmc
+    ? siderealTimeForArmc(
+        resolveArmc({
+          clockArmc: clockSt.armc,
+          trueAyanamsaDeg: ephemeris.trueAyanamsaDeg,
+          trueObliquityDeg: obl.trueObliquity,
+        }),
+        input.longitude,
+        nutInLon,
+        obl.trueObliquity
+      )
+    : clockSt;
 
   const placidus = calculatePlacidusCusps(
     st.armc,
