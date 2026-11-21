@@ -1,5 +1,11 @@
 import { normalizeDegrees } from './astronomy.js';
-import { KPPositionLords, KPCusp, KPPlanetLord, SubBoundaryInfo } from './types.js';
+import {
+  KPPositionLords,
+  KPCusp,
+  KPPlanetLord,
+  SubBoundaryInfo,
+  SubSubBoundaryInfo,
+} from './types.js';
 
 /**
  * KP lords module: the single source of sign, star, sub and sub-sub lords for the engine.
@@ -230,7 +236,10 @@ export function getHoraryEntry(n: number): Horary249Entry {
  * There is deliberately no default: the caller must pass one.
  */
 export interface PositionLordsOptions {
-  /** Arcseconds from either edge of the sub span within which `isNearSubBoundary` is true. */
+  /**
+   * Arcseconds from either edge of the sub span (`isNearSubBoundary`) or of the sub-sub span
+   * (`isNearSubSubBoundary`) within which the flag is true.
+   */
   nearBoundaryThresholdArcsec: number;
 }
 
@@ -248,18 +257,20 @@ function assertThreshold(arcsec: number): void {
  *
  * Without `options` the result has no sub-boundary fields (the shape existing callers rely on).
  * With `options`, `subSpanStart`, `subSpanEnd`, `distanceFromSubStartArcsec`,
- * `distanceToSubEndArcsec` and `isNearSubBoundary` are filled in. They describe the **sub** span
- * (not the sub-sub span).
+ * `distanceToSubEndArcsec` and `isNearSubBoundary` are filled in. They describe the **sub** span.
+ * `distanceFromSubSubStartArcsec`, `distanceToSubSubEndArcsec` and `isNearSubSubBoundary` are
+ * filled in for the **sub-sub** span, which is the one that flips first when a longitude is off by
+ * a few arcseconds. TODO(#29 Q16): which of the two flags drives a warning is the owner's choice.
  */
 export function getPositionLords(longitude: number): KPPositionLords;
 export function getPositionLords(
   longitude: number,
   options: PositionLordsOptions
-): KPPositionLords & SubBoundaryInfo;
+): KPPositionLords & SubBoundaryInfo & SubSubBoundaryInfo;
 export function getPositionLords(
   longitude: number,
   options?: PositionLordsOptions
-): KPPositionLords | (KPPositionLords & SubBoundaryInfo) {
+): KPPositionLords | (KPPositionLords & SubBoundaryInfo & SubSubBoundaryInfo) {
   if (options) {
     assertThreshold(options.nearBoundaryThresholdArcsec);
   }
@@ -305,6 +316,8 @@ export function getPositionLords(
 
   let accumulatedSubSubSpan = 0.0;
   let subSubLord: KPPlanetLord = subLord;
+  let subSubSpan = 0.0;
+  let subSubStartInSub = 0.0;
 
   for (let ss = 0; ss < 9; ss++) {
     const candidateSubSubLord = VIMSHOTTARI_LORDS[(subLordIdx + ss) % 9];
@@ -312,6 +325,8 @@ export function getPositionLords(
 
     if (degreeInSub < accumulatedSubSubSpan + curSubSubSpan || ss === 8) {
       subSubLord = candidateSubSubLord;
+      subSubSpan = curSubSubSpan;
+      subSubStartInSub = accumulatedSubSubSpan;
       break;
     }
     accumulatedSubSubSpan += curSubSubSpan;
@@ -357,6 +372,12 @@ export function getPositionLords(
   const distanceFromSubStartArcsec = Math.max(0, (lon - subSpanStart) * 3600);
   const distanceToSubEndArcsec = Math.max(0, (subSpanEnd - lon) * 3600);
 
+  // 7. Sub-sub boundary info, same convention, for the sub-sub span the longitude falls in.
+  const subSubSpanStart = subSpanStart + subSubStartInSub;
+  const subSubSpanEnd = subSubSpanStart + subSubSpan;
+  const distanceFromSubSubStartArcsec = Math.max(0, (lon - subSubSpanStart) * 3600);
+  const distanceToSubSubEndArcsec = Math.max(0, (subSubSpanEnd - lon) * 3600);
+
   return {
     ...lords,
     subSpanStart,
@@ -366,6 +387,11 @@ export function getPositionLords(
     isNearSubBoundary:
       distanceFromSubStartArcsec < options.nearBoundaryThresholdArcsec ||
       distanceToSubEndArcsec < options.nearBoundaryThresholdArcsec,
+    distanceFromSubSubStartArcsec,
+    distanceToSubSubEndArcsec,
+    isNearSubSubBoundary:
+      distanceFromSubSubStartArcsec < options.nearBoundaryThresholdArcsec ||
+      distanceToSubSubEndArcsec < options.nearBoundaryThresholdArcsec,
   };
 }
 
