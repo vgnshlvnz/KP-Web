@@ -1,12 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import {
-  calculateKpAyanamsa,
-  dateToJulianDay,
-  formatDms,
+  calculateAyanamsa,
   julianDayToDate,
   KP_NEW_J2000_DEG,
   KP_OLD_J2000_DEG,
-} from '../src/ephemeris/ayanamsa.js';
+  toJulianDate as dateToJulianDay,
+} from '../src/engine/astronomy.js';
+// Re-pointed from `src/ephemeris/ayanamsa.js` to `src/engine/astronomy.js` (port-ephemeris, #41).
+// `formatDms` has no unified home yet; it keeps importing Stack B until `entrypoint`.
+import { formatDms } from '../src/ephemeris/ayanamsa.js';
+
+/** Mean ayanamsa in degrees, the quantity Stack B's `calculateKpAyanamsa(jd, 'KP_OLD' | 'KP_NEW')` returned. */
+function calculateKpAyanamsa(jd: number, mode: 'KP_OLD' | 'KP_NEW'): number {
+  return calculateAyanamsa(jd, mode === 'KP_NEW' ? 'kp_new' : 'kp_old').meanAyanamsa;
+}
 
 describe('KP ayanamsa', () => {
   it('KP Old and KP New ayanamsa values at J2000.0', () => {
@@ -103,5 +110,23 @@ describe('KP ayanamsa', () => {
     expect(formatDms(0.0)).toBe("0°00'00\"");
     expect(formatDms(153.0)).toBe("153°00'00\"");
     expect(formatDms(29.999999)).toBe("30°00'00\"");
+  });
+
+  it('rejects anything but kp_old / kp_new: no silent KP Old, no Lahiri (TODO(#22))', () => {
+    const jd = 2451545.0;
+    expect(() => calculateAyanamsa(jd, 'lahiri' as never)).toThrow(/ayanamsa/i);
+    expect(() => calculateAyanamsa(jd, 'KP_OLD' as never)).toThrow(/ayanamsa/i);
+    expect(() => calculateAyanamsa(jd, undefined as never)).toThrow(/ayanamsa/i);
+  });
+
+  it('true ayanamsa is the mean plus the nutation passed in', () => {
+    const r = calculateAyanamsa(2451545.0, 'kp_old', 0.004);
+    expect(r.trueAyanamsa - r.meanAyanamsa).toBeCloseTo(0.004, 12);
+    expect(calculateAyanamsa(2451545.0, 'kp_old').trueAyanamsa).toBe(r.meanAyanamsa);
+  });
+
+  it('julianDayToDate returns the UTC instant for the J2000 epoch and a 2026 reference instant', () => {
+    expect(julianDayToDate(2451545.0).toISOString()).toBe('2000-01-01T12:00:00.000Z');
+    expect(julianDayToDate(2461365.541666667).toISOString()).toBe('2026-11-21T01:00:00.000Z');
   });
 });
