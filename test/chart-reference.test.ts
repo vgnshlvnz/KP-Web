@@ -7,7 +7,8 @@
  * Swiss Ephemeris was used only to generate the numbers; it is not a dependency.
  *
  * Every option passed to `calculateChart` here is a TEST FIXTURE, not a default: each one is an
- * open owner decision (#22, #23, #24, #29 Q6..Q12) and the function has no default for any of them.
+ * owner decision (#22 decided: no API default; #23, #24, #29 Q6..Q12) and the function has no default
+ * for any of them.
  *
  * Tolerances (arcseconds), as in `ephemeris-reference.test.ts` (#41) and the work package:
  * cusps 0.5, Sun 2, Moon 6, Mars/Mercury/Jupiter/Venus/Saturn 12, mean node 1.
@@ -86,7 +87,7 @@ const CASES: Record<CaseId, ReferenceCase> = {
 };
 
 /**
- * Fixture options: only the three decisions that are still open (TODO(#22), TODO(#23), TODO(#24)).
+ * Fixture options: the three required options (#22 decided: no API default; TODO(#23), TODO(#24)).
  * Mean node, Porphyry at polar latitudes, upper-limb sunrise, 365.2425 and 60 arcsec are fixed
  * conventions (`src/engine/conventions.ts`), not options.
  */

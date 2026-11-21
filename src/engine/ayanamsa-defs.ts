@@ -2,9 +2,9 @@
  * Ayanamsa definitions: the supported modes, and how each one that is not KP Old / KP New is
  * defined (work package add-ayanamsas, #64; owner decision on #29, 2026-11-21, answer A).
  *
- * Every mode is an explicit choice. There is no default and no fallback: an unknown value is
- * rejected by `isAyanamsaMode` and by every function that takes an `AyanamsaMode`.
- * TODO(#22): which mode (if any) is the default is still the owner's decision.
+ * Every mode is an explicit choice. There is no fallback: an unknown value is rejected by
+ * `isAyanamsaMode` and by every function that takes an `AyanamsaMode`.
+ * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
  *
  * "As Swiss Ephemeris defines them": each mode below is the Swiss Ephemeris 2.10.03 sidereal mode
  * of the same name, taken BY NAME (the `SE_SIDM_*` constant), not by KP-Qt's numbers (KP-Qt's
@@ -34,8 +34,17 @@
  */
 import type { AyanamsaMode } from './types.js';
 
+/**
+ * The option preselected in the UI. It is ONLY for the preselected UI option (and is listed by
+ * `GET /api/health` and `GET /api/ayanamsa` so a client can preselect it). It is never used to fill
+ * a missing `ayanamsa` in an API request: a request without one is rejected (400).
+ * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ */
+export const DEFAULT_AYANAMSA_SELECTION: AyanamsaMode = 'kp_straight_line_adjusted';
+
 /** Every supported mode, in the order they are shown to the user. */
 export const AYANAMSA_MODES: readonly AyanamsaMode[] = [
+  'kp_straight_line_adjusted',
   'kp_old',
   'kp_new',
   'lahiri',
@@ -49,6 +58,7 @@ export const AYANAMSA_MODES: readonly AyanamsaMode[] = [
 
 /** Display names. */
 export const AYANAMSA_LABELS: Readonly<Record<AyanamsaMode, string>> = {
+  kp_straight_line_adjusted: 'KP Straight Line (Adjusted)',
   kp_old: 'KP Old',
   kp_new: 'KP New',
   lahiri: 'Lahiri',
@@ -70,8 +80,8 @@ export function unsupportedAyanamsaMessage(value: unknown): string {
   return `Unsupported ayanamsa mode: ${String(value)} (expected one of ${AYANAMSA_MODES.join(', ')}; there is no default and no fallback)`;
 }
 
-/** Modes computed from a Swiss Ephemeris definition (all except KP Old, KP New and Nil). */
-export type SeDefinedAyanamsaMode = Exclude<AyanamsaMode, 'kp_old' | 'kp_new' | 'nil'>;
+/** Modes computed from a Swiss Ephemeris definition (all except KPSTLA, KP Old, KP New and Nil). */
+export type SeDefinedAyanamsaMode = Exclude<AyanamsaMode, 'kp_straight_line_adjusted' | 'kp_old' | 'kp_new' | 'nil'>;
 
 export interface SeAyanamsaDefinition {
   /** Swiss Ephemeris constant, used by name. */
@@ -159,4 +169,43 @@ export function isSeDefinedAyanamsaMode(mode: AyanamsaMode): mode is SeDefinedAy
 export function meanAyanamsaSeDefined(mode: SeDefinedAyanamsaMode, T: number): number {
   const [c1, c2, c3, c4] = SE_PRECESSION_DEG_PER_CENTURY;
   return SE_AYANAMSA_DEFINITIONS[mode].meanAtJ2000Deg + c1 * T + c2 * T * T + c3 * T * T * T + c4 * T * T * T * T;
+}
+
+// ---------------------------------------------------------------------------
+// KP Straight Line (Adjusted), "KPSTLA" (id `kp_straight_line_adjusted`)
+// ---------------------------------------------------------------------------
+//
+// Owner definition (#29, 2026-11-21 16:49): KPSTLA = T x P / 3600 degrees, where T is the number of
+// years since the base year 291 AD (zero ayanamsa) and P = 50.2388475 arcsec/yr (Newcomb's general
+// precession). It has no Swiss Ephemeris definition. The choices below are the orchestrator's
+// proposals G1 to G3 (#29, comment 7065965531), applied PROVISIONALLY: "we will do the test and
+// reference checks later. build first" (owner, 2026-11-22). Owner to confirm; reference check pending.
+
+/**
+ * TODO(#29 G1): provisional, owner to confirm; reference check pending.
+ * Zero point: 291-01-01 0h UT in the Julian calendar = JD 1827345.5.
+ */
+export const KPSTLA_ZERO_JD = 1827345.5;
+
+/**
+ * TODO(#29 G2): provisional, owner to confirm; reference check pending.
+ * Length of the year used for T: the Julian year, 365.25 days (G2a). The alternative (G2b) is the
+ * tropical year, 365.242199 days, which differs by 1.8 arcsec at J2000.
+ */
+export const KPSTLA_YEAR_DAYS = 365.25;
+
+/** Annual precession P, arcsec per year (Newcomb), from the owner's definition (#29). */
+export const KPSTLA_PRECESSION_ARCSEC_PER_YEAR = 50.2388475;
+
+/**
+ * Mean KPSTLA ayanamsa, degrees, at Julian day `jd` (UT): T x P / 3600 with
+ * T = (jd - KPSTLA_ZERO_JD) / KPSTLA_YEAR_DAYS.
+ *
+ * TODO(#29 G3): provisional, owner to confirm; reference check pending. This is a MEAN ayanamsa;
+ * `calculateAyanamsa` adds the nutation in longitude, as for every other mode (G3a). The
+ * alternative (G3b) is to use it as given, with no nutation term (differs by up to about 17 arcsec).
+ */
+export function meanAyanamsaKpStla(jd: number): number {
+  const years = (jd - KPSTLA_ZERO_JD) / KPSTLA_YEAR_DAYS;
+  return (years * KPSTLA_PRECESSION_ARCSEC_PER_YEAR) / 3600;
 }

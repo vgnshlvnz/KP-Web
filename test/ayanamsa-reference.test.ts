@@ -309,7 +309,7 @@ function jdTt(utc: string): number {
   return Astronomy.MakeTime(new Date(utc)).tt + 2451545.0;
 }
 
-/** Test fixtures for the options that are still open (TODO(#22), TODO(#23), TODO(#24)); not defaults. */
+/** Test fixtures, not defaults (#22 decided: no API default; #23 and #24 still open, TODO(#23), TODO(#24)). */
 const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
   ayanamsa,
   nodeAgentRuleSet: 'none',
@@ -317,9 +317,9 @@ const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
 });
 
 describe('supported ayanamsa modes (#29, owner)', () => {
-  it('lists exactly the nine explicit ids: KP Old, KP New and the seven added', () => {
+  it('lists exactly the ten explicit ids: KPSTLA (#72), KP Old, KP New and the seven added', () => {
     expect([...AYANAMSA_MODES].sort()).toEqual(
-      ['kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'].sort()
+      ['kp_straight_line_adjusted', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'].sort()
     );
   });
 

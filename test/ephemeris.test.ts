@@ -5,7 +5,7 @@ import type { AyanamsaMode } from '../src/engine/types.js';
 /**
  * Re-pointed from Stack B's `calculatePlanetaryPositions(date, 'KP_OLD', 'MEAN')` to the unified
  * `calculateEphemeris` (port-ephemeris, #41). Reference values and tolerances are unchanged.
- * Two things differ by design: the ayanamsa is an explicit option with no default (TODO(#22)); mean
+ * Two things differ by design: the ayanamsa is an explicit option with no default (#22 decided); mean
  * node only and no outer planets are fixed (#29 (owner, 2026-11-21)); and sidereal = tropical - (mean ayanamsa + nutation), so the sidereal identity below uses
  * `trueAyanamsaDeg` (issue #33).
  */
@@ -127,7 +127,7 @@ describe('Ephemeris (astronomy-engine)', () => {
     ]);
   });
 
-  it('rejects an unknown ayanamsa instead of falling back (TODO(#22))', () => {
+  it('rejects an unknown ayanamsa instead of falling back (#22 decided)', () => {
     const testDate = new Date(Date.UTC(1990, 4, 15, 14, 30, 0));
     const base = { ayanamsa: 'kp_old' } as const;
     expect(() => calculateEphemeris(testDate, { ...base, ayanamsa: 'lahiri2' as never })).toThrow(/ayanamsa/i);

@@ -4,7 +4,7 @@
  * This is the single type module. It is the superset of the original Stack A types and the Stack B
  * `src/types.ts` (deleted in `entrypoint`, #66). Everything here was added without breaking the Stack A code.
  *
- * Owner decisions that are still open are typed as explicit options with NO default. Nothing in
+ * Owner decisions without a default (ayanamsa, #22 decided; #23, #24 open) are typed as explicit options with NO default. Nothing in
  * this file picks a value for them. Code that needs one must take it as a parameter.
  */
 
@@ -26,11 +26,13 @@
  * Stack B's `'KP_OLD' | 'KP_NEW'` (uppercase) was local to its `src/types.ts` and went away with it.
  * The lowercase ids are confirmed (#29, owner, 2026-11-21).
  *
- * TODO(#22): the default mode is an owner decision. This type carries no default; any
- * `= 'kp_old'` parameter default is the silent default #22 refers to; the last one, in
- * `calculateKPChart`, was removed in `final-cleanup` (#69).
+ * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ * This type carries no default member; any `= 'kp_old'` parameter default would be a silent default, and
+ * the last one, in `calculateKPChart`, was removed in `final-cleanup` (#69). `DEFAULT_AYANAMSA_SELECTION`
+ * in `ayanamsa-defs.ts` is for the preselected UI option only.
  */
 export type AyanamsaMode =
+  | 'kp_straight_line_adjusted'
   | 'kp_old'
   | 'kp_new'
   | 'lahiri'
@@ -389,11 +391,11 @@ export type NodeAgentRuleSet = 'none' | 'sign_lord_star_lord_same_sign';
 export type RulingPlanetSet = 'asc_star_sign_moon_star_sign_day_lord';
 
 /**
- * Explicit engine options: the three decisions that are still open. Every field is REQUIRED and has
+ * Explicit engine options: the three that have no default (#22 decided; #23, #24 open). Every field is REQUIRED and has
  * no default. Everything else is a fixed convention in `conventions.ts` (#29 (owner, 2026-11-21)).
  */
 export interface ChartCalculationOptions {
-  /** TODO(#22): default KP ayanamsa is the owner's decision. */
+  /** #22 decided: no API default; KPSTLA is the UI preselect only. */
   ayanamsa: AyanamsaMode;
   /** TODO(#23): Rahu/Ketu agent rules. */
   nodeAgentRuleSet: NodeAgentRuleSet;

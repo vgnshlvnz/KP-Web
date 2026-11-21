@@ -112,7 +112,7 @@ describe('KP ayanamsa', () => {
     expect(formatDms(29.999999)).toBe("30°00'00\"");
   });
 
-  it('rejects an unknown id: no silent KP Old, no silent Lahiri (TODO(#22))', () => {
+  it('rejects an unknown id: no silent KP Old, no silent Lahiri (#22 decided)', () => {
     // 'lahiri' used to be in this list. It is a supported mode since #29 (owner, 2026-11-21, answer A),
     // so the unknown ids are now near-misses of the supported ones.
     const jd = 2451545.0;

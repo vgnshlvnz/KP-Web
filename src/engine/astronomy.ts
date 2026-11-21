@@ -4,6 +4,7 @@ import {
   AYANAMSA_LABELS,
   isAyanamsaMode,
   isSeDefinedAyanamsaMode,
+  meanAyanamsaKpStla,
   meanAyanamsaSeDefined,
   unsupportedAyanamsaMessage,
 } from './ayanamsa-defs.js';
@@ -261,9 +262,12 @@ export interface AyanamsaResult {
  *   so sidereal longitude = tropical longitude.
  * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses.
  *
- * TODO(#22): the default ayanamsa is the owner's decision. `type` is a required parameter (this
- * function used to default it to 'kp_old'), and any value that is not one of the supported modes
- * throws instead of silently becoming KP Old or Lahiri.
+ * KP Straight Line (Adjusted): mean = T x 50.2388475" / 3600, T = (jd - 1827345.5) / 365.25 (owner, #29;
+ *   provisional choices G1 to G3 in `ayanamsa-defs.ts`, TODO(#29 G1), TODO(#29 G2), TODO(#29 G3)).
+ *
+ * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ * `type` is a required parameter (this function used to default it to 'kp_old'), and any value that is
+ * not one of the supported modes throws instead of silently becoming KP Old or Lahiri.
  */
 export function calculateAyanamsa(
   jd: number,
@@ -284,6 +288,9 @@ export function calculateAyanamsa(
     // Tropical: no ayanamsa, and no nutation term either (the planets and cusps are already in the
     // true equinox of date).
     return { type, name: AYANAMSA_LABELS.nil, meanAyanamsa: 0, trueAyanamsa: 0 };
+  } else if (type === 'kp_straight_line_adjusted') {
+    name = 'KP Straight Line (Adjusted)';
+    meanAyanamsa = meanAyanamsaKpStla(jd); // TODO(#29 G3): + dPsi below, like every other mode
   } else if (type === 'kp_new') {
     name = 'KP New (VP291 / Senthilathiban)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI_VP291

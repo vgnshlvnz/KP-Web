@@ -23,8 +23,9 @@
  * `success: false`, which the UI checks.
  *
  * Open owner decisions, never defaulted in the engine:
- *   - TODO(#22): `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa`
- *     (the nine supported ids). Missing or unknown is 400. There is no default and no fallback.
+ *   - #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ *     `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa` (the ten supported ids).
+ *     Missing or unknown is 400. `DEFAULT_AYANAMSA_SELECTION` is only reported, for the UI to preselect.
  *   - TODO(#23), TODO(#24): the two other engine options are set once, in `ENGINE_CONFIG`.
  */
 import { Hono } from 'hono';
@@ -49,16 +50,16 @@ import type {
   PlanetInput,
   RulingPlanetSet,
 } from './engine/index.js';
-import { AYANAMSA_LABELS, AYANAMSA_MODES } from './engine/ayanamsa-defs.js';
+import { AYANAMSA_LABELS, AYANAMSA_MODES, DEFAULT_AYANAMSA_SELECTION } from './engine/ayanamsa-defs.js';
 import { validateAyanamsa } from './core/validation.js';
 
 // ---------------------------------------------------------------------------
-// Engine configuration: the two decisions that are still open
+// Engine configuration: the two decisions that are still open (#23, #24)
 // ---------------------------------------------------------------------------
 
 /**
- * The only place the API picks a value for the still-open engine options. `ayanamsa` is NOT here:
- * it always comes from the request (TODO(#22), no default).
+ * The only place the API picks a value for the still-open engine options (#23, #24). `ayanamsa` is NOT here:
+ * it always comes from the request (#22 decided: no API default).
  */
 const ENGINE_CONFIG: {
   nodeAgentRuleSet: NodeAgentRuleSet;
@@ -102,7 +103,7 @@ async function readJsonBody(req: { json(): Promise<unknown> }): Promise<Body> {
   return body as Body;
 }
 
-/** The ayanamsa is always the caller's explicit choice (TODO(#22)). */
+/** The ayanamsa is always the caller's explicit choice (#22: the default selection is a UI matter; no API fallback). */
 function requireAyanamsa(body: Body): AyanamsaMode {
   const err = validateAyanamsa(body.ayanamsa);
   if (err) throw new BadRequestError(err);
@@ -225,7 +226,9 @@ app.get('/api/health', (c) => {
     engine: 'astronomy-engine',
     licensing: 'astronomy-engine is MIT; see THIRD_PARTY_LICENSES.md',
     runtime: 'Cloudflare Workers',
-    // No default is listed or implied (TODO(#22)): every request names its ayanamsa.
+    // #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+    // `defaultSelection` is for the UI's preselected option only; a request without `ayanamsa` is 400.
+    defaultSelection: DEFAULT_AYANAMSA_SELECTION,
     ayanamsas: AYANAMSA_MODES,
     endpoints: [
       'GET  /api/health',
@@ -304,7 +307,7 @@ app.get('/api/chart/sample', (c) => {
  */
 async function legacyChart(req: { json(): Promise<unknown> }) {
   const body = await readJsonBody(req);
-  const ayanamsa = requireAyanamsa(body); // TODO(#22): required, no default
+  const ayanamsa = requireAyanamsa(body); // required, no default (#22 decided: UI preselect only)
   const input = parseDateTimeLocation(body, 'legacy_utc');
   const planets = parsePlanets(body);
   return calculateKPChart(input, ayanamsa, planets);
@@ -356,7 +359,8 @@ app.get('/api/ayanamsa', (c) => {
   );
   const dPsi = calculateNutation(jd).dPsi;
 
-  // Every supported mode, none preferred (TODO(#22)). "mean" is the ayanamsa of the date;
+  // Every supported mode. `defaultSelection` is the UI's preselected option, not an API fallback
+  // (#22 decided, owner, #29: the API still requires an explicit ayanamsa). "mean" is the ayanamsa of the date;
   // "true" adds the nutation in longitude, the value subtracted from tropical longitudes.
   const ayanamsas = AYANAMSA_MODES.map((id) => {
     const a = calculateAyanamsa(jd, id, dPsi);
@@ -368,13 +372,19 @@ app.get('/api/ayanamsa', (c) => {
       meanDms: formatDms(a.meanAyanamsa, true),
     };
   });
-  return c.json({ dateUtc: date.toISOString(), julianDay: jd, nutationInLongitudeDegrees: dPsi, ayanamsas });
+  return c.json({
+    dateUtc: date.toISOString(),
+    julianDay: jd,
+    nutationInLongitudeDegrees: dPsi,
+    defaultSelection: DEFAULT_AYANAMSA_SELECTION,
+    ayanamsas,
+  });
 });
 
 /**
  * Natal or event chart: `calculateChart`. Flat body, the fields of `DateTimeLocation` plus
  * `ayanamsa`: year, month, day, hour, minute, second (optional, 0), utcOffsetHours (REQUIRED, no
- * silent UTC), latitude, longitude, ayanamsa (REQUIRED, TODO(#22)).
+ * silent UTC), latitude, longitude, ayanamsa (REQUIRED, #22 decided: no API default).
  */
 app.post('/api/calculate', async (c) => {
   const body = await readJsonBody(c.req);
