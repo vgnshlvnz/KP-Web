@@ -179,16 +179,16 @@ export function meanAyanamsaSeDefined(mode: SeDefinedAyanamsaMode, T: number): n
 // Owner definition (#29, 2026-11-21 16:49): KPSTLA = T x P / 3600 degrees, where T is the number of
 // years since the base year 291 AD (zero ayanamsa) and P = 50.2388475 arcsec/yr (Newcomb's general
 // precession). It has no Swiss Ephemeris definition. The choices below (G1 to G3, proposed in #29,
-// comment 7065965531) are FINAL: decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): industry standard; no nutation. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
+// comment 7065965531) are FINAL, decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): G1 zero point unchanged, G2 the Julian year (industry standard), G3 no nutation. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
 
 /**
- * G1 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): industry standard; no nutation. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
+ * G1 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): the zero point is unchanged by the owner's answer. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
  * Zero point: 291-01-01 0h UT in the Julian calendar = JD 1827345.5.
  */
 export const KPSTLA_ZERO_JD = 1827345.5;
 
 /**
- * G2 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): industry standard; no nutation. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
+ * G2 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): the Julian year, the industry (IAU) standard year unit. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
  * Length of the year used for T: the Julian year, 365.25 days (the IAU Julian year, the standard
  * astronomical year unit). The tropical year (365.242199 days) was not chosen; it differs by 1.8 arcsec at J2000.
  */
@@ -201,7 +201,7 @@ export const KPSTLA_PRECESSION_ARCSEC_PER_YEAR = 50.2388475;
  * Mean KPSTLA ayanamsa, degrees, at Julian day `jd` (UT): T x P / 3600 with
  * T = (jd - KPSTLA_ZERO_JD) / KPSTLA_YEAR_DAYS.
  *
- * G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): industry standard; no nutation. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
+ * G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): no nutation, the formula as given. https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067103994 (answer), https://github.com/vgnshlvnz/KP-Web/issues/29#issuecomment-7067328469 (reading, approved at 00:25Z).
  * The formula is used exactly as given: `calculateAyanamsa` returns trueAyanamsa = meanAyanamsa for
  * this mode, with no nutation term (unlike every other mode except Nil; the sidereal longitudes
  * differ from "mean + dPsi" by up to about 17 arcsec, which is intended).

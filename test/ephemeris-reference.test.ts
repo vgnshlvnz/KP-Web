@@ -187,7 +187,10 @@ describe.each(CASES)('ephemeris vs Swiss Ephemeris: $label', (c) => {
     it('true ayanamsa = mean + nutation in longitude, and nutation agrees with Swiss Ephemeris to 0.2"', () => {
       const r = run(c, mode);
       expect(r.trueAyanamsaDeg - r.meanAyanamsaDeg).toBeCloseTo(r.nutationInLongitudeDeg, 12);
-      // astronomy-engine's IAU 2000B nutation vs the dPsi in Appendix A: same model family, <0.14".
+      // The engine's 77-term IAU 2000B nutation (#57) vs the dPsi in Appendix A: now within 0.001"
+      // (`nutation-reference.test.ts` pins that). The 0.2" bounds below were set when the engine
+      // used astronomy-engine's 5-term nutation, which was up to 0.14" off here; they are kept
+      // unchanged and could be tightened to 0.001".
       expect(Math.abs(r.nutationInLongitudeDeg * 3600 - c.dPsiArcsec)).toBeLessThan(0.2);
       expect(Math.abs(r.trueAyanamsaDeg - c.ayanamsa[mode].true) * 3600).toBeLessThan(0.2);
     });
