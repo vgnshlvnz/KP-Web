@@ -109,8 +109,8 @@ export function meanAyanamsaKpStla(jd: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// KP Ayanamsa and KP Straight Line, from KP-Qt (src/livedata/kpAyanamsa.cpp,
-// commit 83264c65). These are the two vendor systems in KP-Qt's product table
+// KP Ayanamsa and KP Straight Line, from KP-Qt (src/livedata/kpAyanamsa.cpp
+// on main @ e987302c3dfa04e579d1ac1605cd188d4750cfab, PR #92, merged). These are the two vendor systems in KP-Qt's product table
 // that KP-Web did not already have. The constants below are copied from that
 // file; they are not Swiss Ephemeris modes and they are not KP Old / KP New.
 //
