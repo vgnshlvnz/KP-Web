@@ -73,15 +73,10 @@ The ayanamsas a user can select:
 3. **KP Ayanamsa** (`kp_ayanamsa`): KP-Qt's formula. t is the fractional year counted from 15 April, minus 1900; (t × 50.2388475 + 1350) / 3600 + 22 + t² × 0.000111 / 3600.
 4. **KP Old** (`kp_old`, `SE_SIDM_KRISHNAMURTI`): K.S. Krishnamurti's original baseline defined at J1900.0 with $22^\circ 21' 50.0''$ ($22.363889^\circ$). J2000 value: $23.76024004^\circ$ ($23^\circ 45' 36.86''$).
 5. **KP New** (`kp_new`, `SE_SIDM_KRISHNAMURTI_VP291`): the Krishnamurti-Senthilathiban revision with zero-ayanamsa epoch at vernal point 291 CE. J2000 value: $23.78036498^\circ$ ($23^\circ 46' 49.31''$). This is the option the page preselects.
-6. Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, and Nil (tropical, ayanamsa 0), as Swiss Ephemeris defines those names.
+6. **Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi**: KP-Qt's IAU 1976 vernal-point precession and `kAya[]` zero points, not the Swiss Ephemeris 2.10 polynomials.
+7. **Nil** (`nil`): tropical, ayanamsa 0, no nutation.
 
-KP Old, KP New and the six Swiss Ephemeris names match Swiss Ephemeris 2.10.03 to within 0.05 arcseconds on the pinned dates. A request with no ayanamsa is rejected.
-
-Also selectable, from KP-Qt's vendor formulas (`kpAyanamsa.cpp`; not Swiss Ephemeris):
-3. **KP Straight Line** (`kp_straight_line`): `(year − 291) × 50.2388475″ / 3600`, using the local civil year. One value for the whole year.
-4. **KP Ayanamsa** (`kp_ayanamsa`): `t = frac − 1900`, `(t × 50.2388475″ + 1350″) / 3600 + 22° + t² × 0.000111″ / 3600`, where `frac` is KP-Qt's fractional year measured from 15 April of the local civil date.
-
-**KP Straight Line (Adjusted)** (`kp_straight_line_adjusted`) stays the owner definition: years from 291-01-01 0h UT (Julian) in units of 365.25 days, times 50.2388475″, with no nutation. That is not KP-Qt's 15 April form of the same name. The page preselects KP New. Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi use KP-Qt's IAU 1976 precession and zero-point table. Nil (tropical) is accepted by the API.
+KP Old and KP New match Swiss Ephemeris 2.10.03 to within 0.05 arcseconds on the pinned dates. A request with no ayanamsa is rejected. The page preselects KP New.
 
 ## Cloudflare Wrangler deployment
 
