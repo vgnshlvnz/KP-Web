@@ -300,6 +300,12 @@
             <md-outlined-text-field type="number" step="0.0001" id="inpLon" label="Longitude" suffix-text="° E" value="77.2090"></md-outlined-text-field>
           </div>
 
+          <md-outlined-select id="inpAyanamsa" label="KP Ayanamsa">
+            <md-select-option value="kp_straight_line_adjusted"><div slot="headline">KP Straight Line (Adjusted)</div></md-select-option>
+            <md-select-option value="kp_old"><div slot="headline">KP Old (Original Krishnamurti)</div></md-select-option>
+            <md-select-option value="kp_new" selected><div slot="headline">KP New (Krishnamurti VP291)</div></md-select-option>
+          </md-outlined-select>
+
         <button class="btn" id="btnCalculate">Calculate Chart</button>
       </div>
 
