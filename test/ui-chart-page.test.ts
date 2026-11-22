@@ -4,9 +4,11 @@ import page from '../public/index.html?raw';
 
 /**
  * The page contract for #68. The captured chart/calculate fixture lives in #85;
- * this file does not copy it. It checks the page source, then the same Kuala Lumpur
- * request the page sends: longitudes from `POST /api/calculate`, forwarded as
- * `{ name, longitude }` to `POST /api/chart/calculate`.
+ * this file does not copy it. It checks the page source, then a Kuala Lumpur
+ * request: longitudes from `POST /api/calculate`, forwarded as `{ name, longitude }` to
+ * `POST /api/chart/calculate`. The page now names its place by `locationId` (see the last
+ * describe); the explicit latitude / longitude / utcOffsetHours request used below is the
+ * API path other callers keep.
  */
 
 /** 1980-01-01 10:00, Kuala Lumpur, offset +8. Same body as the fixture. */
@@ -31,10 +33,13 @@ const post = (path: string, body: unknown) =>
   });
 
 describe('public/index.html request and response contract', () => {
-  it('sends an ayanamsa and utcOffsetHours, and no longer reads fields the API does not return', () => {
+  it('sends an ayanamsa and a locationId, and no longer reads fields the API does not return', () => {
     // Owner decision #29 (2026-11-21 18:14Z, item 2): KP New is the preselected ayanamsa (#80).
     expect(page).toContain('value="kp_new" selected');
-    expect(page).toContain('utcOffsetHours');
+    // Owner decision on #12 (2026-11-22): the place is selected from locations.db, with no manual latitude,
+    // longitude or UTC offset. The page sends `locationId`; the offset it shows is `location.utcOffsetHours`.
+    expect(page).toContain('locationId');
+    expect(page).toContain('location.utcOffsetHours');
     expect(page).toContain("postJson('/api/calculate'");
     expect(page).toContain("postJson('/api/chart/calculate'");
     expect(page).toContain('ayanamsa');
@@ -171,5 +176,64 @@ describe('public/index.html request and response contract', () => {
     // 8 hours earlier than the same clock time read as UT.
     expect(atUtc.data.julianDateUT - withOffset.data.julianDateUT).toBeCloseTo(8 / 24, 8);
     expect(missing.data.julianDateUT).toBe(atUtc.data.julianDateUT);
+  });
+});
+
+/**
+ * The place selects (`locations-select`, #12). Owner decision on #12 (2026-11-22): the user selects a
+ * country, then a place, from locations.db; there is no manual latitude, longitude, timezone or UTC offset.
+ */
+describe('public/index.html place selection', () => {
+  it('has Country and Place selects and no manual latitude, longitude or UTC offset field', () => {
+    expect(page).toContain('id="inpCountry"');
+    expect(page).toContain('id="inpPlace"');
+    for (const gone of ['id="inpLat"', 'id="inpLon"', 'id="inpUtcOffset"']) expect(page, gone).not.toContain(gone);
+    expect(page).not.toMatch(/label="(Latitude|Longitude|UTC offset \(hours\))"/);
+  });
+
+  it('fills the selects from /api/locations and the samples from /api/chart/sample', () => {
+    expect(page).toContain("fetch('/api/locations')");
+    expect(page).toContain("fetch('/api/chart/sample')");
+  });
+
+  it('the request it builds names the place by locationId only', () => {
+    const body = page.slice(page.indexOf('function readChartRequest'), page.indexOf('function formatFixed'));
+    expect(body).toContain('locationId');
+    expect(body).toContain('ambiguousTime');
+    expect(body).not.toMatch(/\blatitude\b|\blongitude\b|utcOffsetHours/);
+  });
+
+  it('shows the coordinates, the zone and the applied offset read-only, and the pre-1970 caution', () => {
+    for (const id of ['metaPlace', 'metaCoords', 'metaZone', 'metaOffset', 'preIanaNotice']) {
+      expect(page, id).toContain(`id="${id}"`);
+    }
+    expect(page).toContain('location.timezone');
+    expect(page).toContain('location.preIanaReliableCaution');
+    expect(page).toContain('Birth before 1970');
+    // Read-only: these are spans, not inputs.
+    expect(page).not.toMatch(/<md-outlined-text-field[^>]*id="meta/);
+  });
+
+  it('the same two calls the page makes, with a locationId, return the chart and the location it displays', async () => {
+    const base = { year: 1947, month: 8, day: 15, hour: 0, minute: 0, second: 0, locationId: 916, ayanamsa: 'kp_new' };
+    const bare = (await (await post('/api/calculate', base)).json()) as any;
+    const planets = bare.planets.map((p: any) => ({ name: p.name, longitude: p.longitude }));
+    const chartRes = await post('/api/chart/calculate', { ...base, planets });
+    expect(chartRes.status).toBe(200);
+    const chart = (await chartRes.json()) as any;
+    expect(chart.success).toBe(true);
+    expect(chart.data.planets).toHaveLength(9);
+    expect(chart.data.cusps).toHaveLength(12);
+    // What renderChart(data, location) reads.
+    expect(chart.location).toMatchObject({
+      country: 'India',
+      place: 'Delhi',
+      timezone: 'Asia/Kolkata',
+      utcOffsetHours: 5.5,
+      preIanaReliableCaution: true,
+    });
+    expect(Number.isFinite(chart.location.latitude)).toBe(true);
+    expect(Number.isFinite(chart.location.longitude)).toBe(true);
+    expect(bare.location).toEqual(chart.location);
   });
 });
