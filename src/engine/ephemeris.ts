@@ -1,18 +1,29 @@
 /**
  * Planetary ephemeris for the unified engine (work package `port-ephemeris`, #41).
  *
- * Sun to Saturn come from astronomy-engine (no Uranus, Neptune or Pluto: #29 (owner, 2026-11-21)), which runs unchanged in Cloudflare Workers. Time, delta-T, nutation and
- * obliquity also come from astronomy-engine, so planets and Placidus cusps share one nutation
- * model.
+ * Sun to Saturn come from astronomy-engine (no Uranus, Neptune or Pluto: #29 (owner, 2026-11-21)), which runs unchanged in Cloudflare Workers. Time and delta-T
+ * also come from astronomy-engine. Nutation does NOT: it is the full 77-term IAU 2000B series of
+ * `nutation.ts` (Swiss Ephemeris' model, #57), used for the planets, the ayanamsa, the obliquity and
+ * the Placidus cusps alike, so there is one nutation model in the engine.
  *
  * Frames and the ayanamsa correction:
  *  - Every `tropicalLongitude` here is measured from the TRUE equinox of date, so it contains the
  *    nutation in longitude (dPsi).
+ *  - astronomy-engine returns the Sun, Moon and planets in its own true equinox of date, which uses
+ *    its 5-term nutation (up to about 0.26 arcsec off). Nutation in longitude is an exact rotation
+ *    about the ecliptic pole (the latitude does not change), so the longitude is moved to this
+ *    module's nutation by adding (dPsi - dPsi_astronomy-engine). That is the whole correction; see
+ *    `tropicalCoordinates`.
  *  - Sidereal longitude = tropical - (mean ayanamsa + dPsi). Subtracting the mean ayanamsa alone
- *    leaves the sidereal longitude off by exactly dPsi (up to ~18 arcsec, issue #33).
+ *    leaves the sidereal longitude off by exactly dPsi (up to ~18 arcsec, issue #33). For the
+ *    modes that add dPsi, dPsi cancels, so the sidereal longitude of a planet does not depend on the
+ *    nutation model at all (measured in #57: unchanged to 1e-9 degrees).
  *  - The mean ayanamsa is `calculateAyanamsa` (Stack A's polynomial for KP Old / KP New, the
  *    Swiss Ephemeris definitions in `ayanamsa-defs.ts` for the others), evaluated at TT.
  *  - 'nil' (tropical) subtracts nothing: mean ayanamsa 0 and no dPsi term, so sidereal = tropical.
+ *  - 'kp_straight_line_adjusted' subtracts the mean only, with no dPsi term (owner, #29, G3), so its
+ *    sidereal longitudes are the true-equinox longitudes minus the formula, and they do follow
+ *    this module's nutation.
  *
  * Lunar nodes: MEAN node only (#29 (owner, 2026-11-21): "Use mean node only"). IAU polynomial for
  * the mean longitude of the ascending node (mean equinox of date), with dPsi added so it is in the
@@ -22,7 +33,7 @@
  */
 
 import * as Astronomy from 'astronomy-engine';
-import { calculateAyanamsa, normalizeDegrees } from './astronomy.js';
+import { calculateAyanamsa, normalizeDegrees, nutationAtTime } from './astronomy.js';
 import { isAyanamsaMode, unsupportedAyanamsaMessage } from './ayanamsa-defs.js';
 import type { AyanamsaMode, ChartCalculationOptions, PlanetName } from './types.js';
 
@@ -41,7 +52,10 @@ export interface EphemerisPlanet {
   name: PlanetName;
   /** Longitude from the true equinox of date, degrees 0-360 (includes nutation). */
   tropicalLongitude: number;
-  /** tropicalLongitude - (mean ayanamsa + dPsi), degrees 0-360. */
+  /**
+   * tropicalLongitude - (mean ayanamsa + dPsi), degrees 0-360. The dPsi term is left out for
+   * 'nil' (no ayanamsa) and 'kp_straight_line_adjusted' (owner, #29, G3).
+   */
   siderealLongitude: number;
   /** Ecliptic latitude, degrees (0 for the nodes). */
   latitude: number;
@@ -60,9 +74,12 @@ export interface EphemerisResult {
   julianDayTt: number;
   /** Mean ayanamsa of the chosen mode, degrees (0 for 'nil'). */
   meanAyanamsaDeg: number;
-  /** Mean ayanamsa + dPsi (0 for 'nil'): the value actually subtracted from tropical longitudes, degrees. */
+  /**
+   * The value actually subtracted from tropical longitudes, degrees: mean ayanamsa + dPsi; 0 for
+   * 'nil'; equal to the mean (no dPsi) for 'kp_straight_line_adjusted'.
+   */
   trueAyanamsaDeg: number;
-  /** Nutation in longitude, degrees (astronomy-engine, IAU 2000B). */
+  /** Nutation in longitude, degrees (`nutation.ts`, IAU 2000B, 77 terms: Swiss Ephemeris' model). */
   nutationInLongitudeDeg: number;
   /** Nutation in obliquity, degrees. */
   nutationInObliquityDeg: number;
@@ -109,6 +126,16 @@ interface TropicalCoordinates {
 /** Nominal Earth-Moon distance in AU, reported for the (massless) nodes. */
 const NODE_DISTANCE_AU = 0.00257;
 
+/**
+ * The nutation in longitude of the engine minus the one astronomy-engine applied inside its
+ * true-equinox-of-date longitudes, degrees. Adding it to an astronomy-engine longitude moves that
+ * longitude to the engine's nutation (#57). Nutation in longitude is an exact rotation about the
+ * ecliptic pole, so only the longitude changes, by exactly this amount.
+ */
+function nutationShiftDeg(time: Astronomy.AstroTime): number {
+  return nutationAtTime(time).dPsi - Astronomy.e_tilt(time).dpsi / 3600.0;
+}
+
 function tropicalCoordinates(
   body: PlanetName,
   time: Astronomy.AstroTime
@@ -116,17 +143,25 @@ function tropicalCoordinates(
   switch (body) {
     case 'Sun': {
       const sun = Astronomy.SunPosition(time);
-      return { lon: sun.elon, lat: sun.elat, dist: sun.vec.Length() };
+      return {
+        lon: normalizeDegrees(sun.elon + nutationShiftDeg(time)),
+        lat: sun.elat,
+        dist: sun.vec.Length(),
+      };
     }
     case 'Moon': {
       const moon = Astronomy.EclipticGeoMoon(time);
-      return { lon: moon.lon, lat: moon.lat, dist: moon.dist };
+      return {
+        lon: normalizeDegrees(moon.lon + nutationShiftDeg(time)),
+        lat: moon.lat,
+        dist: moon.dist,
+      };
     }
     case 'Rahu':
     case 'Ketu': {
       // Mean node is in the mean equinox of date; add dPsi to bring it to the true equinox.
       const rahu = normalizeDegrees(
-        calculateMeanLunarNode(time.tt + JD_J2000) + Astronomy.e_tilt(time).dpsi / 3600.0
+        calculateMeanLunarNode(time.tt + JD_J2000) + nutationAtTime(time).dPsi
       );
       const lon = body === 'Rahu' ? rahu : normalizeDegrees(rahu + 180.0);
       return { lon, lat: 0, dist: NODE_DISTANCE_AU };
@@ -138,7 +173,11 @@ function tropicalCoordinates(
       }
       // GeoVector is in EQJ; Ecliptic() rotates it to the true ecliptic of date.
       const sphere = Astronomy.Ecliptic(Astronomy.GeoVector(astroBody, time, true));
-      return { lon: sphere.elon, lat: sphere.elat, dist: sphere.vec.Length() };
+      return {
+        lon: normalizeDegrees(sphere.elon + nutationShiftDeg(time)),
+        lat: sphere.elat,
+        dist: sphere.vec.Length(),
+      };
     }
   }
 }
@@ -170,11 +209,15 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
   const julianDayUt = time.ut + JD_J2000;
   const julianDayTt = time.tt + JD_J2000;
 
-  const tilt = Astronomy.e_tilt(time);
-  const nutationInLongitudeDeg = tilt.dpsi / 3600.0; // arcsec -> degrees
-  const nutationInObliquityDeg = tilt.deps / 3600.0;
+  // The one nutation of the engine (#57): IAU 2000B, 77 terms. The mean obliquity (IAU 2006) is a
+  // polynomial of astronomy-engine's and does not depend on nutation.
+  const nutation = nutationAtTime(time);
+  const nutationInLongitudeDeg = nutation.dPsi;
+  const nutationInObliquityDeg = nutation.dEps;
+  const meanObliquityDeg = Astronomy.e_tilt(time).mobl;
 
-  // mean + dPsi for every mode except 'nil' (tropical), where both are 0.
+  // mean + dPsi for every mode except 'nil' (tropical, both 0) and 'kp_straight_line_adjusted'
+  // (true = mean, owner #29 G3; no dPsi term).
   const ayanamsa = calculateAyanamsa(julianDayTt, options.ayanamsa, nutationInLongitudeDeg);
   const meanAyanamsaDeg = ayanamsa.meanAyanamsa;
   const trueAyanamsaDeg = ayanamsa.trueAyanamsa;
@@ -210,7 +253,7 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
     trueAyanamsaDeg,
     nutationInLongitudeDeg,
     nutationInObliquityDeg,
-    meanObliquityDeg: tilt.mobl,
-    trueObliquityDeg: tilt.tobl,
+    meanObliquityDeg,
+    trueObliquityDeg: meanObliquityDeg + nutationInObliquityDeg,
   };
 }
