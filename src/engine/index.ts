@@ -87,7 +87,14 @@ export function calculateKPChart(
   );
 
   // KP Ayanamsa (KP Old or KP New)
-  const aya = calculateAyanamsa(jdUT, ayanamsaType, nut.dPsi);
+  const aya = calculateAyanamsa(jdUT, ayanamsaType, nut.dPsi, {
+    year: input.year,
+    month: input.month,
+    day: input.day,
+    hour: input.hour,
+    minute: input.minute,
+    second: input.second,
+  });
 
   // Compute Placidus house cusps
   const placidusResult = calculatePlacidusCusps(
@@ -358,8 +365,17 @@ export function calculateChartWithArmc(
   const threshold = { nearBoundaryThresholdArcsec: NEAR_BOUNDARY_THRESHOLD_ARCSEC };
 
   // Planets, with the ayanamsa and the nutation that go with them.
+  const civilDate = {
+    year: input.year,
+    month: input.month,
+    day: input.day,
+    hour: input.hour,
+    minute: input.minute,
+    second: input.second,
+  };
   const ephemeris = calculateEphemeris(birthUtc, {
     ayanamsa: options.ayanamsa,
+    civilDate,
   });
   const jdUT = ephemeris.julianDayUt;
 
@@ -368,7 +384,7 @@ export function calculateChartWithArmc(
   const nutInObl = ephemeris.nutationInObliquityDeg;
   const obl = calculateObliquity(jdUT, nutInObl);
   const clockSt = calculateSiderealTime(jdUT, input.longitude, nutInLon, obl.trueObliquity);
-  const aya = calculateAyanamsa(jdUT, options.ayanamsa, nutInLon);
+  const aya = calculateAyanamsa(jdUT, options.ayanamsa, nutInLon, civilDate);
   const st = resolveArmc
     ? siderealTimeForArmc(
         resolveArmc({

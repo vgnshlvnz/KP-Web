@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KP-Web — Animate Chart</title>
+  <link rel="stylesheet" href="/styles/kp-m3-tokens.css">
+  <script src="/vendor/material-web-2.5.0.js"></script>
+  <style>
+    :where(div, span, p, h1, h2, h3, table, td, th, header) { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      margin: 0;
+      font: 400 1rem/1.5rem var(--font-plain);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      padding: var(--space-4);
+    }
+    @media (min-width: 600px) { body { padding: var(--space-6); } }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto var(--space-6) auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    header h1 { font: 400 1.5rem/2rem var(--font-brand); color: var(--md-sys-color-primary); }
+    header p { font: 400 0.875rem/1.25rem var(--font-plain); letter-spacing: 0.015625rem; color: var(--md-sys-color-on-surface-variant); }
+    header nav a {
+      font: 500 0.875rem/1.25rem var(--font-plain);
+      color: var(--md-sys-color-primary);
+      text-decoration: none;
+    }
+    header nav a:focus-visible, header nav a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: var(--space-6);
+    }
+    @media (max-width: 839px) { .container { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-sys-shape-corner-medium);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .card h2 { font: 400 1.375rem/1.75rem var(--font-plain); color: var(--md-sys-color-on-surface); margin-bottom: var(--space-4); }
+    .supporting { font: 400 0.875rem/1.25rem var(--font-plain); color: var(--md-sys-color-on-surface-variant); margin-bottom: var(--space-4); }
+
+    .fields { display: grid; gap: var(--space-3); }
+    .fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    .fields-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-2); }
+    md-outlined-text-field, md-outlined-select { width: 100%; min-width: 0; }
+    md-filled-button.block { width: 100%; margin-top: var(--space-2); }
+
+    .controls-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-2); }
+    .controls-row > * { flex: 1 1 auto; }
+
+    .slider-row { display: flex; flex-direction: column; gap: var(--space-1); }
+    .slider-row label { font: 500 0.75rem/1rem var(--font-plain); letter-spacing: 0.03125rem; color: var(--md-sys-color-on-surface-variant); }
+    .slider-row output { font: 400 0.8125rem/1.125rem var(--font-mono); color: var(--md-sys-color-primary); }
+    input[type="range"] { width: 100%; accent-color: var(--md-sys-color-primary); }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-6);
+      background: var(--md-sys-color-surface-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      margin-bottom: var(--space-4);
+    }
+    .meta-item { display: flex; flex-direction: column; }
+    .meta-item span:first-child { font: 500 0.75rem/1rem var(--font-plain); letter-spacing: 0.03125rem; color: var(--md-sys-color-on-surface-variant); }
+    .meta-item span:last-child { font: 400 0.875rem/1.25rem var(--font-mono); color: var(--md-sys-color-primary); }
+
+    #statusLine {
+      font: 500 0.875rem/1.25rem var(--font-plain);
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      margin-bottom: var(--space-4);
+    }
+    #statusLine.is-error { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+
+    .wheel-toggle { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); }
+    .wheel-title { text-align: center; margin-bottom: var(--space-2); font: 500 1rem/1.5rem var(--font-plain); color: var(--md-custom-color-kp-accent); }
+
+    .south-indian-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: var(--space-1);
+      aspect-ratio: 1;
+      max-width: var(--kp-chart-max);
+      margin: var(--space-4) auto;
+      background: var(--md-sys-color-outline-variant);
+      padding: var(--space-1);
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+    .grid-cell {
+      background: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-extra-small);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font: 400 0.75rem/1rem var(--font-plain);
+      min-height: 80px;
+      overflow: hidden;
+    }
+    .grid-cell .sign-name { font-weight: 500; color: var(--md-custom-color-kp-accent); }
+    .grid-cell .cell-cusp { color: var(--md-sys-color-primary); font-size: 0.6875rem; }
+    .grid-cell .cell-planet { color: var(--md-sys-color-on-surface); font-weight: 500; }
+    .center-box {
+      grid-column: 2 / span 2;
+      grid-row: 2 / span 2;
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-sys-shape-corner-extra-small);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--md-sys-color-on-surface-variant);
+      font: 500 0.875rem/1.25rem var(--font-plain);
+      padding: var(--space-4);
+    }
+
+    .north-indian-wheel {
+      max-width: var(--kp-chart-max);
+      margin: var(--space-4) auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2);
+    }
+    .house-box { background: var(--md-sys-color-surface-container); padding: var(--space-3); border-radius: var(--md-sys-shape-corner-small); }
+    .house-title { font: 500 0.875rem/1.25rem var(--font-plain); color: var(--md-sys-color-primary); margin-bottom: var(--space-1); }
+    .house-planets { font: 400 0.8125rem/1.125rem var(--font-plain); color: var(--md-sys-color-on-surface); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font: 400 0.875rem/1.25rem var(--font-plain); text-align: left; }
+    th, td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+    th { font: 500 0.75rem/1rem var(--font-plain); letter-spacing: 0.03125rem; color: var(--md-sys-color-on-surface-variant); background: var(--md-sys-color-surface-container); }
+    td.empty { text-align: center; color: var(--md-sys-color-on-surface-variant); }
+
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>KP-Web — Animate Chart</h1>
+      <p>Step a chart forward in time and watch cusps, lords and the wheels change.</p>
+    </div>
+    <nav><a href="/index.html">Back to chart calculator</a></nav>
+  </header>
+
+  <div class="container">
+    <!-- Sidebar / Controls -->
+    <div>
+      <div class="card">
+        <h2>Start Date &amp; Time</h2>
+        <div class="fields">
+          <div class="fields-2">
+            <md-outlined-text-field type="number" id="inpYear" label="Year" value="1947"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpMonth" label="Month" value="8" min="1" max="12"></md-outlined-text-field>
+          </div>
+          <div class="fields-3">
+            <md-outlined-text-field type="number" id="inpDay" label="Day" value="15" min="1" max="31"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpHour" label="Hour (local)" value="0" min="0" max="23"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpMinute" label="Min" value="0" min="0" max="59"></md-outlined-text-field>
+          </div>
+          <div class="fields-2">
+            <md-outlined-text-field type="number" id="inpSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
+            <md-outlined-select id="inpAmbiguous" label="Repeated time">
+              <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
+              <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
+              <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+            </md-outlined-select>
+          </div>
+
+          <md-outlined-select id="inpCountry" label="Country"></md-outlined-select>
+          <md-outlined-select id="inpPlace" label="Place"></md-outlined-select>
+
+          <md-outlined-select id="inpAyanamsa" label="KP Ayanamsa"></md-outlined-select>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Animation</h2>
+        <div class="fields">
+          <div class="fields-2">
+            <md-outlined-text-field type="number" id="inpIncrement" label="Increment" value="5" min="1"></md-outlined-text-field>
+            <md-outlined-select id="inpIncrementType" label="Type">
+              <md-select-option value="seconds" selected><div slot="headline">Seconds</div></md-select-option>
+              <md-select-option value="minutes"><div slot="headline">Minutes</div></md-select-option>
+              <md-select-option value="hours"><div slot="headline">Hours</div></md-select-option>
+              <md-select-option value="days"><div slot="headline">Days</div></md-select-option>
+              <md-select-option value="months"><div slot="headline">Months</div></md-select-option>
+              <md-select-option value="years"><div slot="headline">Years</div></md-select-option>
+            </md-outlined-select>
+          </div>
+
+          <div class="slider-row">
+            <label for="inpSpeed">Update speed: <output id="speedOut">1000 ms</output></label>
+            <input type="range" id="inpSpeed" min="200" max="5000" step="100" value="1000">
+          </div>
+
+          <md-outlined-text-field type="number" id="inpRunLimit" label="Run limit (0 = unlimited)" value="0" min="0"></md-outlined-text-field>
+        </div>
+
+        <div class="controls-row">
+          <md-filled-button id="btnRun"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M320-200v-560l440 280-440 280Z"/></svg></md-icon>Run</md-filled-button>
+          <md-outlined-button id="btnStop"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M240-240v-480h480v480H240Z"/></svg></md-icon>Stop</md-outlined-button>
+        </div>
+        <div class="controls-row">
+          <md-outlined-button id="btnRestart">Restart</md-outlined-button>
+          <md-outlined-button id="btnNow">Now!</md-outlined-button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>State</h2>
+        <div class="meta-bar">
+          <div class="meta-item"><span>Current time</span><span id="metaCurrentTime">-</span></div>
+          <div class="meta-item"><span>Run count</span><span id="metaRunCount">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Results Area -->
+    <div>
+      <div id="statusLine" role="status" aria-live="polite">Ready.</div>
+
+      <div class="card">
+        <h2>Chart Wheels</h2>
+        <div class="wheel-toggle">
+          <md-filled-tonal-button id="btnShowSouth">South Indian Grid</md-filled-tonal-button>
+          <md-outlined-button id="btnShowNorth">North Indian Diamonds</md-outlined-button>
+        </div>
+
+        <div id="southWheelContainer">
+          <h3 class="wheel-title">South Indian Chart</h3>
+          <div class="south-indian-grid" id="southIndianGrid"></div>
+        </div>
+
+        <div id="northWheelContainer" style="display: none;">
+          <h3 class="wheel-title">North Indian Chart</h3>
+          <div class="north-indian-wheel" id="northIndianWheel"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Planets</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Planet</th>
+                <th>Longitude</th>
+                <th>Sign</th>
+                <th>Star Lord</th>
+                <th>Sub Lord</th>
+              </tr>
+            </thead>
+            <tbody id="planetsTableBody">
+              <tr><td colspan="5" class="empty">Press Run, Now! or Restart to compute a chart.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mirrors src/client/animate-step.ts (tested there with vitest); duplicated here because
+    // this static page has no bundler step to import a TS module into the browser.
+    const ELAPSED_SECONDS_PER_UNIT = { seconds: 1, minutes: 60, hours: 3600, days: 86400 };
+
+    function daysInMonth(year, month) {
+      return new Date(Date.UTC(year, month, 0)).getUTCDate();
+    }
+
+    function stepTime(from, amount, type) {
+      if (type === 'months' || type === 'years') {
+        const totalMonths = type === 'years' ? amount * 12 : amount;
+        const base = from.month - 1 + totalMonths;
+        const year = from.year + Math.floor(base / 12);
+        const month = ((base % 12) + 12) % 12 + 1;
+        const day = Math.min(from.day, daysInMonth(year, month));
+        return { year, month, day, hour: from.hour, minute: from.minute, second: from.second };
+      }
+      const fromMs = Date.UTC(from.year, from.month - 1, from.day, from.hour, from.minute, from.second);
+      const steppedMs = fromMs + amount * ELAPSED_SECONDS_PER_UNIT[type] * 1000;
+      const d = new Date(steppedMs);
+      return {
+        year: d.getUTCFullYear(),
+        month: d.getUTCMonth() + 1,
+        day: d.getUTCDate(),
+        hour: d.getUTCHours(),
+        minute: d.getUTCMinutes(),
+        second: d.getUTCSeconds(),
+      };
+    }
+
+    const el = (id) => document.getElementById(id);
+
+    // ---- Settings persistence -------------------------------------------------
+    const STORAGE_KEY = 'kp-web-animate-settings';
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveSettings() {
+      const settings = {
+        year: el('inpYear').value,
+        month: el('inpMonth').value,
+        day: el('inpDay').value,
+        hour: el('inpHour').value,
+        minute: el('inpMinute').value,
+        second: el('inpSecond').value,
+        locationId: placeSel.value,
+        ayanamsa: el('inpAyanamsa').value,
+        increment: el('inpIncrement').value,
+        incrementType: el('inpIncrementType').value,
+        speedMs: el('inpSpeed').value,
+        runLimit: el('inpRunLimit').value,
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      } catch {
+        // localStorage unavailable (private mode, quota); settings simply won't persist.
+      }
+    }
+
+    // ---- Wheel toggle -----------------------------------------------------------
+    const southCont = el('southWheelContainer');
+    const northCont = el('northWheelContainer');
+    el('btnShowSouth').addEventListener('click', () => {
+      southCont.style.display = 'block';
+      northCont.style.display = 'none';
+    });
+    el('btnShowNorth').addEventListener('click', () => {
+      southCont.style.display = 'none';
+      northCont.style.display = 'block';
+    });
+
+    // ---- Ayanamsa select, built from the known modes ----------------------------
+    // Same ids as AYANAMSA_MODES in src/engine/ayanamsa-defs.ts (pinned by test/animate-page-integrity.test.ts).
+    // KP New is only the preselected option (#22 decided, owner, #29); the request always sends the explicit choice.
+    const AYANAMSA_OPTIONS = [
+      ['kp_straight_line_adjusted', 'KP Straight Line (Adjusted)'],
+      ['kp_straight_line', 'KP Straight Line'],
+      ['kp_ayanamsa', 'KP Ayanamsa'],
+      ['kp_old', 'KP Old'],
+      ['kp_new', 'KP New'],
+      ['lahiri', 'Lahiri'],
+      ['raman', 'Raman'],
+      ['fagan_bradley', 'Fagan-Bradley'],
+      ['yukteshwar', 'Yukteshwar'],
+      ['jn_bhasin', 'J.N. Bhasin'],
+      ['usha_shashi', 'Usha-Shashi'],
+      ['nil', 'Nil (tropical)'],
+    ];
+    const DEFAULT_AYANAMSA_SELECTION = 'kp_new';
+
+    function makeOption(value, label) {
+      const opt = document.createElement('md-select-option');
+      opt.setAttribute('value', value);
+      const headline = document.createElement('div');
+      headline.slot = 'headline';
+      headline.textContent = label;
+      opt.appendChild(headline);
+      return opt;
+    }
+
+    const ayanamsaSel = el('inpAyanamsa');
+    AYANAMSA_OPTIONS.forEach(([value, label]) => {
+      ayanamsaSel.appendChild(makeOption(value, label));
+    });
+    const ayanamsaReady = ayanamsaSel.updateComplete.then(() => {
+      ayanamsaSel.value = DEFAULT_AYANAMSA_SELECTION;
+    });
+
+    // ---- Place: Country then Place, from GET /api/locations ---------------------
+    const countrySel = el('inpCountry');
+    const placeSel = el('inpPlace');
+    let locationData = [];
+
+    function placeLabel(row) {
+      return row.place === null ? row.country + ' (country point)' : row.place;
+    }
+
+    async function fillPlaces(country, selectedId) {
+      placeSel.replaceChildren();
+      const entry = locationData.find((c) => c.country === country);
+      const places = entry ? entry.places : [];
+      places.forEach((row) => placeSel.appendChild(makeOption(String(row.id), placeLabel(row))));
+      await placeSel.updateComplete;
+      const pick = places.find((r) => r.id === selectedId) || places[0];
+      placeSel.value = pick ? String(pick.id) : '';
+    }
+
+    async function selectLocation(id) {
+      for (const entry of locationData) {
+        if (entry.places.some((r) => r.id === id)) {
+          countrySel.value = entry.country;
+          await fillPlaces(entry.country, id);
+          return;
+        }
+      }
+    }
+
+    countrySel.addEventListener('change', () => { fillPlaces(countrySel.value, null); });
+
+    async function loadLocations() {
+      const res = await fetch('/api/locations');
+      const json = await res.json();
+      locationData = json.countries;
+      locationData.forEach((c) => countrySel.appendChild(makeOption(c.country, c.country)));
+      await countrySel.updateComplete;
+
+      const saved = loadSettings();
+      if (saved.locationId !== undefined && saved.locationId !== '') {
+        await selectLocation(Number(saved.locationId));
+      } else {
+        await selectLocation(916); // India | Delhi
+      }
+    }
+
+    // ---- Restore remaining saved settings ---------------------------------------
+    function applySavedSettings() {
+      const saved = loadSettings();
+      if (saved.year !== undefined) el('inpYear').value = saved.year;
+      if (saved.month !== undefined) el('inpMonth').value = saved.month;
+      if (saved.day !== undefined) el('inpDay').value = saved.day;
+      if (saved.hour !== undefined) el('inpHour').value = saved.hour;
+      if (saved.minute !== undefined) el('inpMinute').value = saved.minute;
+      if (saved.second !== undefined) el('inpSecond').value = saved.second;
+      if (AYANAMSA_OPTIONS.some(([value]) => value === saved.ayanamsa)) ayanamsaSel.value = saved.ayanamsa;
+      if (saved.increment !== undefined) el('inpIncrement').value = saved.increment;
+      if (saved.incrementType) el('inpIncrementType').value = saved.incrementType;
+      if (saved.speedMs !== undefined) {
+        el('inpSpeed').value = saved.speedMs;
+        speedOut.textContent = saved.speedMs + ' ms';
+      }
+      if (saved.runLimit !== undefined) el('inpRunLimit').value = saved.runLimit;
+    }
+
+    // ---- Speed slider ------------------------------------------------------------
+    const speedOut = el('speedOut');
+    el('inpSpeed').addEventListener('input', (e) => {
+      speedOut.textContent = e.target.value + ' ms';
+      saveSettings();
+      if (running) restartTimer();
+    });
+
+    // ---- Shared request helpers (mirrors public/index.html) ---------------------
+    function readInt(value) {
+      const raw = String(value).trim();
+      if (!/^-?\d+$/.test(raw)) return NaN;
+      return Number(raw);
+    }
+
+    function formatFixed(value, digits, suffix) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n.toFixed(digits) + suffix : '—';
+    }
+
+    async function postJson(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      return { res, json };
+    }
+
+    // Same checks as readChartRequest in public/index.html. The place goes as `locationId` only: the server
+    // resolves the coordinates, the zone and the historical UTC offset.
+    function readChartRequest() {
+      const year = readInt(el('inpYear').value);
+      const month = readInt(el('inpMonth').value);
+      const day = readInt(el('inpDay').value);
+      const hour = readInt(el('inpHour').value);
+      const minute = readInt(el('inpMinute').value);
+      const second = readInt(el('inpSecond').value);
+      const locationId = Number(placeSel.value);
+      const ambiguousTime = el('inpAmbiguous').value;
+      const ayanamsa = ayanamsaSel.value;
+      const errors = [];
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+        errors.push('Year, month and day must be integers.');
+      } else {
+        const probe = new Date(Date.UTC(year, month - 1, day));
+        if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) {
+          errors.push('That is not a calendar date.');
+        }
+      }
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59 || !Number.isInteger(second) || second < 0 || second > 59) {
+        errors.push('Time must be a real clock time (hour 0–23, minute and second 0–59).');
+      }
+      if (!placeSel.value || !Number.isInteger(locationId)) {
+        errors.push('Choose a country and a place.');
+      }
+      if (!ayanamsa) errors.push('Choose an ayanamsa.');
+      const payload = { year, month, day, hour, minute, second, locationId, ayanamsa };
+      if (ambiguousTime) payload.ambiguousTime = ambiguousTime;
+      return { errors, payload };
+    }
+
+    // The API's own message (a DST gap, a repeated clock time, an unknown place) is shown as it is.
+    function apiErrorMessage(result) {
+      const detail = result.json && result.json.error ? result.json.error : 'HTTP ' + result.res.status;
+      return 'Chart computation failed: ' + detail;
+    }
+
+    function setCurrentTimeDisplay() {
+      const y = el('inpYear').value, m = el('inpMonth').value, d = el('inpDay').value;
+      const hh = String(el('inpHour').value).padStart(2, '0');
+      const mm = String(el('inpMinute').value).padStart(2, '0');
+      const ss = String(el('inpSecond').value).padStart(2, '0');
+      el('metaCurrentTime').textContent = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')} ${hh}:${mm}:${ss}`;
+    }
+
+    function setStatus(text, isError) {
+      const line = el('statusLine');
+      line.textContent = text;
+      line.classList.toggle('is-error', Boolean(isError));
+    }
+
+    // ---- Chart wheel rendering (mirrors public/index.html) ----------------------
+    function renderWheels(wheels) {
+      const southGrid = el('southIndianGrid');
+      southGrid.innerHTML = '';
+      const cellSignMap = [12, 1, 2, 3, 11, null, null, 4, 10, null, null, 5, 9, 8, 7, 6];
+      cellSignMap.forEach((signNum, idx) => {
+        if (signNum === null) {
+          if (idx === 5) {
+            const center = document.createElement('div');
+            center.className = 'center-box';
+            center.innerHTML = 'KP Placidus<br>Chart Wheel';
+            southGrid.appendChild(center);
+          }
+          return;
+        }
+        const box = (wheels.southIndian || []).find((s) => s.signIndex === signNum - 1);
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        if (!box) {
+          southGrid.appendChild(cell);
+          return;
+        }
+        const cuspsHtml = box.cusps.length > 0
+          ? box.cusps.map((c) => `<div class="cell-cusp">C${c.house}: ${(c.formatted || '').split(' ')[0]}</div>`).join('')
+          : '';
+        const planetsHtml = box.planets.length > 0
+          ? box.planets.map((p) => `<div class="cell-planet">${p.name} (H${p.house})</div>`).join('')
+          : '';
+        cell.innerHTML = `<div class="sign-name">${box.signName}</div>${cuspsHtml}${planetsHtml}`;
+        southGrid.appendChild(cell);
+      });
+
+      const northWheel = el('northIndianWheel');
+      northWheel.innerHTML = '';
+      (wheels.northIndian || []).forEach((h) => {
+        const box = document.createElement('div');
+        box.className = 'house-box';
+        const planetsText = h.planets.length > 0 ? h.planets.map((p) => p.name).join(', ') : 'None';
+        box.innerHTML = `
+          <div class="house-title">House ${h.house} (${h.signName})</div>
+          <div style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Cusp: ${h.cuspFormatted}</div>
+          <div class="house-planets">Planets: ${planetsText}</div>
+        `;
+        northWheel.appendChild(box);
+      });
+    }
+
+    function renderPlanetsTable(planets) {
+      const body = el('planetsTableBody');
+      body.innerHTML = '';
+      if (!planets || planets.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="empty">No planets in the response.</td></tr>';
+        return;
+      }
+      planets.forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${p.name}</strong></td>
+          <td>${p.formatted}</td>
+          <td>${p.signName}</td>
+          <td>${p.starLord}</td>
+          <td><strong style="color: var(--md-sys-color-primary);">${p.subLord}</strong></td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    // ---- Tick loop ----------------------------------------------------------------
+    let running = false;
+    let runCount = 0;
+    let timerId = null;
+    let fetchInFlight = false;
+    let currentController = null;
+
+    function currentSpeedMs() {
+      return Math.max(200, Number(el('inpSpeed').value) || 1000);
+    }
+
+    // Resolves to { ok: true } or { ok: false, message }. A failure (the API's 400 for a DST gap or a
+    // repeated clock time included) is shown in the status line with the API's own message.
+    async function computeAndRender() {
+      if (fetchInFlight) return { ok: true, skipped: true }; // skip this tick: still waiting on the previous fetch
+      fetchInFlight = true;
+      currentController = new AbortController();
+      const { signal } = currentController;
+      try {
+        const { errors, payload } = readChartRequest();
+        if (errors.length) return { ok: false, message: errors.join(' ') };
+
+        const computed = await postJson('/api/calculate', payload);
+        if (signal.aborted) return { ok: true, aborted: true };
+        if (!computed.res.ok) return { ok: false, message: apiErrorMessage(computed) };
+        const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
+        const planets = positions.map((p) => ({ name: p.name, longitude: p.longitude }));
+
+        const chart = await postJson('/api/chart/calculate', { ...payload, planets });
+        if (signal.aborted) return { ok: true, aborted: true };
+        if (!chart.res.ok || !chart.json.success) return { ok: false, message: apiErrorMessage(chart) };
+
+        renderWheels(chart.json.data.chartWheels || { southIndian: [], northIndian: [] });
+        renderPlanetsTable(chart.json.data.planets || []);
+        setCurrentTimeDisplay();
+        return { ok: true };
+      } catch (err) {
+        if (signal.aborted) return { ok: true, aborted: true };
+        return { ok: false, message: 'Chart computation failed: ' + (err && err.message ? err.message : err) };
+      } finally {
+        fetchInFlight = false;
+      }
+    }
+
+    async function fetchForDisplay(label) {
+      const result = await computeAndRender();
+      if (result.ok) setStatus(label, false);
+      else setStatus(result.message, true);
+      return result;
+    }
+
+    function advanceOneStep() {
+      const from = {
+        year: readInt(el('inpYear').value),
+        month: readInt(el('inpMonth').value),
+        day: readInt(el('inpDay').value),
+        hour: readInt(el('inpHour').value),
+        minute: readInt(el('inpMinute').value),
+        second: readInt(el('inpSecond').value),
+      };
+      const amount = readInt(el('inpIncrement').value) || 1;
+      const type = el('inpIncrementType').value;
+      const next = stepTime(from, amount, type);
+      el('inpYear').value = next.year;
+      el('inpMonth').value = next.month;
+      el('inpDay').value = next.day;
+      el('inpHour').value = next.hour;
+      el('inpMinute').value = next.minute;
+      el('inpSecond').value = next.second;
+      runCount += 1;
+      el('metaRunCount').textContent = String(runCount);
+    }
+
+    function runLimitReached() {
+      const limit = readInt(el('inpRunLimit').value);
+      return Number.isInteger(limit) && limit > 0 && runCount >= limit;
+    }
+
+    async function tick() {
+      advanceOneStep();
+      const result = await computeAndRender();
+      if (!result.ok) {
+        // Stop on the first failure so the same error is not repeated every tick. The status line keeps it.
+        stopAnimation(result.message);
+        setStatus(result.message, true);
+        return;
+      }
+      if (running && !result.skipped && !result.aborted) setStatus(`Running — step ${runCount}.`, false);
+      if (runLimitReached()) {
+        stopAnimation('Run limit reached. Animation Complete.');
+      }
+    }
+
+    function restartTimer() {
+      if (timerId !== null) clearInterval(timerId);
+      timerId = setInterval(tick, currentSpeedMs());
+    }
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      el('btnRun').lastChild.textContent = 'Step';
+    }
+
+    function startAnimation() {
+      if (running) return;
+      if (!placeSel.value) {
+        setStatus('Choose a country and a place.', true);
+        return;
+      }
+      if (prefersReducedMotion) {
+        // Reduced motion: a single step per press instead of a running timer.
+        tick();
+        return;
+      }
+      running = true;
+      setStatus('Running.', false);
+      restartTimer();
+    }
+
+    function stopAnimation(message) {
+      running = false;
+      if (timerId !== null) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      if (currentController) currentController.abort();
+      setStatus(message || 'Animation Stopped', false);
+    }
+
+    el('btnRun').addEventListener('click', startAnimation);
+    el('btnStop').addEventListener('click', () => stopAnimation('Animation Stopped'));
+
+    let startSnapshot = null;
+
+    function captureStartSnapshot() {
+      startSnapshot = {
+        year: el('inpYear').value,
+        month: el('inpMonth').value,
+        day: el('inpDay').value,
+        hour: el('inpHour').value,
+        minute: el('inpMinute').value,
+        second: el('inpSecond').value,
+      };
+    }
+
+    el('btnRestart').addEventListener('click', () => {
+      stopAnimation('Animation Stopped');
+      if (startSnapshot) {
+        el('inpYear').value = startSnapshot.year;
+        el('inpMonth').value = startSnapshot.month;
+        el('inpDay').value = startSnapshot.day;
+        el('inpHour').value = startSnapshot.hour;
+        el('inpMinute').value = startSnapshot.minute;
+        el('inpSecond').value = startSnapshot.second;
+      }
+      runCount = 0;
+      el('metaRunCount').textContent = '0';
+      fetchForDisplay('Restarted.');
+    });
+
+    el('btnNow').addEventListener('click', () => {
+      const now = new Date();
+      el('inpYear').value = now.getFullYear();
+      el('inpMonth').value = now.getMonth() + 1;
+      el('inpDay').value = now.getDate();
+      el('inpHour').value = now.getHours();
+      el('inpMinute').value = now.getMinutes();
+      el('inpSecond').value = now.getSeconds();
+      fetchForDisplay('Now.');
+    });
+
+    // Persist settings on every relevant change.
+    ['inpYear', 'inpMonth', 'inpDay', 'inpHour', 'inpMinute', 'inpSecond', 'inpIncrement', 'inpIncrementType', 'inpRunLimit']
+      .forEach((id) => el(id).addEventListener('change', saveSettings));
+    ayanamsaSel.addEventListener('change', saveSettings);
+    placeSel.addEventListener('change', saveSettings);
+    countrySel.addEventListener('change', saveSettings);
+
+    // ---- Boot ----------------------------------------------------------------------
+    (async () => {
+      try {
+        await ayanamsaReady;
+        await loadLocations();
+        applySavedSettings();
+        captureStartSnapshot();
+        await fetchForDisplay('Ready.');
+      } catch (err) {
+        setStatus('Could not load the places: ' + (err && err.message ? err.message : err), true);
+      }
+    })();
+  </script>
+</body>
+</html>

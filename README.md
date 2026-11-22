@@ -9,7 +9,7 @@ The product goal is a hosted app that can compute a natal KP chart and a horary 
 Ship a web application that:
 
 - Accepts birth or question data with time to the second and a resolved place and timezone.
-- Computes sidereal planetary positions and Placidus house cusps using a KP ayanamsa (KP Old and KP New).
+- Computes sidereal planetary positions and Placidus house cusps using a chosen ayanamsa. The page preselects KP New. KP Straight Line and KP Ayanamsa (KP-Qt's formulas), KP Straight Line (Adjusted), KP Old, and the Swiss Ephemeris modes are selectable too.
 - Derives sign, star, sub, and sub-sub lords for every planet and cusp.
 - Shows South and North Indian charts plus KP cusp, planet, significator, ruling-planet, and dasha tables.
 - Supports KP horary numbers 1–249, with the lagna fixed at the **start** of the chosen sub.
@@ -23,7 +23,7 @@ These are the rules the engine has to get right. People will judge the app on th
 
 ### Sidereal zodiac and ayanamsa
 
-Use a sidereal zodiac with a **KP ayanamsa**, not Lahiri as a silent fallback. Offer both **KP Old** and **KP New**, the two KP modes in [Swiss Ephemeris](https://www.astro.com/swisseph/swisseph.pdf). KP sits about 4 to 6 arcminutes from Lahiri. The often-quoted fixed gap of 5′48″ is only an approximation. Which mode is the default is an open decision.
+Use a sidereal zodiac with an explicit ayanamsa. Lahiri is never a silent fallback. The UI preselects **KP New**. The selectable list is KP Straight Line (Adjusted), KP Straight Line, KP Ayanamsa, KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, and Nil. KP Old and KP New are the two Krishnamurti modes in [Swiss Ephemeris](https://www.astro.com/swisseph/swisseph.pdf). KP sits about 4 to 6 arcminutes from Lahiri. The often-quoted fixed gap of 5′48″ is only an approximation. KP Straight Line and KP Ayanamsa use KP-Qt's closed formulas.
 
 ### Placidus house cusps
 
@@ -66,10 +66,17 @@ To resolve the Swiss Ephemeris AGPL / CHF 700 commercial fee constraint and enab
 
 NASA JPL Ephemeris models are works of the United States Government (17 U.S.C. § 105), placed in the public domain and permissively licensed. See [docs/licensing.md](docs/licensing.md) for full architectural rationale and licensing compliance.
 
-Both KP ayanamsa standards are implemented and selectable:
-1. **KP Old** (`SE_SIDM_KRISHNAMURTI`): K.S. Krishnamurti's original baseline defined at J1900.0 with $22^\circ 21' 50.0''$ ($22.363889^\circ$). J2000 value: $23.76024004^\circ$ ($23^\circ 45' 36.86''$).
-2. **KP New** (`SE_SIDM_KRISHNAMURTI_VP291`): The Krishnamurti-Senthilathiban revision with zero-ayanamsa epoch at vernal point 291 CE. J2000 value: $23.78036498^\circ$ ($23^\circ 46' 49.31''$).
-Both match Swiss Ephemeris to within $0.05$ arcseconds across modern epochs.
+The ayanamsas a user can select:
+
+1. **KP Straight Line (Adjusted)** (`kp_straight_line_adjusted`): the owner's JD formula, T × 50.2388475″ / 3600 from 291 CE, with no nutation. This is the UI's first option. It is not KP-Qt's fractional-year form of the same name.
+2. **KP Straight Line** (`kp_straight_line`): KP-Qt's formula, (local year − 291) × 50.2388475″ / 3600. The month and the clock are ignored. The chart uses the local civil year.
+3. **KP Ayanamsa** (`kp_ayanamsa`): KP-Qt's formula. t is the fractional year counted from 15 April, minus 1900; (t × 50.2388475 + 1350) / 3600 + 22 + t² × 0.000111 / 3600.
+4. **KP Old** (`kp_old`, `SE_SIDM_KRISHNAMURTI`): K.S. Krishnamurti's original baseline defined at J1900.0 with $22^\circ 21' 50.0''$ ($22.363889^\circ$). J2000 value: $23.76024004^\circ$ ($23^\circ 45' 36.86''$).
+5. **KP New** (`kp_new`, `SE_SIDM_KRISHNAMURTI_VP291`): the Krishnamurti-Senthilathiban revision with zero-ayanamsa epoch at vernal point 291 CE. J2000 value: $23.78036498^\circ$ ($23^\circ 46' 49.31''$). This is the option the page preselects.
+6. **Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi**: KP-Qt's IAU 1976 vernal-point precession and `kAya[]` zero points, not the Swiss Ephemeris 2.10 polynomials.
+7. **Nil** (`nil`): tropical, ayanamsa 0, no nutation.
+
+KP Old and KP New match Swiss Ephemeris 2.10.03 to within 0.05 arcseconds on the pinned dates. A request with no ayanamsa is rejected. The page preselects KP New.
 
 ## Cloudflare Wrangler deployment
 
@@ -93,7 +100,7 @@ npm run deploy
 ### API Endpoints
 
 - `GET /api/health` — Engine status, versions, and NASA JPL licensing confirmation.
-- `GET /api/ayanamsa?year=2026&month=11&day=21` — KP Old and KP New ayanamsa values for a given date.
+- `GET /api/ayanamsa?date=2026-11-21T00:00:00Z` — every supported ayanamsa at that UTC instant.
 - `GET /api/horary-table` or `GET /api/horary-table?number=108` — Complete canonical 1–249 Horary table or specific entry lookup.
 - `POST /api/calculate` — Computes full natal or event chart (planetary positions, Placidus cusps, sign/star/sub/sub-sub lords, 4-level significators, ruling planets, Vimshottari dasha).
 - `POST /api/horary` — Computes Horary chart for numbers 1–249 with Lagna at start of sub (or midpoint toggle) via RAMC inversion.
@@ -114,7 +121,7 @@ Birth data is personal data under Malaysia's [PDPA](https://www.pdp.gov.my/en/fa
 
 These are filed as `decision` issues and should be settled in writing before the related features ship:
 
-1. **Default KP ayanamsa** — KP Old vs KP New (both must remain selectable).
+1. **Default KP ayanamsa** — decided: the page preselects KP New. The API still requires an explicit ayanamsa. Every id in the list above stays selectable.
 2. **Rahu/Ketu significator rule set** — which agent rules to implement, and how to document them.
 3. **Ruling-planet rule set** — exact members of the set, including any node or additional-planet rules.
 4. **Swiss Ephemeris licence path** — AGPL (source must be offered for the hosted app) vs the Professional licence (CHF 700 / 6 years, Nov 2026 contract).
@@ -123,7 +130,7 @@ These are filed as `decision` issues and should be settled in writing before the
 
 ### MVP
 
-- Birth data input: time to the second, place search, timezone offset shown, ayanamsa toggle (KP Old / KP New).
+- Birth data input: time to the second, place search, timezone offset shown, ayanamsa select (KP New preselected; the full list above).
 - Ephemeris engine and a recorded licensing decision.
 - Placidus house cusps.
 - Sub and sub-sub lord computation, including the 1–249 table.

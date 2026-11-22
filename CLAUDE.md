@@ -28,11 +28,16 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 - **Fixed conventions** (owner decisions on #29) are constants in `src/engine/conventions.ts`, not options: mean node only,
   no outer planets, Porphyry fallback with a visible `polar_fallback` warning (horary at polar latitude throws),
   sunrise = upper limb with standard refraction, dasha year 365.2425 days, near-boundary threshold 60 arcsec.
-- **Ayanamsa:** ten explicit ids in `src/engine/ayanamsa-defs.ts`: `kp_straight_line_adjusted` (KPSTLA, first), `kp_old`,
-  `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`, `usha_shashi`, `nil`. All except KPSTLA are
-  defined as Swiss Ephemeris defines them; KPSTLA follows the owner's formula (#29: T x 50.2388475" / 3600, T from 291 AD),
-  and its definition is final (#29): zero point 291-01-01 0h UT Julian, 365.25-day year, no nutation (true = mean). The UI
-  preselects KP New (`DEFAULT_AYANAMSA_SELECTION`, #22). The API has **no default and no fallback**: `calculateChart`, `calculateKPChart`,
+- **Ayanamsa:** twelve explicit ids in `src/engine/ayanamsa-defs.ts`: `kp_straight_line_adjusted` (KPSTLA, first),
+  `kp_straight_line`, `kp_ayanamsa`, `kp_old`, `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`,
+  `usha_shashi`, `nil`. Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi use KP-Qt's
+  IAU 1976 vernal-point precession and `kAya[]` zero points (`kpqt-precession.ts`), evaluated at UT with KP-Qt's ΔT.
+  KP Old and KP New are the
+  Swiss Ephemeris Krishnamurti polynomials. KPSTLA follows the owner's formula (#29: T x 50.2388475" / 3600, T from 291 AD),
+  and its definition is final (#29): zero point 291-01-01 0h UT Julian, 365.25-day year, no nutation (true = mean). It is
+  not KP-Qt's 15 April fractional year. `kp_straight_line` and `kp_ayanamsa` are KP-Qt's formulas from `kpAyanamsa.cpp`,
+  evaluated on the local civil date; their true value is mean + nutation. KP-Qt's "User Defined" (`SE_SIDM_USER`) is not
+  a mode: it has no fixed formula. The UI preselects KP New (`DEFAULT_AYANAMSA_SELECTION`, #22). The API has **no default and no fallback**: `calculateChart`, `calculateKPChart`,
   `calculateAyanamsa`, `calculateEphemeris` and every API route require it; missing or unknown is an error (HTTP 400).
 - **Accuracy of `astronomy-engine` vs Swiss Ephemeris 2.10.03** (audit, #53; local comparison only, SE is not a dependency):
   mean ayanamsa 0.0002″, Sun 0.90″, Moon 4.37″, Mercury to Saturn up to 10.21″ (Saturn 2026), mean node 0.23″, Placidus
@@ -71,7 +76,7 @@ Not wired into the app: `src/core/{places,storage}.ts`, `src/data/cities.ts`.
 ## Rules that hold for every task
 
 - **KP correctness is the product.** Never change a calculation result to make a test pass. If a test and the code disagree, find out which is right (cite the reference value and where it came from) and say so.
-- Ayanamsa is an explicit choice from the supported list (KP Straight Line (Adjusted), KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). The UI preselects KP New (#22). KP Straight Line (Adjusted) is final and has no nutation (#29). **The API never falls back: a request without an ayanamsa is rejected.**
+- Ayanamsa is an explicit choice from the supported list (KP Straight Line (Adjusted), KP Straight Line, KP Ayanamsa, KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29, plus the two KP-Qt formulas). The UI preselects KP New (#22). KP Straight Line (Adjusted) is final and has no nutation (#29). **The API never falls back: a request without an ayanamsa is rejected.**
 - Horary lagna is the **start** of the chosen sub, not the midpoint (midpoint only behind an explicit toggle).
 - Day lord for ruling planets changes at **sunrise**, not midnight.
 - A planet's house comes from Placidus cusps, not its sign.

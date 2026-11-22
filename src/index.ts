@@ -37,7 +37,7 @@
  *
  * Open owner decisions, never defaulted in the engine:
  *   - #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
- *     `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa` (the ten supported ids).
+ *     `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa` (the supported ids).
  *     Missing or unknown is 400. `DEFAULT_AYANAMSA_SELECTION` is only reported, for the UI to preselect.
  *   - TODO(#23), TODO(#24): the two other engine options are set once, in `ENGINE_CONFIG`.
  */
@@ -482,8 +482,18 @@ app.get('/api/ayanamsa', (c) => {
   // (#22 decided, owner, #29: the API still requires an explicit ayanamsa). "mean" is the ayanamsa of the date;
   // "true" adds the nutation in longitude (except KPSTLA and Nil, where true = mean), the value
   // subtracted from tropical longitudes.
+  // KP Straight Line and KP Ayanamsa use this UTC civil date. A chart request uses the local
+  // civil date instead (KP-Qt evaluates those two on the date the user entered).
+  const civil = {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+    hour: date.getUTCHours(),
+    minute: date.getUTCMinutes(),
+    second: date.getUTCSeconds(),
+  };
   const ayanamsas = AYANAMSA_MODES.map((id) => {
-    const a = calculateAyanamsa(jd, id, dPsi);
+    const a = calculateAyanamsa(jd, id, dPsi, civil);
     return {
       id,
       label: AYANAMSA_LABELS[id],

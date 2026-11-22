@@ -73,6 +73,9 @@ describe('Birth Data Validation & Integrity', () => {
       // Owner decision on #29 (2026-11-21, answer A): KP Old, KP New, Lahiri, Raman, Fagan-Bradley,
       // Yukteshwar, J.N. Bhasin, Usha-Shashi and Nil (tropical).
       for (const id of [
+        'kp_straight_line_adjusted',
+        'kp_straight_line',
+        'kp_ayanamsa',
         'kp_old',
         'kp_new',
         'lahiri',
