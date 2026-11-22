@@ -137,8 +137,8 @@ describe('KP-Web API Routes', () => {
   });
 });
 
-describe('UI contract: /api/chart/* (public/index.html must keep working unchanged)', () => {
-  /** The payload `public/index.html` builds (around line 607): no utcOffsetHours, ayanamsa from a <select>. */
+describe('UI contract: /api/chart/* (legacy payload; the page now also sends utcOffsetHours)', () => {
+  /** Historical page payload: no utcOffsetHours, pasted planet longitudes. The page no longer builds this. */
   const UI_PAYLOAD = {
     year: 1947,
     month: 8,

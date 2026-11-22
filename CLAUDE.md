@@ -52,8 +52,9 @@ Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q16 whi
 
 **Open UI issue:** `public/index.html` reads response fields that no API version returns (`julianDate`, `formattedDms`,
 `assignedHouse`, …) and still asks the user to paste planet longitudes. It is **not** fixed; the owner will design the UI/API
-contract later (#29 answer 10). See #68. `src/client/html.ts` is unused and calls routes that do not exist.
-Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/cities.ts`, `src/client/html.ts`
+contract later (#29 answer 10). See #68. `src/client/html.ts` was deleted in #68: nothing imported it,
+and it called `/api/places/search`, `/api/timezone/offset` and `/api/charts/validate-input`, which do not exist.
+Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/cities.ts`
 (only `src/core/validation.ts` is used).
 
 ## Target state
