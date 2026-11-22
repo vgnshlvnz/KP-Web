@@ -13,6 +13,7 @@
  *   POST /api/chart/calculate  cusps + planets + significators, `{ success, data }` (UI contract, unchanged)
  *   POST /api/calculate        natal chart, `calculateChart`, bare result
  *   POST /api/horary           horary chart, `calculateHoraryChart`, bare result
+ *   POST /api/match            KP Dasavidha Porutham, `calculateMatch`, bare result (rules 1,3,4,6,7,8,10 only)
  *
  * `public/index.html` asks `POST /api/calculate` for the nine sidereal longitudes, then posts those
  * `{ name, longitude }` rows to `POST /api/chart/calculate` and reads `data`: `julianDateUT`,
@@ -67,6 +68,7 @@ import { validateAyanamsa } from './core/validation.js';
 import { getLocation, listLocationsByCountry, PRE_IANA_RELIABLE_YEAR } from './core/locations.js';
 import { AmbiguousLocalTimeError, computeTimezoneOffset, NonexistentLocalTimeError } from './core/timezone.js';
 import { LOCATIONS } from './data/locations.js';
+import { calculateMatch, localNoonUtc, MatchingDateOutOfRangeError } from './engine/matching.js';
 
 // ---------------------------------------------------------------------------
 // Engine configuration: the two decisions that are still open (#23, #24)
@@ -318,6 +320,9 @@ app.onError((err, c) => {
   if (err instanceof PolarLatitudeError) {
     return c.json(errorBody(c.req.path, err.message), 422);
   }
+  if (err instanceof MatchingDateOutOfRangeError) {
+    return c.json(errorBody(c.req.path, err.message), 400);
+  }
   // Not the caller's fault. Log it server-side; the response carries no message from the error and no stack.
   console.error('Unhandled error:', err);
   return c.json(errorBody(c.req.path, 'An internal error occurred while processing the request.'), 500);
@@ -346,6 +351,7 @@ app.get('/api/health', (c) => {
       'POST /api/chart/calculate',
       'POST /api/calculate',
       'POST /api/horary',
+      'POST /api/match',
     ],
   });
 });
@@ -528,6 +534,64 @@ app.post('/api/horary', async (c) => {
     engineOptions(ayanamsa)
   );
   return c.json(location ? { ...result, location } : result);
+});
+
+/** `body[key]` must be a plain JSON object (one of the two people in a matching request). */
+function personField(body: Body, key: 'boy' | 'girl'): Body {
+  const raw = body[key];
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new BadRequestError(`"${key}" is required and must be an object.`);
+  }
+  return raw as Body;
+}
+
+/** `checkingDate` is a calendar date only (no time of day: KP-Qt takes noon in the girl's place, owner 2026-11-22). */
+function requireCheckingDate(body: Body): { year: number; month: number; day: number } {
+  const raw = body.checkingDate;
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new BadRequestError('"checkingDate" is required and must be an object with year, month and day.');
+  }
+  const cd = raw as Body;
+  const year = numberField(cd, 'year', undefined);
+  const month = numberField(cd, 'month', undefined);
+  const day = numberField(cd, 'day', undefined);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    throw new BadRequestError('"checkingDate.year", "checkingDate.month" and "checkingDate.day" must be integers.');
+  }
+  const dt = new Date(0);
+  dt.setUTCFullYear(year, month - 1, day);
+  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
+    throw new BadRequestError(`"checkingDate" is not a calendar date: ${year}-${month}-${day}.`);
+  }
+  return { year, month, day };
+}
+
+/**
+ * KP Dasavidha Porutham (owner, 2026-11-22: rules 2, 5 and 9 omitted; see `engine/matching.ts`).
+ * Body: `ayanamsa` (required, no default); `boy` and `girl`, each the same place/time fields as
+ * `/api/calculate` (EITHER `locationId` OR `latitude`+`longitude`+`utcOffsetHours`, both required
+ * here); `checkingDate: { year, month, day }` (required). The checking instant is local noon in the
+ * girl's resolved place, as in KP-Qt.
+ */
+app.post('/api/match', async (c) => {
+  const body = await readJsonBody(c.req);
+  const ayanamsa = requireAyanamsa(body);
+  const options = engineOptions(ayanamsa);
+  const { input: boyInput, location: boyLocation } = parseDateTimeLocation(personField(body, 'boy'), 'required');
+  const { input: girlInput, location: girlLocation } = parseDateTimeLocation(personField(body, 'girl'), 'required');
+  const checkingDate = requireCheckingDate(body);
+
+  const boy = calculateChart(boyInput, options);
+  const girl = calculateChart(girlInput, options);
+  // `'required'` mode guarantees `utcOffsetHours` is set (never silently UTC); see `parseDateTimeLocation`.
+  const checkingDateUtc = localNoonUtc(checkingDate.year, checkingDate.month, checkingDate.day, girlInput.utcOffsetHours!);
+
+  const match = calculateMatch(boy, girl, checkingDateUtc);
+  return c.json({
+    ...match,
+    boy: { ...match.boy, location: boyLocation },
+    girl: { ...match.girl, location: girlLocation },
+  });
 });
 
 export default app;

@@ -47,6 +47,8 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 | #23 | Rahu/Ketu agent rule set | `NodeAgentRuleSet` in `types.ts`; `calculateFourLevelSignificators` in `significators.ts`; `ENGINE_CONFIG.nodeAgentRuleSet` in `src/index.ts` (interim `'none'`, owner answer on #29) |
 | #24 | ruling-planet set | `RulingPlanetSet` in `types.ts`; `calculateRulingPlanets` in `ruling-planets.ts`; `ENGINE_CONFIG.rulingPlanetSet` in `src/index.ts` |
 
+| matching | decided (owner, 2026-11-22): KP Dasavidha Porutham rules 2, 5 and 9 are OMITTED entirely (not scored as null rows) — KP-Qt's own source marks their friendship table / aspect-class list / "connected" definition as unverified, and `Reading::ReferenceFitted` (which only existed to fit those three) is not ported. Kept rules 1, 3, 4, 6, 7, 8, 10, each worth 100, total out of 700. Rule 4's orb is a fixed constant, 7° (`RULE_4_ORB_DEG` in `matching.ts`), not a request field. Dasha lords use this engine's own `DASHA_YEAR_DAYS` (365.2425), not KP-Qt's 365.25. Checking instant is local noon in the girl's resolved place, as in KP-Qt (`horomatch.cpp` ~121/656) | `src/engine/matching.ts`, `POST /api/match` in `src/index.ts` |
+
 #25 (Swiss Ephemeris licence) is still open, but the engine is `astronomy-engine`, as recorded in `docs/licensing.md`.
 Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q16 which boundary flag the UI shows).
 
