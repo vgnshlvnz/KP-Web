@@ -42,7 +42,16 @@ const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
   rulingPlanetSet: 'asc_star_sign_moon_star_sign_day_lord', // TODO(#24): fixture
 });
 
-/** Swiss Ephemeris true obliquity and true ayanamsa per case, from Appendix A.1 to A.4. */
+/**
+ * Swiss Ephemeris true obliquity and true ayanamsa per case, from Appendix A.1 to A.4.
+ *
+ * The numbers are the ones printed in Appendix A, with more digits (regenerated with pyswisseph
+ * 2.10.03: `swe.calc_ut(jd, ECL_NUT)[0][0]` and `swe.get_ayanamsa_ex_ut(jd, FLG_SWIEPH)` for
+ * `SIDM_KRISHNAMURTI` / `SIDM_KRISHNAMURTI_VP291`). Appendix A rounds the obliquity to 1e-7 deg
+ * (0.00036") and the ayanamsa to 1e-8 deg, which is coarser than the 1e-4" the horary lagna is
+ * aimed inside the sub, and the check below is [0, 0.5"] with no slack. Every value agrees with the
+ * printed one to its last printed digit; none was changed.
+ */
 interface SeCase {
   input: DateTimeLocation;
   trueObliquity: number;
@@ -50,24 +59,24 @@ interface SeCase {
 }
 const KL: SeCase = {
   input: { year: 1992, month: 3, day: 11, hour: 6, minute: 14, second: 0, utcOffsetHours: 8, latitude: 3.139, longitude: 101.6869 },
-  trueObliquity: 23.4407206,
-  trueAyanamsa: { kp_old: 23.65598842, kp_new: 23.67611386 },
+  trueObliquity: 23.440720614551,
+  trueAyanamsa: { kp_old: 23.655988417305, kp_new: 23.676113860623 },
 };
 const OTHER_CASES: Record<string, SeCase> = {
   gw2000: {
     input: { year: 2000, month: 1, day: 1, hour: 12, minute: 0, second: 0, utcOffsetHours: 0, latitude: 51.4779, longitude: -0.0015 },
-    trueObliquity: 23.4376767,
-    trueAyanamsa: { kp_old: 23.75637017, kp_new: 23.77649512 },
+    trueObliquity: 23.437676716055,
+    trueAyanamsa: { kp_old: 23.756370172647, kp_new: 23.776495117237 },
   },
   chn1950: {
     input: { year: 1950, month: 6, day: 15, hour: 23, minute: 59, second: 30, utcOffsetHours: 5.5, latitude: 13.0827, longitude: 80.2707 },
-    trueObliquity: 23.4480701,
-    trueAyanamsa: { kp_old: 23.06785963, kp_new: 23.08798753 },
+    trueObliquity: 23.448070138257,
+    trueAyanamsa: { kp_old: 23.067859626319, kp_new: 23.087987530635 },
   },
   pj2026: {
     input: { year: 2026, month: 11, day: 21, hour: 9, minute: 0, second: 0, utcOffsetHours: 8, latitude: 3.1073, longitude: 101.6067 },
-    trueObliquity: 23.4378255,
-    trueAyanamsa: { kp_old: 24.1381165, kp_new: 24.15823963 },
+    trueObliquity: 23.437825528014,
+    trueAyanamsa: { kp_old: 24.138116497464, kp_new: 24.158239633113 },
   },
 };
 
@@ -178,7 +187,7 @@ describe('every one of the 249 numbers lands in its own sub', () => {
     ]),
   ];
   for (const [label, c, ayanamsa] of cases) {
-    it(`${label}: Asc is in sub n (engine terms), and within 0.2" of the start in SE terms`, () => {
+    it(`${label}: Asc is in sub n (engine terms), and in [0, 0.2") from the start in SE terms`, () => {
       for (const entry of getHorary249Table()) {
         const chart = calculateHoraryChart(
           { questionTime: c.input, horaryNumber: entry.number },
@@ -194,11 +203,16 @@ describe('every one of the 249 numbers lands in its own sub', () => {
         expect(own).toBeGreaterThanOrEqual(0);
         expect(own).toBeLessThan(0.001);
 
-        // In Swiss Ephemeris terms the offset is the difference of the two nutation models
-        // (engine IAU 2000B vs SE, Delta-psi), at most 0.14" here, inside the 0.2" tolerance that
-        // `ephemeris-reference.test.ts` allows for the true ayanamsa. Its sign varies by instant.
+        // In Swiss Ephemeris terms the lagna is on the start of the sub and never in the previous
+        // one: 0 <= offset < 0.2". The upper bound is the old `|offset| < 0.2"` bound, kept as it
+        // was (not loosened); the lower bound is new. The engine and Swiss Ephemeris now use the
+        // same nutation (the 77-term IAU 2000B series, #57); with astronomy-engine's 5-term
+        // nutation this offset was up to 0.13" and negative at Greenwich 2000. What is left is the
+        // 1e-4" aim inside the sub plus the ayanamsa polynomial's 1e-4" or so. KL 1992 additionally
+        // has the [0, 0.5"] tests below.
         const se = diffArcsec(seSiderealAsc(c, ayanamsa, chart.armc), entry.startLongitude);
-        expect(Math.abs(se), `number ${entry.number}`).toBeLessThan(0.2);
+        expect(se, `number ${entry.number}`).toBeGreaterThanOrEqual(0);
+        expect(se, `number ${entry.number}`).toBeLessThan(0.2);
       }
     });
   }
@@ -213,6 +227,22 @@ describe('every one of the 249 numbers lands in its own sub', () => {
         const d = diffArcsec(seSiderealAsc(KL, ayanamsa, chart.armc), entry.startLongitude);
         expect(d, `${ayanamsa} number ${entry.number}`).toBeGreaterThanOrEqual(0);
         expect(d, `${ayanamsa} number ${entry.number}`).toBeLessThanOrEqual(0.5);
+      }
+    }
+  });
+
+  it('Greenwich 2000 (the case that was 0.08" to 0.13" inside the previous sub, #57): all 249 in [0, 0.2")', () => {
+    // Kept as its own test so the regression for #57 is named. With astronomy-engine's nutation the
+    // offset here was -0.133 to -0.082 arcsec for both ayanamsas.
+    for (const ayanamsa of ['kp_old', 'kp_new'] as const) {
+      for (const entry of getHorary249Table()) {
+        const chart = calculateHoraryChart(
+          { questionTime: OTHER_CASES.gw2000.input, horaryNumber: entry.number },
+          OPTIONS(ayanamsa)
+        );
+        const d = diffArcsec(seSiderealAsc(OTHER_CASES.gw2000, ayanamsa, chart.armc), entry.startLongitude);
+        expect(d, `${ayanamsa} number ${entry.number}`).toBeGreaterThanOrEqual(0);
+        expect(d, `${ayanamsa} number ${entry.number}`).toBeLessThan(0.2);
       }
     }
   });
