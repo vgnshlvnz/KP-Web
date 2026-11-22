@@ -358,8 +358,12 @@
     });
 
     // ---- Ayanamsa select, built from the known modes ----------------------------
+    // Same ids as AYANAMSA_MODES in src/engine/ayanamsa-defs.ts (pinned by test/animate-page-integrity.test.ts).
+    // KP New is only the preselected option (#22 decided, owner, #29); the request always sends the explicit choice.
     const AYANAMSA_OPTIONS = [
       ['kp_straight_line_adjusted', 'KP Straight Line (Adjusted)'],
+      ['kp_straight_line', 'KP Straight Line'],
+      ['kp_ayanamsa', 'KP Ayanamsa'],
       ['kp_old', 'KP Old'],
       ['kp_new', 'KP New'],
       ['lahiri', 'Lahiri'],
@@ -445,7 +449,7 @@
       if (saved.hour !== undefined) el('inpHour').value = saved.hour;
       if (saved.minute !== undefined) el('inpMinute').value = saved.minute;
       if (saved.second !== undefined) el('inpSecond').value = saved.second;
-      if (saved.ayanamsa) ayanamsaSel.value = saved.ayanamsa;
+      if (AYANAMSA_OPTIONS.some(([value]) => value === saved.ayanamsa)) ayanamsaSel.value = saved.ayanamsa;
       if (saved.increment !== undefined) el('inpIncrement').value = saved.increment;
       if (saved.incrementType) el('inpIncrementType').value = saved.incrementType;
       if (saved.speedMs !== undefined) {
@@ -485,7 +489,9 @@
       return { res, json };
     }
 
-    function currentPayload() {
+    // Same checks as readChartRequest in public/index.html. The place goes as `locationId` only: the server
+    // resolves the coordinates, the zone and the historical UTC offset.
+    function readChartRequest() {
       const year = readInt(el('inpYear').value);
       const month = readInt(el('inpMonth').value);
       const day = readInt(el('inpDay').value);
@@ -495,9 +501,31 @@
       const locationId = Number(placeSel.value);
       const ambiguousTime = el('inpAmbiguous').value;
       const ayanamsa = ayanamsaSel.value;
+      const errors = [];
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+        errors.push('Year, month and day must be integers.');
+      } else {
+        const probe = new Date(Date.UTC(year, month - 1, day));
+        if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) {
+          errors.push('That is not a calendar date.');
+        }
+      }
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59 || !Number.isInteger(second) || second < 0 || second > 59) {
+        errors.push('Time must be a real clock time (hour 0–23, minute and second 0–59).');
+      }
+      if (!placeSel.value || !Number.isInteger(locationId)) {
+        errors.push('Choose a country and a place.');
+      }
+      if (!ayanamsa) errors.push('Choose an ayanamsa.');
       const payload = { year, month, day, hour, minute, second, locationId, ayanamsa };
       if (ambiguousTime) payload.ambiguousTime = ambiguousTime;
-      return payload;
+      return { errors, payload };
+    }
+
+    // The API's own message (a DST gap, a repeated clock time, an unknown place) is shown as it is.
+    function apiErrorMessage(result) {
+      const detail = result.json && result.json.error ? result.json.error : 'HTTP ' + result.res.status;
+      return 'Chart computation failed: ' + detail;
     }
 
     function setCurrentTimeDisplay() {
@@ -592,47 +620,44 @@
       return Math.max(200, Number(el('inpSpeed').value) || 1000);
     }
 
+    // Resolves to { ok: true } or { ok: false, message }. A failure (the API's 400 for a DST gap or a
+    // repeated clock time included) is shown in the status line with the API's own message.
     async function computeAndRender() {
-      if (fetchInFlight) return; // skip this tick: still waiting on the previous fetch
+      if (fetchInFlight) return { ok: true, skipped: true }; // skip this tick: still waiting on the previous fetch
       fetchInFlight = true;
       currentController = new AbortController();
       const { signal } = currentController;
       try {
-        const payload = currentPayload();
-        if (!placeSel.value) {
-          setStatus('Choose a country and a place.', true);
-          return;
-        }
+        const { errors, payload } = readChartRequest();
+        if (errors.length) return { ok: false, message: errors.join(' ') };
 
-        const computed = await postJson('/api/calculate', payload).catch((e) => { throw e; });
-        if (signal.aborted) return;
-        if (!computed.res.ok) {
-          setStatus('Chart computation failed.', true);
-          return;
-        }
+        const computed = await postJson('/api/calculate', payload);
+        if (signal.aborted) return { ok: true, aborted: true };
+        if (!computed.res.ok) return { ok: false, message: apiErrorMessage(computed) };
         const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
         const planets = positions.map((p) => ({ name: p.name, longitude: p.longitude }));
 
         const chart = await postJson('/api/chart/calculate', { ...payload, planets });
-        if (signal.aborted) return;
-        if (!chart.res.ok || !chart.json.success) {
-          setStatus('Chart computation failed.', true);
-          return;
-        }
+        if (signal.aborted) return { ok: true, aborted: true };
+        if (!chart.res.ok || !chart.json.success) return { ok: false, message: apiErrorMessage(chart) };
 
         renderWheels(chart.json.data.chartWheels || { southIndian: [], northIndian: [] });
         renderPlanetsTable(chart.json.data.planets || []);
         setCurrentTimeDisplay();
-        if (!signal.aborted && running) setStatus(`Running — step ${runCount}.`, false);
+        return { ok: true };
       } catch (err) {
-        if (!signal.aborted) setStatus('Chart computation failed.', true);
+        if (signal.aborted) return { ok: true, aborted: true };
+        return { ok: false, message: 'Chart computation failed: ' + (err && err.message ? err.message : err) };
       } finally {
         fetchInFlight = false;
       }
     }
 
-    function fetchForDisplay(label) {
-      return computeAndRender().then(() => setStatus(label, false));
+    async function fetchForDisplay(label) {
+      const result = await computeAndRender();
+      if (result.ok) setStatus(label, false);
+      else setStatus(result.message, true);
+      return result;
     }
 
     function advanceOneStep() {
@@ -664,7 +689,14 @@
 
     async function tick() {
       advanceOneStep();
-      await computeAndRender();
+      const result = await computeAndRender();
+      if (!result.ok) {
+        // Stop on the first failure so the same error is not repeated every tick. The status line keeps it.
+        stopAnimation(result.message);
+        setStatus(result.message, true);
+        return;
+      }
+      if (running && !result.skipped && !result.aborted) setStatus(`Running — step ${runCount}.`, false);
       if (runLimitReached()) {
         stopAnimation('Run limit reached. Animation Complete.');
       }
@@ -764,7 +796,7 @@
         captureStartSnapshot();
         await fetchForDisplay('Ready.');
       } catch (err) {
-        setStatus('Chart computation failed.', true);
+        setStatus('Could not load the places: ' + (err && err.message ? err.message : err), true);
       }
     })();
   </script>
