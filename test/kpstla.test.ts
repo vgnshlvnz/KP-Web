@@ -101,8 +101,10 @@ describe('KPSTLA through the API; KP New is the UI default selection only, never
   }
 
   it('public/index.html preselects KP New and no other option', () => {
-    const select = indexHtml.match(/<select[^>]*id="inpAyanamsa"[\s\S]*?<\/select>/)?.[0] ?? '';
-    const selected = [...select.matchAll(/<option value="([^"]+)"[^>]*\sselected/g)].map((m) => m[1]);
+    // The page may use a native <select> or a Material Web <md-outlined-select> / <md-filled-select>.
+    const select =
+      indexHtml.match(/<(select|md-(?:outlined|filled)-select)\b[^>]*id="inpAyanamsa"[\s\S]*?<\/\1>/)?.[0] ?? '';
+    const selected = [...select.matchAll(/<(?:option|md-select-option) value="([^"]+)"[^>]*\sselected/g)].map((m) => m[1]);
     expect(selected).toEqual(['kp_new']);
   });
 
