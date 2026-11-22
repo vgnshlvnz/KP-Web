@@ -14,6 +14,14 @@ import fixture from './fixtures/api-chart-calculate-kl-1980.json';
  *
  * `utcOffsetHours` is hours ahead of Universal Time (positive east).
  * UT = local clock − utcOffsetHours, so 10:00 at +8 is 02:00 UT.
+ *
+ * Fixture provenance: captured from the Hono handler (`app.request`) in #85.
+ * Regenerated 2026-11-22 (#89) with the same request and the same method, because the
+ * engine changed by owner decision: #80 (KPSTLA no longer adds nutation, owner decision
+ * #29 18:14Z) and #83 (IAU 2000B nutation). The ayanamsa rose by 7.9218 arcsec, the
+ * cusps, Asc and MC moved by -7.84 to -7.86 arcsec, and ARMC, GAST, nutation and
+ * true obliquity moved by at most 0.08 arcsec. No lord, star, sub or sign changed.
+ * The per-field comparison is in https://github.com/vgnshlvnz/KP-Web/issues/89.
  */
 
 /** Absolute tolerance for angles and sidereal time, in the field's own unit. 1e-6 deg is 0.0036 arcsec; 1e-6 hour is 0.0036 seconds of time. */
