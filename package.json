@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "wrangler dev",
+    "predeploy": "npm run typecheck && npm test",
+    "deploy": "wrangler deploy",
     "build": "tsc --noEmit",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
