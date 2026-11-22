@@ -91,7 +91,7 @@ export function validateCoordinates(lat: number, lon: number): string | null {
 export function validateAyanamsa(ayanamsa: unknown): string | null {
   if (!isAyanamsaMode(ayanamsa)) {
     const choices = AYANAMSA_MODES.map((m) => `${AYANAMSA_LABELS[m]} ('${m}')`).join(', ');
-    return `Ayanamsa must be explicitly selected as one of: ${choices}. There is no default and no silent fallback.`;
+    return `Ayanamsa must be explicitly selected as one of: ${choices}. Every request must name its ayanamsa; there is no silent fallback (the API never falls back, and 'defaultSelection' is only the UI's preselected option).`;
   }
   return null;
 }

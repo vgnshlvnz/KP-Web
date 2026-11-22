@@ -65,7 +65,7 @@ export function isAyanamsaMode(value: unknown): value is AyanamsaMode {
 
 /** Message for an unknown mode: lists the supported ids and says there is no fallback. */
 export function unsupportedAyanamsaMessage(value: unknown): string {
-  return `Unsupported ayanamsa mode: ${String(value)} (expected one of ${AYANAMSA_MODES.join(', ')}; there is no default and no fallback)`;
+  return `Unsupported ayanamsa mode: ${String(value)} (expected one of ${AYANAMSA_MODES.join(', ')}; every request must name its ayanamsa, the API never falls back, and 'defaultSelection' is only the UI's preselected option)`;
 }
 
 

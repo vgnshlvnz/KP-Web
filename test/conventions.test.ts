@@ -139,7 +139,7 @@ describe('polar latitude: Porphyry fallback with a visible warning, without any 
   });
 
   it('calculateCuspsFromARMC returns bare cusps, so it throws instead of falling back silently', () => {
-    expect(() => calculateCuspsFromARMC(100, TROMSO.latitude)).toThrow(PolarLatitudeError);
+    expect(() => calculateCuspsFromARMC(100, TROMSO.latitude, 23.439291, 24.1358)).toThrow(PolarLatitudeError);
   });
 });
 
