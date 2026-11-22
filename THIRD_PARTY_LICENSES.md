@@ -36,3 +36,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Material Web (vendored, front end only)
+
+- Package: `@material/web` 2.5.0, bundled with esbuild 0.28.2 into one classic script
+- Author: Google LLC
+- Source: https://github.com/material-components/material-web
+- Licence: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+- File: `public/vendor/material-web-2.5.0.js` (static asset, not an npm dependency; the Worker does not import it)
+- Used for: the Material Design 3 components on `public/index.html` (`md-*` elements)
+
+## Material Symbols (inline SVG paths)
+
+- Package: `@material-symbols/svg-400` 0.48.2 (Outlined)
+- Author: Google LLC
+- Source: https://github.com/google/material-design-icons
+- Licence: Apache License 2.0
+- Used for: the icons inlined in `public/index.html`
+
+## Roboto (font files)
+
+- Package: `@fontsource/roboto` 5.3.0, files `roboto-latin-{400,500,700}-normal.woff2`
+- Author: Christian Robertson / Google
+- Licence: SIL Open Font License 1.1 (https://openfontlicense.org)
+- Files: `public/fonts/Roboto-{400,500,700}.woff2`
