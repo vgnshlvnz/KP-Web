@@ -50,9 +50,9 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 #25 (Swiss Ephemeris licence) is still open, but the engine is `astronomy-engine`, as recorded in `docs/licensing.md`.
 Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q16 which boundary flag the UI shows).
 
-**UI:** `public/index.html` posts to `/api/calculate`, forwards `{ name, longitude }` to `/api/chart/calculate`,
-and reads the real fields (`julianDateUT`, `localSiderealTimeDegrees`, `formatted`, `signName`, `house`, …).
-It sends `utcOffsetHours`. KP New is the preselected ayanamsa. `src/client/html.ts` was deleted in #68: nothing imported it,
+**Open UI issue:** `public/index.html` reads response fields that no API version returns (`julianDate`, `formattedDms`,
+`assignedHouse`, …) and still asks the user to paste planet longitudes. It is **not** fixed; the owner will design the UI/API
+contract later (#29 answer 10). See #68. `src/client/html.ts` was deleted in #68: nothing imported it,
 and it called `/api/places/search`, `/api/timezone/offset` and `/api/charts/validate-input`, which do not exist.
 Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/cities.ts`
 (only `src/core/validation.ts` is used).

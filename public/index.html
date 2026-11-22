@@ -256,15 +256,42 @@
             <md-outlined-text-field type="number" id="inpMonth" label="Month" value="8" min="1" max="12"></md-outlined-text-field>
           </div>
 
-          <div class="fields-3">
-            <md-outlined-text-field type="number" id="inpDay" label="Day" value="14" min="1" max="31"></md-outlined-text-field>
-            <md-outlined-text-field type="number" id="inpHour" label="Hour (local)" value="18" min="0" max="23"></md-outlined-text-field>
-            <md-outlined-text-field type="number" id="inpMinute" label="Min" value="30" min="0" max="59"></md-outlined-text-field>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+          <div class="form-group">
+            <label>Day</label>
+            <input type="number" id="inpDay" value="14" min="1" max="31">
+          </div>
+          <div class="form-group">
+            <label>Hour (local)</label>
+            <input type="number" id="inpHour" value="18" min="0" max="23">
+          </div>
+          <div class="form-group">
+            <label>Min</label>
+            <input type="number" id="inpMinute" value="30" min="0" max="59">
           </div>
 
-          <div class="fields-2">
-            <md-outlined-text-field type="number" id="inpSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
-            <md-outlined-text-field type="number" step="0.25" id="inpUtcOffset" label="UTC offset (hours)" value="0"></md-outlined-text-field>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <div class="form-group">
+            <label>Sec</label>
+            <input type="number" id="inpSecond" value="0" min="0" max="59">
+          </div>
+          <div class="form-group">
+            <label>UTC offset (hours)</label>
+            <input type="number" step="0.25" id="inpUtcOffset" value="0">
+          </div>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin: -0.35rem 0 0.85rem;">
+          Local civil time. The offset is hours east of Greenwich (Kuala Lumpur +8, India +5.5, the Americas negative). Universal time is this clock time minus the offset. A missing offset would be read as 0. Planet positions are computed by the server.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <div class="form-group">
+            <label>Latitude (° N)</label>
+            <input type="number" step="0.0001" id="inpLat" value="28.6139">
+          </div>
+          <div class="form-group">
+            <label>Longitude (° E)</label>
+            <input type="number" step="0.0001" id="inpLon" value="77.2090">
           </div>
           <p class="supporting">Local civil time. The offset is hours east of Greenwich (Kuala Lumpur +8, India +5.5, the Americas negative). Universal time is this clock time minus the offset. A missing offset would be read as 0. Planet positions are computed by the server.</p>
 
@@ -273,14 +300,7 @@
             <md-outlined-text-field type="number" step="0.0001" id="inpLon" label="Longitude" suffix-text="° E" value="77.2090"></md-outlined-text-field>
           </div>
 
-          <md-outlined-select id="inpAyanamsa" label="KP Ayanamsa">
-            <md-select-option value="kp_straight_line_adjusted"><div slot="headline">KP Straight Line (Adjusted)</div></md-select-option>
-            <md-select-option value="kp_old"><div slot="headline">KP Old (Original Krishnamurti)</div></md-select-option>
-            <md-select-option value="kp_new" selected><div slot="headline">KP New (Krishnamurti VP291)</div></md-select-option>
-          </md-outlined-select>
-        </div>
-
-        <md-filled-button class="block" id="btnCalculate"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M314-228h50v-88h88v-50h-88v-88h-50v88h-88v50h88v88Zm215-35h201v-49H529v49Zm0-107h201v-50H529v50Zm37-163 61-61 61 61 36-36-61-61 61-61-36-36-61 61-61-61-36 36 61 61-61 61 36 36Zm-325-72h196v-50H241v50Zm-61 485q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm0-600v600-600Z"/></svg></md-icon>Calculate Chart</md-filled-button>
+        <button class="btn" id="btnCalculate">Calculate Chart</button>
       </div>
 
       <div class="card">
@@ -382,12 +402,12 @@
       <!-- Tab 3: Significators -->
       <div class="card tab-content" id="tab-significators">
         <h2>KP 4-Level Significators</h2>
-        <div>
-          <h3>House-wise Significators</h3>
-          <p class="supporting">
-            Level 1: Planet in star of occupant &bull; Level 2: Occupant &bull; Level 3: Planet in star of lord &bull; Level 4: House lord
-          </p>
-          <div class="table-wrap">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+          <div>
+            <h3 style="font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem;">House-wise Significators</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Level 1: Planet in star of occupant &bull; Level 2: Occupant &bull; Level 3: Planet in star of lord &bull; Level 4: House lord
+            </p>
             <table id="houseWiseTable">
               <thead>
                 <tr>
@@ -578,6 +598,8 @@
           alert(errors.join('\n'));
           return;
         }
+        const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
+        const planets = positions.map(p => ({ name: p.name, longitude: p.longitude }));
 
         const computed = await postJson('/api/calculate', payload);
         if (!computed.res.ok) {
@@ -637,9 +659,9 @@
           <td><strong>${p.name}</strong></td>
           <td>${p.formatted}</td>
           <td>${p.signName}</td>
-          <td><span style="font-weight: 500; color: var(--md-custom-color-kp-accent);">House ${p.house}</span></td>
+          <td><span style="font-weight: 700; color: var(--accent);">House ${p.house}</span></td>
           <td>${formatFixed(p.distancePassedCusp, 4, '°')} / ${formatFixed(p.distanceToNextCusp, 4, '°')}</td>
-          <td>${p.starLord} / <strong style="color: var(--md-sys-color-primary);">${p.subLord}</strong></td>
+          <td>${p.starLord} / <strong style="color: var(--primary);">${p.subLord}</strong></td>
           <td>
             ${isDiff
               ? `<span class="badge badge-diff">Sign ${signNo} ≠ House ${p.house}</span>`
@@ -732,7 +754,7 @@
         const planetsText = h.planets.length > 0 ? h.planets.map(p => p.name).join(', ') : 'None';
         box.innerHTML = `
           <div class="house-title">House ${h.house} (${h.signName})</div>
-          <div style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Cusp: ${h.cuspFormatted}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Cusp: ${h.cuspFormatted}</div>
           <div class="house-planets">Planets: ${planetsText}</div>
         `;
         northWheel.appendChild(box);
