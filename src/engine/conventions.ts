@@ -50,3 +50,14 @@ export const DASHA_YEAR_DAYS = 365.2425;
  * TODO(#29 Q16): which of the two flags the UI shows is still open.
  */
 export const NEAR_BOUNDARY_THRESHOLD_ARCSEC = 60;
+
+/**
+ * Nutation model: IAU 2000B, the full 77-term luni-solar series with no planetary offset, which is
+ * the Swiss Ephemeris default (`SEMOD_NUT_IAU_2000B`). `src/engine/nutation.ts` evaluates it and
+ * `calculateNutation` (`astronomy.ts`) is the only function the engine takes nutation from: the true
+ * ayanamsa (mean + dPsi), the true obliquity, the equation of the equinoxes and GAST, the mean node
+ * and the tropical planet longitudes. astronomy-engine's own `e_tilt` is a 5-term truncation of
+ * this series (up to 0.26 arcsec off in dPsi), so it is not used for any nutation value (#57).
+ * KPSTLA adds no nutation (owner, #29, G3) and Nil is tropical, whatever the model.
+ */
+export const NUTATION_MODEL = 'iau2000b_77_terms' as const;
