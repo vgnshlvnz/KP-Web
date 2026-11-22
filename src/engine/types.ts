@@ -488,3 +488,77 @@ export interface HoraryDetails {
  * plus the horary fields. Assignable to `ChartCalculationResult`.
  */
 export interface HoraryCalculationResult extends FullChartCalculationResult, HoraryDetails {}
+
+// ---------------------------------------------------------------------------
+// Horoscope matching (Dasavidha Porutham), work package `matching-core`
+// ---------------------------------------------------------------------------
+
+/**
+ * Inputs to `calculateMatch`. Both births and the checking date take an explicit UTC offset
+ * (`DateTimeLocation`'s existing pattern); there is no lat/lon-to-zone lookup.
+ *
+ * `ayanamsa` and `rulingPlanetSet` are required with no default, following the existing pattern
+ * (#22 decided; #24 open). `nodeAgentRuleSet` (#23, open) is also required: `calculateChart` needs
+ * all three together, even though matching does not use the Rahu/Ketu agent significators it adds.
+ */
+export interface MatchInput {
+  ayanamsa: AyanamsaMode;
+  nodeAgentRuleSet: NodeAgentRuleSet;
+  rulingPlanetSet: RulingPlanetSet;
+  boy: DateTimeLocation;
+  girl: DateTimeLocation;
+  /**
+   * The date the match is being checked: the instant is 12:00 civil time on this date in
+   * `utcOffsetHours`. KP-Qt's `horomatch.cpp` uses noon in the girl's zone as it was on the
+   * checking date, so a caller resolving the offset from a place should use the offset in force at
+   * the checking date, not at her birth (`POST /api/match` does).
+   * TODO(owner): noon and the girl's place are KP-Qt's convention, not confirmed by the owner.
+   */
+  checking: {
+    year: number;
+    month: number;
+    day: number;
+    utcOffsetHours: number;
+  };
+  /**
+   * Rule 4's aspect orb in degrees, 0 to 30. Required: the engine picks no orb. The API passes
+   * `MATCH_RULE4_ORB_DEG` (`conventions.ts`, 7 degrees, KP-Qt's value, for the owner to confirm).
+   */
+  aspectOrbDeg: number;
+}
+
+/** One of the ten Dasavidha Porutham rules. Rules 2, 5 and 9 are omitted (owner decision): see `calculateMatch`. */
+export interface MatchRuleResult {
+  id: number;
+  description: string;
+  marks: number;
+  /** What the rule is worth: 100 for every kept rule. */
+  maxMarks: number;
+  note?: string;
+}
+
+/** The lords `calculateMatch` reads from one chart, for display and for independent verification. */
+export interface MatchChartKeyLords {
+  ascendant: { signLord: KPPlanetLord; starLord: KPPlanetLord; subLord: KPPlanetLord };
+  seventhCuspSub: { signLord: KPPlanetLord; starLord: KPPlanetLord; subLord: KPPlanetLord };
+  moonStarLord: KPPlanetLord;
+  dayLord: KPPlanetLord | null;
+  dashaLordsAtChecking: { dasha: KPPlanetLord; bhukti: KPPlanetLord; antara: KPPlanetLord };
+  rulingPlanetsList: KPPlanetLord[];
+}
+
+/**
+ * Result of `calculateMatch`: the kept rules (1, 3, 4, 6, 7, 8, 10), each worth 100 marks, for a
+ * total out of `maxTotal` (700).
+ */
+export interface MatchResult {
+  rules: MatchRuleResult[];
+  total: number;
+  maxTotal: number;
+  totalPercent: number;
+  /** The checking instant (noon civil time in `MatchInput.checking.utcOffsetHours`), ISO 8601 UTC. */
+  checkingUtc: string;
+  boy: MatchChartKeyLords;
+  girl: MatchChartKeyLords;
+  warnings: ChartWarning[];
+}
