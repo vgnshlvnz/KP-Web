@@ -32,7 +32,8 @@ const post = (path: string, body: unknown) =>
 
 describe('public/index.html request and response contract', () => {
   it('sends an ayanamsa and utcOffsetHours, and no longer reads fields the API does not return', () => {
-    expect(page).toContain('value="kp_straight_line_adjusted" selected');
+    // Owner decision #29 (2026-11-21 18:14Z, item 2): KP New is the preselected ayanamsa (#80).
+    expect(page).toContain('value="kp_new" selected');
     expect(page).toContain('utcOffsetHours');
     expect(page).toContain("postJson('/api/calculate'");
     expect(page).toContain("postJson('/api/chart/calculate'");
