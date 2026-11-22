@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KP-Web — Horoscope Match</title>
+  <link rel="stylesheet" href="/styles/kp-m3-tokens.css">
+  <script src="/vendor/material-web-2.5.0.js"></script>
+  <style>
+    /* Reset only plain elements: a global * rule would override Material Web's :host padding. */
+    :where(div, span, p, h1, h2, h3, table, td, th, header, ul, li) { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      margin: 0;
+      font: 400 1rem/1.5rem var(--font-plain);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      padding: var(--space-4);
+    }
+    @media (min-width: 600px) { body { padding: var(--space-6); } }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto var(--space-6) auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    header h1 { font: 400 1.5rem/2rem var(--font-brand); color: var(--md-sys-color-primary); }
+    header p { font: 400 0.875rem/1.25rem var(--font-plain); letter-spacing: 0.015625rem; color: var(--md-sys-color-on-surface-variant); }
+    .header-actions { display: flex; align-items: center; gap: var(--space-4); }
+    header nav { display: flex; gap: var(--space-4); }
+    header nav a { font: 500 0.875rem/1.25rem var(--font-plain); color: var(--md-sys-color-primary); text-decoration: none; }
+    header nav a:focus-visible, header nav a:hover { text-decoration: underline; }
+
+    main { max-width: 1200px; margin: 0 auto; }
+
+    .card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-sys-shape-corner-medium);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .card h2 { font: 400 1.375rem/1.75rem var(--font-plain); color: var(--md-sys-color-on-surface); margin-bottom: var(--space-4); }
+    .card h3 { font: 500 1rem/1.5rem var(--font-plain); letter-spacing: 0.009375rem; color: var(--md-custom-color-kp-accent); margin-bottom: var(--space-2); }
+    .supporting { font: 400 0.875rem/1.25rem var(--font-plain); color: var(--md-sys-color-on-surface-variant); }
+    .card .supporting { margin-bottom: var(--space-4); }
+
+    .persons { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+    @media (max-width: 839px) { .persons { grid-template-columns: 1fr; } }
+    .persons .card { margin-bottom: 0; }
+    .persons, .settings-row { margin-bottom: var(--space-4); }
+
+    .fields { display: grid; gap: var(--space-3); }
+    .fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    .fields-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-2); }
+    md-outlined-text-field, md-outlined-select { width: 100%; min-width: 0; }
+    md-filled-button.block { width: 100%; margin-top: var(--space-4); }
+
+    .notice-box {
+      display: flex;
+      gap: var(--space-3);
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      font: 400 0.875rem/1.25rem var(--font-plain);
+      margin-bottom: var(--space-4);
+    }
+
+    #statusLine {
+      font: 500 0.875rem/1.25rem var(--font-plain);
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      margin-bottom: var(--space-4);
+    }
+    #statusLine.is-error { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+    #errorActions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+    #errorActions[hidden] { display: none; }
+
+    .total-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-6); margin-bottom: var(--space-4); }
+    .total-bar .big { font: 400 2.25rem/2.75rem var(--font-brand); color: var(--md-sys-color-primary); }
+    .total-bar .big small { font: 400 1rem/1.5rem var(--font-plain); color: var(--md-sys-color-on-surface-variant); }
+    .total-bar .pct { font: 500 1.375rem/1.75rem var(--font-plain); color: var(--md-custom-color-kp-accent); }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-6);
+      background: var(--md-sys-color-surface-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      margin-bottom: var(--space-4);
+    }
+    .meta-item { display: flex; flex-direction: column; }
+    .meta-item span:first-child { font: 500 0.75rem/1rem var(--font-plain); letter-spacing: 0.03125rem; color: var(--md-sys-color-on-surface-variant); }
+    .meta-item span:last-child { font: 400 0.875rem/1.25rem var(--font-mono); color: var(--md-sys-color-primary); }
+
+    .table-wrap { overflow-x: auto; margin-bottom: var(--space-4); }
+    table { width: 100%; border-collapse: collapse; font: 400 0.875rem/1.25rem var(--font-plain); text-align: left; }
+    th, td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--md-sys-color-outline-variant); vertical-align: top; }
+    th { font: 500 0.75rem/1rem var(--font-plain); letter-spacing: 0.03125rem; color: var(--md-sys-color-on-surface-variant); background: var(--md-sys-color-surface-container); }
+    tbody tr:hover td { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
+    td.num { font-family: var(--font-mono); white-space: nowrap; color: var(--md-sys-color-primary); }
+    tr.omitted td { color: var(--md-sys-color-on-surface-variant); }
+    ul.warnings { padding-left: var(--space-6); }
+    ul.warnings li { font: 400 0.875rem/1.25rem var(--font-plain); margin-bottom: var(--space-1); }
+    #results[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>KP-Web — Horoscope Match</h1>
+      <p>KP Dasavidha Porutham for a boy and a girl: rules 1, 3, 4, 6, 7, 8 and 10, 100 marks each.</p>
+    </div>
+    <div class="header-actions">
+      <nav>
+        <a href="/index.html">Back to chart calculator</a>
+        <a href="/animate.html">Animate Chart</a>
+      </nav>
+      <md-icon-button id="btnTheme" aria-label="Switch to light theme"><md-icon><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M579-381q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-240.5 42.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-450H40v-60h160v60Zm720 0H760v-60h160v60ZM450-760v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-99-537 98-99 44 42-99 98-43-41ZM162-205l99-98 42 42-98 99-43-43Zm318-275Z"/></svg></md-icon></md-icon-button>
+    </div>
+  </header>
+
+  <main>
+    <div class="persons">
+      <div class="card">
+        <h2>Boy</h2>
+        <div class="fields">
+          <md-outlined-text-field id="boyName" label="Name (optional, shown only here)" maxlength="60"></md-outlined-text-field>
+          <div class="fields-3">
+            <md-outlined-text-field type="number" id="boyYear" label="Year" value=""></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="boyMonth" label="Month" value="" min="1" max="12"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="boyDay" label="Day" value="" min="1" max="31"></md-outlined-text-field>
+          </div>
+          <div class="fields-3">
+            <md-outlined-text-field type="number" id="boyHour" label="Hour (local)" value="" min="0" max="23"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="boyMinute" label="Min" value="" min="0" max="59"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="boySecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
+          </div>
+          <md-outlined-select id="boyAmbiguous" label="Repeated time">
+            <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
+            <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
+            <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+          </md-outlined-select>
+          <md-outlined-select id="boyCountry" label="Country"></md-outlined-select>
+          <md-outlined-select id="boyPlace" label="Place"></md-outlined-select>
+        </div>
+        <p class="supporting" style="margin-top: var(--space-3); margin-bottom: 0;">Local civil time at the place. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date. A time that does not exist is refused; one that occurs twice (the clocks go back) is refused until you choose the earlier or the later one.</p>
+      </div>
+      <div class="card">
+        <h2>Girl</h2>
+        <div class="fields">
+          <md-outlined-text-field id="girlName" label="Name (optional, shown only here)" maxlength="60"></md-outlined-text-field>
+          <div class="fields-3">
+            <md-outlined-text-field type="number" id="girlYear" label="Year" value=""></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="girlMonth" label="Month" value="" min="1" max="12"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="girlDay" label="Day" value="" min="1" max="31"></md-outlined-text-field>
+          </div>
+          <div class="fields-3">
+            <md-outlined-text-field type="number" id="girlHour" label="Hour (local)" value="" min="0" max="23"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="girlMinute" label="Min" value="" min="0" max="59"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="girlSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
+          </div>
+          <md-outlined-select id="girlAmbiguous" label="Repeated time">
+            <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
+            <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
+            <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+          </md-outlined-select>
+          <md-outlined-select id="girlCountry" label="Country"></md-outlined-select>
+          <md-outlined-select id="girlPlace" label="Place"></md-outlined-select>
+        </div>
+        <p class="supporting" style="margin-top: var(--space-3); margin-bottom: 0;">Local civil time at the place. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date. A time that does not exist is refused; one that occurs twice (the clocks go back) is refused until you choose the earlier or the later one.</p>
+      </div>
+    </div>
+
+    <div class="card settings-row">
+      <h2>Checking date &amp; ayanamsa</h2>
+      <div class="fields">
+        <div class="fields-3">
+          <md-outlined-text-field type="number" id="chkYear" label="Checking year" value=""></md-outlined-text-field>
+          <md-outlined-text-field type="number" id="chkMonth" label="Month" value="" min="1" max="12"></md-outlined-text-field>
+          <md-outlined-text-field type="number" id="chkDay" label="Day" value="" min="1" max="31"></md-outlined-text-field>
+        </div>
+        <md-outlined-select id="chkAmbiguous" label="Repeated time (checking date)">
+          <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
+          <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
+          <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+        </md-outlined-select>
+        <p class="supporting">The match is checked at 12:00 civil time on this date, in the girl's place, using that place's UTC offset on that date. The dasha, bhukti and antara lords running then are used by rules 7, 8 and 10. Defaults to today.</p>
+        <md-outlined-select id="inpAyanamsa" label="KP Ayanamsa"></md-outlined-select>
+      </div>
+      <md-filled-button class="block" id="btnMatch">Match</md-filled-button>
+    </div>
+
+    <div id="statusLine" role="status" aria-live="polite">Enter both births and press Match.</div>
+    <div id="errorActions" hidden></div>
+
+    <div id="results" hidden>
+      <div class="card">
+        <h2>Result</h2>
+        <div class="total-bar">
+          <div class="big"><span id="resTotal">—</span> <small>/ <span id="resMax">—</span> marks</small></div>
+          <div class="pct" id="resPercent">—</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Rule</th><th>Name</th><th>Marks</th><th>Note</th></tr>
+            </thead>
+            <tbody id="rulesBody"></tbody>
+          </table>
+        </div>
+        <p class="supporting">Rules 2, 5 and 9 are not computed (owner decision), so the total is out of the kept rules only.</p>
+
+        <h3>Checking</h3>
+        <div class="meta-bar">
+          <div class="meta-item"><span>Checking date</span><span id="chkDateOut">—</span></div>
+          <div class="meta-item"><span>UTC offset used</span><span id="chkOffsetOut">—</span></div>
+          <div class="meta-item"><span>Offset source</span><span id="chkSourceOut">—</span></div>
+          <div class="meta-item"><span>Checking instant (UTC)</span><span id="chkUtcOut">—</span></div>
+        </div>
+
+        <h3>Places</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th id="thBoyPlace">Boy</th><th id="thGirlPlace">Girl</th></tr></thead>
+            <tbody id="placesBody"></tbody>
+          </table>
+        </div>
+
+        <h3>Key lords</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Lord</th><th id="thBoyLords">Boy</th><th id="thGirlLords">Girl</th></tr></thead>
+            <tbody id="lordsBody"></tbody>
+          </table>
+        </div>
+
+        <div class="notice-box" id="preIanaNotice" hidden role="note">
+          <div><strong>Birth before 1970:</strong> IANA warns that its time zone data before 1970 may be incomplete or approximate for this place. Check the UTC offset applied above against a record of the birth.</div>
+        </div>
+
+        <h3>Warnings</h3>
+        <ul class="warnings" id="warningsList"></ul>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Nothing on this page is stored: no browser storage and no cookies. Names are shown, never sent.
+    // Icons are inline Material Symbols (Outlined, weight 400) so the page needs no icon font.
+    const ICON_LIGHT_MODE = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M579-381q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-240.5 42.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-450H40v-60h160v60Zm720 0H760v-60h160v60ZM450-760v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-99-537 98-99 44 42-99 98-43-41ZM162-205l99-98 42 42-98 99-43-43Zm318-275Z"/></svg>';
+    const ICON_DARK_MODE = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 90 63 153t153 63q52 0 99-18.5t79-51.5q1 12 1.5 19.5t.5 14.5q0 150-105 255T480-120Zm0-60q109 0 190-67.5T771-406q-25 11-53.67 16.5Q688.67-384 660-384q-114.69 0-195.34-80.66Q384-545.31 384-660q0-24 5-51.5t18-62.5q-98 27-162.5 109.5T180-480q0 125 87.5 212.5T480-180Zm-4-297Z"/></svg>';
+    const themeBtn = document.getElementById('btnTheme');
+    themeBtn.addEventListener('click', () => {
+      const root = document.documentElement;
+      const toLight = root.dataset.theme !== 'light';
+      root.dataset.theme = toLight ? 'light' : 'dark';
+      themeBtn.querySelector('md-icon').innerHTML = toLight ? ICON_DARK_MODE : ICON_LIGHT_MODE;
+      themeBtn.setAttribute('aria-label', toLight ? 'Switch to dark theme' : 'Switch to light theme');
+    });
+
+    // ---- Ayanamsa select, built from the known modes ----------------------------
+    // Same ids and labels as AYANAMSA_MODES / AYANAMSA_LABELS in src/engine/ayanamsa-defs.ts
+    // (pinned by test/match-page-integrity.test.ts). KP New is only the preselected option (#22 decided,
+    // owner, #29); the request always sends the explicit choice.
+    const AYANAMSA_OPTIONS = [
+      ['kp_straight_line_adjusted', 'KP Straight Line (Adjusted)'],
+      ['kp_straight_line', 'KP Straight Line'],
+      ['kp_ayanamsa', 'KP Ayanamsa'],
+      ['kp_old', 'KP Old'],
+      ['kp_new', 'KP New'],
+      ['lahiri', 'Lahiri'],
+      ['raman', 'Raman'],
+      ['fagan_bradley', 'Fagan-Bradley'],
+      ['yukteshwar', 'Yukteshwar'],
+      ['jn_bhasin', 'J.N. Bhasin'],
+      ['usha_shashi', 'Usha-Shashi'],
+      ['nil', 'Nil (tropical)'],
+    ];
+    const DEFAULT_AYANAMSA_SELECTION = 'kp_new';
+
+    // Rules the engine does not compute (owner decision, #29): shown so nobody reads a 7-rule total as 10.
+    const OMITTED_RULES = [2, 5, 9];
+
+    // Every element the people cards use, by role. Explicit ids so the page integrity test can check them.
+    const PERSON_IDS = {
+      boy: {
+        name: 'boyName', year: 'boyYear', month: 'boyMonth', day: 'boyDay', hour: 'boyHour',
+        minute: 'boyMinute', second: 'boySecond', ambiguous: 'boyAmbiguous', country: 'boyCountry', place: 'boyPlace',
+      },
+      girl: {
+        name: 'girlName', year: 'girlYear', month: 'girlMonth', day: 'girlDay', hour: 'girlHour',
+        minute: 'girlMinute', second: 'girlSecond', ambiguous: 'girlAmbiguous', country: 'girlCountry', place: 'girlPlace',
+      },
+    };
+    const PERSON_LABEL = { boy: 'Boy', girl: 'Girl' };
+
+    const el = (id) => document.getElementById(id);
+
+    function makeOption(value, label) {
+      const opt = document.createElement('md-select-option');
+      opt.setAttribute('value', value);
+      const headline = document.createElement('div');
+      headline.slot = 'headline';
+      headline.textContent = label;
+      opt.appendChild(headline);
+      return opt;
+    }
+
+    const ayanamsaSel = el('inpAyanamsa');
+    AYANAMSA_OPTIONS.forEach(([value, label]) => ayanamsaSel.appendChild(makeOption(value, label)));
+    ayanamsaSel.updateComplete.then(() => { ayanamsaSel.value = DEFAULT_AYANAMSA_SELECTION; });
+
+    // ---- Checking date defaults to today (the browser's local date) ---------------
+    (function setToday() {
+      const now = new Date();
+      el('chkYear').value = now.getFullYear();
+      el('chkMonth').value = now.getMonth() + 1;
+      el('chkDay').value = now.getDate();
+    })();
+
+    // ---- Places: Country then Place, from GET /api/locations (as public/index.html) ----
+    let locationData = [];
+
+    function placeLabel(row) {
+      return row.place === null ? row.country + ' (country point)' : row.place;
+    }
+
+    async function fillPlaces(who, country, selectedId) {
+      const placeSel = el(PERSON_IDS[who].place);
+      placeSel.replaceChildren();
+      const entry = locationData.find((c) => c.country === country);
+      const places = entry ? entry.places : [];
+      places.forEach((row) => placeSel.appendChild(makeOption(String(row.id), placeLabel(row))));
+      await placeSel.updateComplete;
+      const pick = places.find((r) => r.id === selectedId) || places[0];
+      placeSel.value = pick ? String(pick.id) : '';
+    }
+
+    async function selectLocation(who, id) {
+      for (const entry of locationData) {
+        if (entry.places.some((r) => r.id === id)) {
+          el(PERSON_IDS[who].country).value = entry.country;
+          await fillPlaces(who, entry.country, id);
+          return;
+        }
+      }
+    }
+
+    Object.keys(PERSON_IDS).forEach((who) => {
+      const countrySel = el(PERSON_IDS[who].country);
+      countrySel.addEventListener('change', () => { fillPlaces(who, countrySel.value, null); });
+    });
+
+    async function loadLocations() {
+      const res = await fetch('/api/locations');
+      const json = await res.json();
+      locationData = json.countries;
+      for (const who of Object.keys(PERSON_IDS)) {
+        const countrySel = el(PERSON_IDS[who].country);
+        locationData.forEach((c) => countrySel.appendChild(makeOption(c.country, c.country)));
+        await countrySel.updateComplete;
+        await selectLocation(who, 916); // India | Delhi, as public/index.html
+      }
+    }
+    const locationsReady = loadLocations();
+    locationsReady.catch((err) => setStatus('Could not load the places: ' + err.message, true));
+
+    // ---- Status and error area -----------------------------------------------------
+    function setStatus(text, isError) {
+      const line = el('statusLine');
+      line.textContent = text;
+      line.classList.toggle('is-error', Boolean(isError));
+      el('errorActions').hidden = true;
+      el('errorActions').replaceChildren();
+    }
+
+    // ---- Number display: at most 2 decimals, trailing zeros trimmed ------------------
+    // The API's floating-point marks can carry noise ("100.00000000000001"); show "100".
+    function trimNum(value, digits) {
+      const n = Number(value);
+      if (value === null || value === undefined || !Number.isFinite(n)) return '—';
+      return String(parseFloat(n.toFixed(digits)));
+    }
+    const marks = (value) => trimNum(value, 2);
+    const text = (value) => (value === null || value === undefined || value === '' ? '—' : String(value));
+
+    function formatFixed(value, digits, suffix) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n.toFixed(digits) + suffix : '—';
+    }
+
+    // Hours east of Greenwich as "UTC+05:30", exact to the minute (as public/index.html).
+    function formatUtcOffset(hours) {
+      if (!Number.isFinite(Number(hours))) return '—';
+      const totalMin = Math.round(Math.abs(hours) * 60);
+      const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+      const mm = String(totalMin % 60).padStart(2, '0');
+      return 'UTC' + (hours < 0 ? '-' : '+') + hh + ':' + mm + ' (' + trimNum(hours, 4) + ' h)';
+    }
+
+    // ---- Request -------------------------------------------------------------------
+    function readInt(id) {
+      const raw = String(el(id).value).trim();
+      if (!/^-?\d+$/.test(raw)) return NaN;
+      return Number(raw);
+    }
+
+    function isCalendarDate(year, month, day) {
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+      const probe = new Date(0);
+      probe.setUTCFullYear(year, month - 1, day);
+      return probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+    }
+
+    // The place goes as `locationId` only: the server resolves coordinates, zone and the historical UTC
+    // offset. The name is not read here, so it is never sent.
+    function readPerson(who, errors) {
+      const ids = PERSON_IDS[who];
+      const label = PERSON_LABEL[who];
+      const year = readInt(ids.year);
+      const month = readInt(ids.month);
+      const day = readInt(ids.day);
+      const hour = readInt(ids.hour);
+      const minute = readInt(ids.minute);
+      const second = readInt(ids.second);
+      const locationId = Number(el(ids.place).value);
+      if (!isCalendarDate(year, month, day)) errors.push(label + ': the birth date must be a real calendar date (whole numbers).');
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59 || !Number.isInteger(second) || second < 0 || second > 59) {
+        errors.push(label + ': the time must be a real clock time (hour 0–23, minute and second 0–59).');
+      }
+      if (!el(ids.place).value || !Number.isInteger(locationId)) errors.push(label + ': choose a country and a place.');
+      const person = { year, month, day, hour, minute, second, locationId };
+      const ambiguousTime = el(ids.ambiguous).value;
+      if (ambiguousTime) person.ambiguousTime = ambiguousTime;
+      return person;
+    }
+
+    function readMatchRequest() {
+      const errors = [];
+      const boy = readPerson('boy', errors);
+      const girl = readPerson('girl', errors);
+      const year = readInt('chkYear');
+      const month = readInt('chkMonth');
+      const day = readInt('chkDay');
+      if (!isCalendarDate(year, month, day)) errors.push('The checking date must be a real calendar date (whole numbers).');
+      const checkingDate = { year, month, day };
+      const chkAmbiguous = el('chkAmbiguous').value;
+      if (chkAmbiguous) checkingDate.ambiguousTime = chkAmbiguous;
+      const ayanamsa = ayanamsaSel.value;
+      if (!AYANAMSA_OPTIONS.some(([value]) => value === ayanamsa)) errors.push('Choose an ayanamsa.');
+      return { errors, payload: { ayanamsa, boy, girl, checkingDate } };
+    }
+
+    // ---- Ambiguous-time and DST-gap answers ------------------------------------------
+    // The API's message names the local time ("... 2024-11-03 01:30:00 ..."), not whose it is. Match it to the
+    // birth(s) or the checking date (12:00:00) that have that local time, to offer Earlier/Later for those.
+    function sameLocalTime(a, y, mo, d, h, mi, s) {
+      return a.year === y && a.month === mo && a.day === d && a.hour === h && a.minute === mi && a.second === s;
+    }
+
+    function affectedBy(message, payload) {
+      const m = /(-?\d+)-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/.exec(message);
+      if (!m) return [];
+      const [y, mo, d, h, mi, s] = m.slice(1).map(Number);
+      const hit = [];
+      ['boy', 'girl'].forEach((who) => {
+        if (sameLocalTime(payload[who], y, mo, d, h, mi, s)) hit.push(who);
+      });
+      const c = payload.checkingDate;
+      if (h === 12 && mi === 0 && s === 0 && c.year === y && c.month === mo && c.day === d) hit.push('checking');
+      return hit;
+    }
+
+    function selectFor(target) {
+      return target === 'checking' ? el('chkAmbiguous') : el(PERSON_IDS[target].ambiguous);
+    }
+
+    function showApiError(message, payload) {
+      setStatus(message, true);
+      if (!/Ambiguous local time/i.test(message)) return; // a DST gap: nothing to choose, the message is the answer
+      const actions = el('errorActions');
+      affectedBy(message, payload).forEach((target) => {
+        const who = target === 'checking' ? 'Checking date' : PERSON_LABEL[target];
+        ['earlier', 'later'].forEach((choice) => {
+          const btn = document.createElement('md-outlined-button');
+          btn.textContent = who + ': use the ' + choice + ' one';
+          btn.addEventListener('click', () => {
+            selectFor(target).value = choice;
+            runMatch();
+          });
+          actions.appendChild(btn);
+        });
+      });
+      actions.hidden = actions.childElementCount === 0;
+    }
+
+    // ---- Result ----------------------------------------------------------------------
+    function cell(tag, content, cls) {
+      const node = document.createElement(tag);
+      node.textContent = content;
+      if (cls) node.className = cls;
+      return node;
+    }
+
+    function addRow(body, cells, cls) {
+      const tr = document.createElement('tr');
+      if (cls) tr.className = cls;
+      cells.forEach((c) => tr.appendChild(c));
+      body.appendChild(tr);
+    }
+
+    function personTitle(who) {
+      const name = el(PERSON_IDS[who].name).value.trim();
+      return name ? PERSON_LABEL[who] + ' (' + name + ')' : PERSON_LABEL[who];
+    }
+
+    function placeText(location) {
+      if (!location) return '—';
+      return (location.place === null ? '' : text(location.place) + ', ') + text(location.country);
+    }
+
+    function coordsText(location) {
+      if (!location) return '—';
+      return formatFixed(Math.abs(location.latitude), 4, location.latitude < 0 ? '° S' : '° N') + ', ' +
+        formatFixed(Math.abs(location.longitude), 4, location.longitude < 0 ? '° W' : '° E');
+    }
+
+    function lordTriple(t) {
+      if (!t) return '—';
+      return text(t.signLord) + ' / ' + text(t.starLord) + ' / ' + text(t.subLord);
+    }
+
+    function dashaTriple(t) {
+      if (!t) return '—';
+      return text(t.dasha) + ' / ' + text(t.bhukti) + ' / ' + text(t.antara);
+    }
+
+    const OFFSET_SOURCE_TEXT = {
+      girl_location_at_checking_date: "the girl's place, zone rules on the checking date",
+      request: 'as sent in the request',
+    };
+
+    function renderResult(data) {
+      el('resTotal').textContent = marks(data.total);
+      el('resMax').textContent = marks(data.maxTotal);
+      el('resPercent').textContent = Number.isFinite(Number(data.totalPercent)) ? marks(data.totalPercent) + '%' : '—';
+
+      const rulesBody = el('rulesBody');
+      rulesBody.replaceChildren();
+      const rules = Array.isArray(data.rules) ? data.rules : [];
+      const rows = rules.map((r) => ({ id: r.id, rule: r })).concat(OMITTED_RULES.map((id) => ({ id, rule: null })));
+      rows.sort((a, b) => a.id - b.id);
+      rows.forEach(({ id, rule }) => {
+        if (rule === null) {
+          const note = cell('td', 'not computed (owner decision)');
+          note.colSpan = 3;
+          addRow(rulesBody, [cell('td', String(id)), note], 'omitted');
+        } else {
+          addRow(rulesBody, [
+            cell('td', String(rule.id)),
+            cell('td', text(rule.description)),
+            cell('td', marks(rule.marks) + ' / ' + marks(rule.maxMarks), 'num'),
+            cell('td', text(rule.note)),
+          ]);
+        }
+      });
+
+      const c = data.checking || {};
+      el('chkDateOut').textContent = [c.year, c.month, c.day].every((v) => v !== undefined)
+        ? c.year + '-' + String(c.month).padStart(2, '0') + '-' + String(c.day).padStart(2, '0')
+        : '—';
+      el('chkOffsetOut').textContent = formatUtcOffset(c.utcOffsetHours);
+      el('chkSourceOut').textContent = OFFSET_SOURCE_TEXT[c.offsetSource] || text(c.offsetSource);
+      el('chkUtcOut').textContent = text(data.checkingUtc);
+
+      el('thBoyPlace').textContent = personTitle('boy');
+      el('thGirlPlace').textContent = personTitle('girl');
+      el('thBoyLords').textContent = personTitle('boy');
+      el('thGirlLords').textContent = personTitle('girl');
+
+      const boy = data.boy || {};
+      const girl = data.girl || {};
+      const placesBody = el('placesBody');
+      placesBody.replaceChildren();
+      [
+        ['Place', placeText(boy.location), placeText(girl.location)],
+        ['Coordinates', coordsText(boy.location), coordsText(girl.location)],
+        ['Time zone', text((boy.location || {}).timezone), text((girl.location || {}).timezone)],
+        ['UTC offset applied at birth', formatUtcOffset((boy.location || {}).utcOffsetHours), formatUtcOffset((girl.location || {}).utcOffsetHours)],
+      ].forEach(([label, b, g]) => addRow(placesBody, [cell('td', label), cell('td', b), cell('td', g)]));
+
+      const lordsBody = el('lordsBody');
+      lordsBody.replaceChildren();
+      [
+        ['Ascendant: sign / star / sub', lordTriple(boy.ascendant), lordTriple(girl.ascendant)],
+        ['7th cusp: sign / star / sub', lordTriple(boy.seventhCuspSub), lordTriple(girl.seventhCuspSub)],
+        ['Moon star lord', text(boy.moonStarLord), text(girl.moonStarLord)],
+        ['Day lord', text(boy.dayLord), text(girl.dayLord)],
+        ['Dasha / bhukti / antara at checking', dashaTriple(boy.dashaLordsAtChecking), dashaTriple(girl.dashaLordsAtChecking)],
+        ['Ruling planets', Array.isArray(boy.rulingPlanetsList) ? boy.rulingPlanetsList.join(', ') || '—' : '—',
+          Array.isArray(girl.rulingPlanetsList) ? girl.rulingPlanetsList.join(', ') || '—' : '—'],
+      ].forEach(([label, b, g]) => addRow(lordsBody, [cell('td', label), cell('td', b), cell('td', g)]));
+
+      el('preIanaNotice').hidden = !((boy.location && boy.location.preIanaReliableCaution) || (girl.location && girl.location.preIanaReliableCaution));
+
+      const warningsList = el('warningsList');
+      warningsList.replaceChildren();
+      const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+      if (warnings.length === 0) {
+        warningsList.appendChild(cell('li', 'None.'));
+      }
+      warnings.forEach((w) => warningsList.appendChild(cell('li', text(w.message))));
+
+      el('results').hidden = false;
+    }
+
+    // ---- Run -------------------------------------------------------------------------
+    let running = false;
+    async function runMatch() {
+      if (running) return;
+      const { errors, payload } = readMatchRequest();
+      if (errors.length) {
+        setStatus(errors.join(' '), true);
+        return;
+      }
+      running = true;
+      el('btnMatch').disabled = true;
+      setStatus('Matching…', false);
+      try {
+        const res = await fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        let json;
+        try {
+          json = await res.json();
+        } catch {
+          json = null;
+        }
+        if (!res.ok || !json) {
+          el('results').hidden = true;
+          showApiError((json && json.error) || 'The match could not be computed (HTTP ' + res.status + ').', payload);
+          return;
+        }
+        renderResult(json);
+        setStatus('Matched ' + personTitle('boy') + ' and ' + personTitle('girl') + '.', false);
+      } catch (err) {
+        el('results').hidden = true;
+        setStatus('Request failed: ' + err.message, true);
+      } finally {
+        running = false;
+        el('btnMatch').disabled = false;
+      }
+    }
+
+    el('btnMatch').addEventListener('click', runMatch);
+  </script>
+</body>
+</html>
