@@ -187,7 +187,7 @@ describe('every one of the 249 numbers lands in its own sub', () => {
     ]),
   ];
   for (const [label, c, ayanamsa] of cases) {
-    it(`${label}: Asc is in sub n (engine terms), and in [0, 0.5"] from the start in SE terms`, () => {
+    it(`${label}: Asc is in sub n (engine terms), and in [0, 0.2") from the start in SE terms`, () => {
       for (const entry of getHorary249Table()) {
         const chart = calculateHoraryChart(
           { questionTime: c.input, horaryNumber: entry.number },
@@ -204,13 +204,15 @@ describe('every one of the 249 numbers lands in its own sub', () => {
         expect(own).toBeLessThan(0.001);
 
         // In Swiss Ephemeris terms the lagna is on the start of the sub and never in the previous
-        // one. The engine and Swiss Ephemeris now use the same nutation (the 77-term IAU 2000B
-        // series, #57); with astronomy-engine's 5-term nutation this offset was up to 0.13" and
-        // negative at Greenwich 2000, which is why this used to be `|offset| < 0.2"`. What is left
-        // is the 1e-4" aim inside the sub plus the ayanamsa polynomial's 1e-4" or so.
+        // one: 0 <= offset < 0.2". The upper bound is the old `|offset| < 0.2"` bound, kept as it
+        // was (not loosened); the lower bound is new. The engine and Swiss Ephemeris now use the
+        // same nutation (the 77-term IAU 2000B series, #57); with astronomy-engine's 5-term
+        // nutation this offset was up to 0.13" and negative at Greenwich 2000. What is left is the
+        // 1e-4" aim inside the sub plus the ayanamsa polynomial's 1e-4" or so. KL 1992 additionally
+        // has the [0, 0.5"] tests below.
         const se = diffArcsec(seSiderealAsc(c, ayanamsa, chart.armc), entry.startLongitude);
         expect(se, `number ${entry.number}`).toBeGreaterThanOrEqual(0);
-        expect(se, `number ${entry.number}`).toBeLessThanOrEqual(0.5);
+        expect(se, `number ${entry.number}`).toBeLessThan(0.2);
       }
     });
   }
@@ -229,7 +231,7 @@ describe('every one of the 249 numbers lands in its own sub', () => {
     }
   });
 
-  it('Greenwich 2000 (the case that was 0.08" to 0.13" inside the previous sub, #57): all 249 in [0, 0.5"]', () => {
+  it('Greenwich 2000 (the case that was 0.08" to 0.13" inside the previous sub, #57): all 249 in [0, 0.2")', () => {
     // Kept as its own test so the regression for #57 is named. With astronomy-engine's nutation the
     // offset here was -0.133 to -0.082 arcsec for both ayanamsas.
     for (const ayanamsa of ['kp_old', 'kp_new'] as const) {
@@ -240,7 +242,7 @@ describe('every one of the 249 numbers lands in its own sub', () => {
         );
         const d = diffArcsec(seSiderealAsc(OTHER_CASES.gw2000, ayanamsa, chart.armc), entry.startLongitude);
         expect(d, `${ayanamsa} number ${entry.number}`).toBeGreaterThanOrEqual(0);
-        expect(d, `${ayanamsa} number ${entry.number}`).toBeLessThanOrEqual(0.5);
+        expect(d, `${ayanamsa} number ${entry.number}`).toBeLessThan(0.2);
       }
     }
   });
