@@ -270,7 +270,7 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     const sun = (c: any) => c.planets.find((p: any) => p.name === 'Sun').longitude as number;
     expect(Math.abs(sun(old) - 326.9440666)).toBeLessThan(2 * ARCSEC); // A.1, KP Old
     expect(Math.abs(sun(nw) - 326.9239411)).toBeLessThan(2 * ARCSEC); // A.1, KP New
-    expect(Math.abs(sun(lahiri) - 326.8472142)).toBeLessThan(2 * ARCSEC); // SE Lahiri, ayanamsa-reference.test.ts
+    expect(Math.abs(sun(lahiri) - 326.8471034)).toBeLessThan(2 * ARCSEC); // moved 0.399" from the old SE pin 326.8472142 when Lahiri became KP-Qt's precession
   });
 });
 

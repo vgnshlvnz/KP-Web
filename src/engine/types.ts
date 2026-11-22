@@ -16,9 +16,9 @@
  * The supported ayanamsa modes (owner decision on #29, 2026-11-21, answer A): KP Straight Line
  * (Adjusted), KP Straight Line, KP Ayanamsa, KP Old, KP New, Lahiri, Raman, Fagan-Bradley,
  * Yukteshwar, J.N. Bhasin, Usha-Shashi and Nil (tropical). KP Straight Line and KP Ayanamsa are
- * KP-Qt's vendor formulas (`kpAyanamsa.cpp`); the others are unchanged.
- * The SE-defined ones are Swiss Ephemeris `SE_SIDM_*` modes taken by name; see
- * `src/engine/ayanamsa-defs.ts`. `'nil'` is the tropical zodiac: ayanamsa 0 and no nutation term,
+ * KP-Qt's vendor formulas (`kpAyanamsa.cpp`). Lahiri, Raman, Fagan-Bradley, Yukteshwar,
+ * J.N. Bhasin and Usha-Shashi use KP-Qt's precession (`kpqt-precession.ts`). `'nil'` is the
+ * tropical zodiac: ayanamsa 0 and no nutation term,
  * so sidereal longitude = tropical longitude.
  *
  * Every mode is an explicit choice. There is no 'default' member, and an unknown value must be

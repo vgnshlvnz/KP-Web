@@ -1,11 +1,13 @@
 /**
  * Ayanamsa modes added by work package add-ayanamsas (#64) vs Swiss Ephemeris 2.10.03.
  *
- * Owner decision on #29 (2026-11-21, answer A): Lahiri, Raman, Fagan-Bradley, Yukteshwar,
- * J.N. Bhasin, Usha-Shashi and Nil (tropical), as explicit choices, defined as Swiss Ephemeris defines
- * them (by name: SE_SIDM_LAHIRI, SE_SIDM_RAMAN, SE_SIDM_FAGAN_BRADLEY, SE_SIDM_YUKTESHWAR,
- * SE_SIDM_JN_BHASIN, SE_SIDM_USHASHASHI), next to KP Old / KP New (those are tested in
- * ayanamsa.test.ts and ephemeris-reference.test.ts, unchanged).
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi now follow KP-Qt's
+ * precession (`kpqt-precession.ts`). The mean pins below were regenerated at UT from that
+ * function (maximum move from the old Swiss Ephemeris pins: 1.429 arcsec, Raman at 2100-01-01).
+ * Sun, Moon and the KL 1992 cusps for those six were regenerated with them (Sun up to 2.018",
+ * Moon up to 2.572", cusps up to 1.097"). Nil is unchanged and is still the tropical comparison.
+ * The external contract for these six, plus KP Ayanamsa and KP Straight Line, is
+ * `test/fixtures/kpqt-ayanamsa-reference.json`.
  *
  * Reference values were generated locally with Swiss Ephemeris (pyswisseph 2.10.3.2 = SE 2.10.03, full
  * `sepl_18` / `semo_18` files) by the script reproduced at the end of this comment. Swiss Ephemeris is
@@ -90,9 +92,9 @@ import { calculateChart } from '../src/engine/index.js';
 import { calculateHoraryChart } from '../src/engine/horary.js';
 import {
   AYANAMSA_MODES,
-  SE_AYANAMSA_DEFINITIONS,
   isAyanamsaMode,
 } from '../src/engine/ayanamsa-defs.js';
+import { KPQT_AYA_TABLE } from '../src/engine/kpqt-precession.js';
 import { validateAyanamsa } from '../src/core/validation.js';
 import type { AyanamsaMode, ChartCalculationOptions, DateTimeLocation } from '../src/engine/types.js';
 
@@ -113,185 +115,185 @@ interface BodyReference {
 
 const MEAN_REFERENCE: MeanReference[] = [
   { label: 'KL 1992', utc: '1992-03-10T22:14:00Z', jdUt: 2448692.426388889, mean: {
-    lahiri: 23.74799838,
-    raman: 22.30169706,
-    fagan_bradley: 24.63120602,
-    yukteshwar: 22.36970905,
-    jn_bhasin: 22.65304305,
-    usha_shashi: 19.94844705,
+    lahiri: 23.74803228,
+    raman: 22.30200228,
+    fagan_bradley: 24.63135250,
+    yukteshwar: 22.36978428,
+    jn_bhasin: 22.65311828,
+    usha_shashi: 19.94852228,
   } },
   { label: 'Greenwich 2000', utc: '2000-01-01T12:00:00Z', jdUt: 2451545.000000000, mean: {
-    lahiri: 23.85709235,
-    raman: 22.41079104,
-    fagan_bradley: 24.74029999,
-    yukteshwar: 22.47880303,
-    jn_bhasin: 22.76213703,
-    usha_shashi: 20.05754103,
+    lahiri: 23.85713277,
+    raman: 22.41110277,
+    fagan_bradley: 24.74045298,
+    yukteshwar: 22.47888477,
+    jn_bhasin: 22.76221877,
+    usha_shashi: 20.05762277,
   } },
   { label: 'Chennai 1950', utc: '1950-06-15T18:29:30Z', jdUt: 2433448.270486111, mean: {
-    lahiri: 23.16506360,
-    raman: 21.71876222,
-    fagan_bradley: 24.04827123,
-    yukteshwar: 21.78677421,
-    jn_bhasin: 22.07010821,
-    usha_shashi: 19.36551221,
+    lahiri: 23.16506302,
+    raman: 21.71903302,
+    fagan_bradley: 24.04838328,
+    yukteshwar: 21.78681502,
+    jn_bhasin: 22.07014902,
+    usha_shashi: 19.36555302,
   } },
   { label: 'Petaling Jaya 2026', utc: '2026-11-21T01:00:00Z', jdUt: 2461365.541666667, mean: {
-    lahiri: 24.23269830,
-    raman: 22.78639702,
-    fagan_bradley: 25.11590594,
-    yukteshwar: 22.85440900,
-    jn_bhasin: 23.13774300,
-    usha_shashi: 20.43314700,
+    lahiri: 24.23276130,
+    raman: 22.78673130,
+    fagan_bradley: 25.11608148,
+    yukteshwar: 22.85451330,
+    jn_bhasin: 23.13784730,
+    usha_shashi: 20.43325130,
   } },
   { label: 'Tromso 2010', utc: '2010-12-21T03:00:00Z', jdUt: 2455551.625000000, mean: {
-    lahiri: 24.01032825,
-    raman: 22.56402695,
-    fagan_bradley: 24.89353589,
-    yukteshwar: 22.63203894,
-    jn_bhasin: 22.91537294,
-    usha_shashi: 20.21077694,
+    lahiri: 24.01037785,
+    raman: 22.56434785,
+    fagan_bradley: 24.89369805,
+    yukteshwar: 22.63212985,
+    jn_bhasin: 22.91546385,
+    usha_shashi: 20.21086785,
   } },
   { label: '1900-01-01', utc: '1900-01-01T00:00:00Z', jdUt: 2415020.500000000, mean: {
-    lahiri: 22.46053059,
-    raman: 21.01422913,
-    fagan_bradley: 23.34373822,
+    lahiri: 22.46048911,
+    raman: 21.01445911,
+    fagan_bradley: 23.34380945,
     yukteshwar: 21.08224111,
     jn_bhasin: 21.36557511,
     usha_shashi: 18.66097911,
   } },
   { label: '1950-01-01', utc: '1950-01-01T00:00:00Z', jdUt: 2433282.500000000, mean: {
-    lahiri: 23.15872514,
-    raman: 21.71242376,
-    fagan_bradley: 24.04193278,
-    yukteshwar: 21.78043575,
-    jn_bhasin: 22.06376975,
-    usha_shashi: 19.35917375,
+    lahiri: 23.15872419,
+    raman: 21.71269419,
+    fagan_bradley: 24.04204446,
+    yukteshwar: 21.78047619,
+    jn_bhasin: 22.06381019,
+    usha_shashi: 19.35921419,
   } },
   { label: '2100-01-01', utc: '2100-01-01T00:00:00Z', jdUt: 2488069.500000000, mean: {
-    lahiri: 25.25426827,
-    raman: 23.80796705,
-    fagan_bradley: 26.13747592,
-    yukteshwar: 23.87597903,
-    jn_bhasin: 24.15931303,
-    usha_shashi: 21.45471703,
+    lahiri: 25.25439390,
+    raman: 23.80836390,
+    fagan_bradley: 26.13771403,
+    yukteshwar: 23.87614590,
+    jn_bhasin: 24.15947990,
+    usha_shashi: 21.45488390,
   } },
 ];
 
 const BODY_REFERENCE: BodyReference[] = [
   { label: 'KL 1992', utc: '1992-03-10T22:14:00Z', bodies: {
     Sun: {
-      lahiri: 326.8472142,
-      raman: 328.2935156,
-      fagan_bradley: 325.9640066,
-      yukteshwar: 328.2255036,
-      jn_bhasin: 327.9421696,
-      usha_shashi: 330.6467656,
+      lahiri: 326.8471034,
+      raman: 328.2931334,
+      fagan_bradley: 325.9637832,
+      yukteshwar: 328.2253514,
+      jn_bhasin: 327.9420174,
+      usha_shashi: 330.6466134,
       nil: 350.6000550,
     },
     Moon: {
-      lahiri: 41.9326546,
-      raman: 43.3789559,
-      fagan_bradley: 41.0494470,
-      yukteshwar: 43.3109439,
-      jn_bhasin: 43.0276099,
-      usha_shashi: 45.7322059,
+      lahiri: 41.9322114,
+      raman: 43.3782414,
+      fagan_bradley: 41.0488912,
+      yukteshwar: 43.3104594,
+      jn_bhasin: 43.0271254,
+      usha_shashi: 45.7317214,
       nil: 65.6854953,
     },
   } },
   { label: 'Greenwich 2000', utc: '2000-01-01T12:00:00Z', bodies: {
     Sun: {
-      lahiri: 256.5156962,
-      raman: 257.9619975,
-      fagan_bradley: 255.6324885,
-      yukteshwar: 257.8939855,
-      jn_bhasin: 257.6106515,
-      usha_shashi: 260.3152475,
+      lahiri: 256.5154071,
+      raman: 257.9614371,
+      fagan_bradley: 255.6320869,
+      yukteshwar: 257.8936551,
+      jn_bhasin: 257.6103211,
+      usha_shashi: 260.3149171,
       nil: 280.3689187,
     },
     Moon: {
-      lahiri: 199.4705290,
-      raman: 200.9168303,
-      fagan_bradley: 198.5873213,
-      yukteshwar: 200.8488183,
-      jn_bhasin: 200.5654843,
-      usha_shashi: 203.2700803,
+      lahiri: 199.4706580,
+      raman: 200.9166880,
+      fagan_bradley: 198.5873378,
+      yukteshwar: 200.8489060,
+      jn_bhasin: 200.5655720,
+      usha_shashi: 203.2701680,
       nil: 223.3237514,
     },
   } },
   { label: 'Chennai 1950', utc: '1950-06-15T18:29:30Z', bodies: {
     Sun: {
-      lahiri: 60.9035036,
-      raman: 62.3498050,
-      fagan_bradley: 60.0202960,
-      yukteshwar: 62.2817930,
-      jn_bhasin: 61.9984590,
-      usha_shashi: 64.7030550,
+      lahiri: 60.9035591,
+      raman: 62.3495891,
+      fagan_bradley: 60.0202388,
+      yukteshwar: 62.2818071,
+      jn_bhasin: 61.9984731,
+      usha_shashi: 64.7030691,
       nil: 84.0682156,
     },
     Moon: {
-      lahiri: 62.1248112,
-      raman: 63.5711126,
-      fagan_bradley: 61.2416036,
-      yukteshwar: 63.5031006,
-      jn_bhasin: 63.2197666,
-      usha_shashi: 65.9243626,
+      lahiri: 62.1250366,
+      raman: 63.5710666,
+      fagan_bradley: 61.2417164,
+      yukteshwar: 63.5032846,
+      jn_bhasin: 63.2199506,
+      usha_shashi: 65.9245466,
       nil: 85.2895232,
     },
   } },
   { label: 'Petaling Jaya 2026', utc: '2026-11-21T01:00:00Z', bodies: {
     Sun: {
-      lahiri: 214.4868034,
-      raman: 215.9331046,
-      fagan_bradley: 213.6035957,
-      yukteshwar: 215.8650927,
-      jn_bhasin: 215.5817587,
-      usha_shashi: 218.2863547,
+      lahiri: 214.4865274,
+      raman: 215.9325574,
+      fagan_bradley: 213.6032072,
+      yukteshwar: 215.8647754,
+      jn_bhasin: 215.5814414,
+      usha_shashi: 218.2860374,
       nil: 238.7217721,
     },
     Moon: {
-      lahiri: 346.4690029,
-      raman: 347.9153042,
-      fagan_bradley: 345.5857952,
-      yukteshwar: 347.8472922,
-      jn_bhasin: 347.5639582,
-      usha_shashi: 350.2685542,
+      lahiri: 346.4701529,
+      raman: 347.9161829,
+      fagan_bradley: 345.5868327,
+      yukteshwar: 347.8484009,
+      jn_bhasin: 347.5650669,
+      usha_shashi: 350.2696629,
       nil: 10.7039716,
     },
   } },
   { label: 'Tromso 2010', utc: '2010-12-21T03:00:00Z', bodies: {
     Sun: {
-      lahiri: 245.1094605,
-      raman: 246.5557618,
-      fagan_bradley: 244.2262529,
-      yukteshwar: 246.4877498,
-      jn_bhasin: 246.2044158,
-      usha_shashi: 248.9090118,
+      lahiri: 245.1094317,
+      raman: 246.5554617,
+      fagan_bradley: 244.2261115,
+      yukteshwar: 246.4876797,
+      jn_bhasin: 246.2043457,
+      usha_shashi: 248.9089417,
       nil: 269.1245239,
     },
     Moon: {
-      lahiri: 62.3509176,
-      raman: 63.7972189,
-      fagan_bradley: 61.4677099,
-      yukteshwar: 63.7292069,
-      jn_bhasin: 63.4458729,
-      usha_shashi: 66.1504689,
+      lahiri: 62.3511543,
+      raman: 63.7971843,
+      fagan_bradley: 61.4678341,
+      yukteshwar: 63.7294023,
+      jn_bhasin: 63.4460683,
+      usha_shashi: 66.1506643,
       nil: 86.3659810,
     },
   } },
 ];
 
 const KL_CUSPS: Record<string, number[]> = {
-  lahiri: [307.6321679, 340.6982017, 12.8538783, 42.1587614, 69.5204664, 97.2853496, 127.6321679, 160.6982017, 192.8538783, 222.1587614, 249.5204664, 277.2853496],
-  raman: [309.0784692, 342.1445031, 14.3001796, 43.6050628, 70.9667678, 98.7316510, 129.0784692, 162.1445031, 194.3001796, 223.6050628, 250.9667678, 278.7316510],
-  fagan_bradley: [306.7489603, 339.8149941, 11.9706706, 41.2755538, 68.6372588, 96.4021420, 126.7489603, 159.8149941, 191.9706706, 221.2755538, 248.6372588, 276.4021420],
-  yukteshwar: [309.0104572, 342.0764911, 14.2321676, 43.5370508, 70.8987558, 98.6636390, 129.0104572, 162.0764911, 194.2321676, 223.5370508, 250.8987558, 278.6636390],
-  jn_bhasin: [308.7271232, 341.7931571, 13.9488336, 43.2537168, 70.6154218, 98.3803050, 128.7271232, 161.7931571, 193.9488336, 223.2537168, 250.6154218, 278.3803050],
-  usha_shashi: [311.4317192, 344.4977531, 16.6534296, 45.9583128, 73.3200178, 101.0849010, 131.4317192, 164.4977531, 196.6534296, 225.9583128, 253.3200178, 281.0849010],
+  lahiri: [307.6321348, 340.6981687, 12.8538451, 42.1587282, 69.5204332, 97.2853165, 127.6321348, 160.6981687, 192.8538451, 222.1587282, 249.5204332, 277.2853165],
+  raman: [309.0781648, 342.1441987, 14.2998751, 43.6047582, 70.9664632, 98.7313465, 129.0781648, 162.1441987, 194.2998751, 223.6047582, 250.9664632, 278.7313465],
+  fagan_bradley: [306.7488146, 339.8148484, 11.9705249, 41.2754080, 68.6371130, 96.4019962, 126.7488146, 159.8148484, 191.9705249, 221.2754080, 248.6371130, 276.4019962],
+  yukteshwar: [309.0103828, 342.0764167, 14.2320931, 43.5369762, 70.8986812, 98.6635645, 129.0103828, 162.0764167, 194.2320931, 223.5369762, 250.8986812, 278.6635645],
+  jn_bhasin: [308.7270488, 341.7930827, 13.9487591, 43.2536422, 70.6153472, 98.3802305, 128.7270488, 161.7930827, 193.9487591, 223.2536422, 250.6153472, 278.3802305],
+  usha_shashi: [311.4316448, 344.4976787, 16.6533551, 45.9582382, 73.3199432, 101.0848265, 131.4316448, 164.4976787, 196.6533551, 225.9582382, 253.3199432, 281.0848265],
   nil: [331.3850086, 4.4510425, 36.6067190, 65.9116022, 93.2733072, 121.0381904, 151.3850086, 184.4510425, 216.6067190, 245.9116022, 273.2733072, 301.0381904],
 };
 
-const MEAN_AYANAMSA_ARCSEC = 0.05;
+const MEAN_AYANAMSA_ARCSEC = 0.001;
 const SUN_ARCSEC = 2;
 const MOON_ARCSEC = 6;
 const CUSP_ARCSEC = 0.5;
@@ -323,14 +325,14 @@ describe('supported ayanamsa modes (#29, owner)', () => {
     );
   });
 
-  it('each SE-defined mode names its Swiss Ephemeris constant and has a sane definition', () => {
-    expect(SE_AYANAMSA_DEFINITIONS.lahiri.seConstant).toBe('SE_SIDM_LAHIRI');
-    expect(SE_AYANAMSA_DEFINITIONS.raman.seConstant).toBe('SE_SIDM_RAMAN');
-    expect(SE_AYANAMSA_DEFINITIONS.fagan_bradley.seConstant).toBe('SE_SIDM_FAGAN_BRADLEY');
-    expect(SE_AYANAMSA_DEFINITIONS.yukteshwar.seConstant).toBe('SE_SIDM_YUKTESHWAR');
-    expect(SE_AYANAMSA_DEFINITIONS.jn_bhasin.seConstant).toBe('SE_SIDM_JN_BHASIN');
-    expect(SE_AYANAMSA_DEFINITIONS.usha_shashi.seConstant).toBe('SE_SIDM_USHASHASHI');
-    expect(Object.keys(SE_AYANAMSA_DEFINITIONS).sort()).toEqual([...SE_MODES].sort());
+  it('the six KP-Qt table modes use the kAya sidereal-mode index', () => {
+    expect(KPQT_AYA_TABLE.lahiri.sidMode).toBe(1);
+    expect(KPQT_AYA_TABLE.raman.sidMode).toBe(3);
+    expect(KPQT_AYA_TABLE.fagan_bradley.sidMode).toBe(0);
+    expect(KPQT_AYA_TABLE.yukteshwar.sidMode).toBe(7);
+    expect(KPQT_AYA_TABLE.jn_bhasin.sidMode).toBe(8);
+    expect(KPQT_AYA_TABLE.usha_shashi.sidMode).toBe(4);
+    expect(Object.keys(KPQT_AYA_TABLE).sort()).toEqual([...SE_MODES].sort());
   });
 
   it('is rejected, not defaulted, for anything that is not an exact lowercase id', () => {
@@ -346,9 +348,9 @@ describe('supported ayanamsa modes (#29, owner)', () => {
   });
 });
 
-describe.each(MEAN_REFERENCE)('mean ayanamsa vs Swiss Ephemeris: $label', (ref) => {
+describe.each(MEAN_REFERENCE)('mean ayanamsa vs KP-Qt precession at UT: $label', (ref) => {
   it.each(SE_MODES)(`%s within ${MEAN_AYANAMSA_ARCSEC}"`, (mode) => {
-    const got = calculateAyanamsa(jdTt(ref.utc), mode).meanAyanamsa;
+    const got = calculateAyanamsa(ref.jdUt, mode).meanAyanamsa;
     expect(Math.abs(got - ref.mean[mode]) * 3600).toBeLessThanOrEqual(MEAN_AYANAMSA_ARCSEC);
   });
 
@@ -367,7 +369,7 @@ describe('true ayanamsa of the SE-defined modes', () => {
   });
 });
 
-describe.each(BODY_REFERENCE)('sidereal Sun and Moon vs Swiss Ephemeris: $label', (ref) => {
+describe.each(BODY_REFERENCE)('sidereal Sun and Moon after the KP-Qt ayanamsa: $label', (ref) => {
   const date = new Date(ref.utc);
 
   describe.each(SE_MODES)('%s', (mode) => {
@@ -410,7 +412,7 @@ const KL: DateTimeLocation = {
 };
 
 describe('calculateChart with the added modes (KL 1992, Placidus)', () => {
-  it.each([...SE_MODES, 'nil' as const])('%s: 12 cusps within 0.5" of the Swiss Ephemeris Placidus cusps', (mode) => {
+  it.each([...SE_MODES, 'nil' as const])('%s: 12 cusps within 0.5" of the pinned Placidus cusps', (mode) => {
     const chart = calculateChart(KL, OPTIONS(mode));
     const ref = KL_CUSPS[mode];
     expect(chart.cusps).toHaveLength(12);

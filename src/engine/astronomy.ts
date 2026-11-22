@@ -4,15 +4,14 @@ import { nutationIau2000b } from './nutation.js';
 import {
   AYANAMSA_LABELS,
   isAyanamsaMode,
-  isSeDefinedAyanamsaMode,
   kpCivilFromJulianDay,
   meanAyanamsaKpAyanamsa,
   meanAyanamsaKpStla,
   meanAyanamsaKpStraightLine,
-  meanAyanamsaSeDefined,
   unsupportedAyanamsaMessage,
   type KpCivilDate,
 } from './ayanamsa-defs.js';
+import { isKpQtTableAyanamsa, meanAyanamsaKpQt } from './kpqt-precession.js';
 
 export const DEG2RAD = Math.PI / 180.0;
 export const RAD2DEG = 180.0 / Math.PI;
@@ -286,8 +285,8 @@ export interface AyanamsaResult {
  * KP New: Krishnamurti VP291 / Senthilathiban (Swiss Ephemeris SIDM_KRISHNAMURTI_VP291 #45)
  *   Epoch: Zero ayanamsa at 291 CE (JD 1827424.752255678)
  *   J2000.0 value: 23°46'49.31" = 23.780365°
- * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi: the Swiss Ephemeris 2.10.03
- *   modes of the same names, defined in `ayanamsa-defs.ts` (owner decision on #29, 2026-11-21).
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi: KP-Qt's `astro::ayanamsa`
+ *   (`kpqt-precession.ts`). `jd` for these six is UT; the function applies KP-Qt's ΔT itself.
  * Nil: the tropical zodiac. The mean and the true ayanamsa are both 0, and `dPsiDeg` is ignored,
  *   so sidereal longitude = tropical longitude.
  * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses
@@ -356,9 +355,10 @@ export function calculateAyanamsa(
       0.000307064 * T * T +
       0.00000000227 * T * T * T -
       0.00000000411 * T * T * T * T;
-  } else if (isSeDefinedAyanamsaMode(type)) {
+  } else if (isKpQtTableAyanamsa(type)) {
+    // Name string kept. The value is KP-Qt's mean at this UT Julian day.
     name = `${AYANAMSA_LABELS[type]} (Swiss Ephemeris)`;
-    meanAyanamsa = meanAyanamsaSeDefined(type, T);
+    meanAyanamsa = meanAyanamsaKpQt(jd, type);
   } else {
     // Unreachable: every AyanamsaMode is handled above.
     throw new Error(unsupportedAyanamsaMessage(type));

@@ -6,28 +6,11 @@
  * `isAyanamsaMode` and by every function that takes an `AyanamsaMode`.
  * #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  *
- * "As Swiss Ephemeris defines them": each mode below is the Swiss Ephemeris 2.10.03 sidereal mode
- * of the same name, taken BY NAME (the `SE_SIDM_*` constant), not by KP-Qt's numbers (KP-Qt's
- * numeric mapping is wrong, #29). Swiss Ephemeris is used only to generate reference values for
- * `test/ayanamsa-reference.test.ts`; it is not a dependency.
- *
- * How the mean ayanamsa is computed (same approach as KP Old / KP New in `astronomy.ts`):
- *
- *     mean(T) = meanAtJ2000Deg + SE_PRECESSION_DEG_PER_CENTURY(T)
- *
- * with T in Julian centuries of 36525 days from J2000.0 (JD 2451545.0, TT). `meanAtJ2000Deg` is the
- * value Swiss Ephemeris 2.10.03 returns for that mode at J2000.0 (`swe_get_ayanamsa_ex` with
- * `SEFLG_NONUT`). The shared polynomial is the vernal point's precession measured on the ecliptic
- * of J1900.0, which is what SE does by default (`swi_get_ayanamsa_ex` in sweph.c, the branch without
- * `SE_SIDBIT_ECL_DATE`). Measured against SE 2.10.03 (yearly steps, 1700 to 2300) the largest
- * difference is 0.002 arcsec for every mode below.
- *
- * Why the J2000 value is pinned and not derived from the epoch `t0` and the value at it
- * (`ayanamsa[]` in sweph.h): for Fagan-Bradley, Lahiri and Raman, SE 2.10 corrects the table value
- * for the difference between the precession model the author used (Newcomb or IAU 1976) and SE's
- * default one (`get_aya_correction` in sweph.c), so its output at `t0` is up to 0.83 arcsec off the
- * table value. For Yukteshwar, J.N. Bhasin and Usha-Shashi the table value is reproduced exactly at
- * `t0`. Pinning SE's own J2000 output reproduces what SE returns in all six cases.
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi are KP-Qt's own
+ * computation (`astro::ayanamsa` in `kpqt-precession.ts`): IAU 1976 precession of the vernal
+ * point, the `kAya[]` zero points, and KP-Qt's ΔT. The Julian day passed for those six is UT.
+ * KP Old and KP New stay the polynomials in `astronomy.ts`. KP Straight Line (Adjusted) stays
+ * the owner definition below.
  *
  * True ayanamsa = mean + nutation in longitude (dPsi), as for KP Old / KP New (except KPSTLA, whose
  * true value equals its mean, and Nil). Sidereal longitude =
@@ -85,99 +68,6 @@ export function unsupportedAyanamsaMessage(value: unknown): string {
   return `Unsupported ayanamsa mode: ${String(value)} (expected one of ${AYANAMSA_MODES.join(', ')}; there is no default and no fallback)`;
 }
 
-/** Modes computed from a Swiss Ephemeris definition (all except KPSTLA, KP Old, KP New and Nil). */
-export type SeDefinedAyanamsaMode = Exclude<
-  AyanamsaMode,
-  'kp_straight_line_adjusted' | 'kp_straight_line' | 'kp_ayanamsa' | 'kp_old' | 'kp_new' | 'nil'
->;
-
-export interface SeAyanamsaDefinition {
-  /** Swiss Ephemeris constant, used by name. */
-  seConstant: string;
-  /** Epoch `t0` of the SE definition, JD (`ayanamsa[]` in sweph.h, SE 2.10.03). */
-  t0Jd: number;
-  /** Ayanamsa at `t0` as listed in sweph.h (before SE's precession-model correction), degrees. */
-  ayanT0Deg: number;
-  /** Mean ayanamsa at J2000.0 (JD 2451545.0 TT) as returned by SE 2.10.03 with SEFLG_NONUT, degrees. */
-  meanAtJ2000Deg: number;
-  /** Source of the definition, for the record. */
-  source: string;
-}
-
-const J1900 = 2415020.0; // sweph.h J1900
-
-export const SE_AYANAMSA_DEFINITIONS: Readonly<Record<SeDefinedAyanamsaMode, SeAyanamsaDefinition>> = {
-  // SE_SIDM_LAHIRI (1). Calendar Reform Committee 1956, derived from the Indian Astronomical
-  // Ephemeris 1989 p. 556: t0 = JD 2435553.5, 23.250182778 - 0.004658035 (the second term is nutation).
-  lahiri: {
-    seConstant: 'SE_SIDM_LAHIRI',
-    t0Jd: 2435553.5,
-    ayanT0Deg: 23.250182778 - 0.004658035,
-    meanAtJ2000Deg: 23.8570923254552,
-    source: 'sweph.h ayanamsa[1]; SE 2.10.03',
-  },
-  // SE_SIDM_RAMAN (3). B.V. Raman, "Hindu Predictive Astrology": t0 = J1900, 360 - 338.98556.
-  raman: {
-    seConstant: 'SE_SIDM_RAMAN',
-    t0Jd: J1900,
-    ayanT0Deg: 360 - 338.98556,
-    meanAtJ2000Deg: 22.41079101207282,
-    source: 'sweph.h ayanamsa[3]; SE 2.10.03',
-  },
-  // SE_SIDM_FAGAN_BRADLEY (0). SVP 335 deg 57' 28.64" for 1950.0: t0 = JD 2433282.42346, 24.042044444.
-  fagan_bradley: {
-    seConstant: 'SE_SIDM_FAGAN_BRADLEY',
-    t0Jd: 2433282.42346,
-    ayanT0Deg: 24.042044444,
-    meanAtJ2000Deg: 24.740299966181283,
-    source: 'sweph.h ayanamsa[0]; SE 2.10.03',
-  },
-  // SE_SIDM_YUKTESHWAR (7). Sri Yukteswar, "The Holy Science": t0 = J1900, 360 - 338.917778.
-  yukteshwar: {
-    seConstant: 'SE_SIDM_YUKTESHWAR',
-    t0Jd: J1900,
-    ayanT0Deg: 360 - 338.917778,
-    meanAtJ2000Deg: 22.47880299955449,
-    source: 'sweph.h ayanamsa[7]; SE 2.10.03',
-  },
-  // SE_SIDM_JN_BHASIN (8). No source given by SE: t0 = J1900, 360 - 338.634444.
-  jn_bhasin: {
-    seConstant: 'SE_SIDM_JN_BHASIN',
-    t0Jd: J1900,
-    ayanT0Deg: 360 - 338.634444,
-    meanAtJ2000Deg: 22.762136999554514,
-    source: 'sweph.h ayanamsa[8]; SE 2.10.03',
-  },
-  // SE_SIDM_USHASHASHI (4). Usha and Shashi, "Hindu Astrological Calculations" (1978): t0 = J1900,
-  // 360 - 341.33904.
-  usha_shashi: {
-    seConstant: 'SE_SIDM_USHASHASHI',
-    t0Jd: J1900,
-    ayanT0Deg: 360 - 341.33904,
-    meanAtJ2000Deg: 20.057540999554476,
-    source: 'sweph.h ayanamsa[4]; SE 2.10.03',
-  },
-};
-
-/**
- * Precession of the vernal point on the ecliptic of J1900.0, degrees per Julian century, as
- * [T, T^2, T^3, T^4] coefficients (no constant term). These are the same coefficients as KP Old in
- * `calculateAyanamsa`; the six SE-defined modes have `t0` between 1900 and 1956, so they share it.
- */
-export const SE_PRECESSION_DEG_PER_CENTURY: readonly [number, number, number, number] = [
-  1.39688808, 0.000307064, 0.00000000227, -0.00000000411,
-];
-
-/** True for the modes defined by `SE_AYANAMSA_DEFINITIONS`. */
-export function isSeDefinedAyanamsaMode(mode: AyanamsaMode): mode is SeDefinedAyanamsaMode {
-  return Object.prototype.hasOwnProperty.call(SE_AYANAMSA_DEFINITIONS, mode);
-}
-
-/** Mean ayanamsa, degrees, of an SE-defined mode at `T` Julian centuries from J2000.0. */
-export function meanAyanamsaSeDefined(mode: SeDefinedAyanamsaMode, T: number): number {
-  const [c1, c2, c3, c4] = SE_PRECESSION_DEG_PER_CENTURY;
-  return SE_AYANAMSA_DEFINITIONS[mode].meanAtJ2000Deg + c1 * T + c2 * T * T + c3 * T * T * T + c4 * T * T * T * T;
-}
 
 // ---------------------------------------------------------------------------
 // KP Straight Line (Adjusted), "KPSTLA" (id `kp_straight_line_adjusted`)

@@ -75,7 +75,7 @@ Also selectable, from KP-Qt's vendor formulas (`kpAyanamsa.cpp`; not Swiss Ephem
 3. **KP Straight Line** (`kp_straight_line`): `(year − 291) × 50.2388475″ / 3600`, using the local civil year. One value for the whole year.
 4. **KP Ayanamsa** (`kp_ayanamsa`): `t = frac − 1900`, `(t × 50.2388475″ + 1350″) / 3600 + 22° + t² × 0.000111″ / 3600`, where `frac` is KP-Qt's fractional year measured from 15 April of the local civil date.
 
-**KP Straight Line (Adjusted)** (`kp_straight_line_adjusted`) stays the owner definition: years from 291-01-01 0h UT (Julian) in units of 365.25 days, times 50.2388475″, with no nutation. That is not KP-Qt's 15 April form of the same name. The page preselects KP New. Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi and Nil (tropical) are accepted by the API.
+**KP Straight Line (Adjusted)** (`kp_straight_line_adjusted`) stays the owner definition: years from 291-01-01 0h UT (Julian) in units of 365.25 days, times 50.2388475″, with no nutation. That is not KP-Qt's 15 April form of the same name. The page preselects KP New. Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi use KP-Qt's IAU 1976 precession and zero-point table. Nil (tropical) is accepted by the API.
 
 ## Cloudflare Wrangler deployment
 

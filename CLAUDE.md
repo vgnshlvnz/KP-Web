@@ -30,7 +30,9 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
   sunrise = upper limb with standard refraction, dasha year 365.2425 days, near-boundary threshold 60 arcsec.
 - **Ayanamsa:** twelve explicit ids in `src/engine/ayanamsa-defs.ts`: `kp_straight_line_adjusted` (KPSTLA, first),
   `kp_straight_line`, `kp_ayanamsa`, `kp_old`, `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`,
-  `usha_shashi`, `nil`. Lahiri through Usha-Shashi are defined as Swiss Ephemeris defines them. KP Old and KP New are the
+  `usha_shashi`, `nil`. Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi use KP-Qt's
+  IAU 1976 vernal-point precession and `kAya[]` zero points (`kpqt-precession.ts`), evaluated at UT with KP-Qt's ΔT.
+  KP Old and KP New are the
   Swiss Ephemeris Krishnamurti polynomials. KPSTLA follows the owner's formula (#29: T x 50.2388475" / 3600, T from 291 AD),
   and its definition is final (#29): zero point 291-01-01 0h UT Julian, 365.25-day year, no nutation (true = mean). It is
   not KP-Qt's 15 April fractional year. `kp_straight_line` and `kp_ayanamsa` are KP-Qt's formulas from `kpAyanamsa.cpp`,

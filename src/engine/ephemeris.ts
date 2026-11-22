@@ -18,8 +18,9 @@
  *    leaves the sidereal longitude off by exactly dPsi (up to ~18 arcsec, issue #33). For the
  *    modes that add dPsi, dPsi cancels, so the sidereal longitude of a planet does not depend on the
  *    nutation model at all (measured in #57: unchanged to 1e-9 degrees).
- *  - The mean ayanamsa is `calculateAyanamsa` (Stack A's polynomial for KP Old / KP New, the
- *    Swiss Ephemeris definitions in `ayanamsa-defs.ts` for the others), evaluated at TT.
+ *  - The mean ayanamsa is `calculateAyanamsa`. KP Old / KP New use their polynomials at TT.
+ *    Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi use KP-Qt's
+ *    precession at UT (that function applies its own ΔT). The other modes are evaluated at TT.
  *  - 'nil' (tropical) subtracts nothing: mean ayanamsa 0 and no dPsi term, so sidereal = tropical.
  *  - 'kp_straight_line_adjusted' subtracts the mean only, with no dPsi term (owner, #29, G3), so its
  *    sidereal longitudes are the true-equinox longitudes minus the formula, and they do follow
@@ -37,6 +38,7 @@
 import * as Astronomy from 'astronomy-engine';
 import { calculateAyanamsa, normalizeDegrees, nutationAtTime } from './astronomy.js';
 import { isAyanamsaMode, unsupportedAyanamsaMessage, type KpCivilDate } from './ayanamsa-defs.js';
+import { isKpQtTableAyanamsa } from './kpqt-precession.js';
 import type { AyanamsaMode, ChartCalculationOptions, PlanetName } from './types.js';
 
 /** Julian Day of the J2000.0 epoch. */
@@ -226,9 +228,11 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
   const meanObliquityDeg = Astronomy.e_tilt(time).mobl;
 
   // mean + dPsi for every mode except 'nil' (tropical, both 0) and 'kp_straight_line_adjusted'
-  // (true = mean, owner #29 G3; no dPsi term).
+  // (true = mean, owner #29 G3; no dPsi term). The six KP-Qt table modes take UT, because
+  // `astro::ayanamsa` converts UT to TT itself. Every other mode stays on TT.
+  const ayanamsaJd = isKpQtTableAyanamsa(options.ayanamsa) ? julianDayUt : julianDayTt;
   const ayanamsa = calculateAyanamsa(
-    julianDayTt,
+    ayanamsaJd,
     options.ayanamsa,
     nutationInLongitudeDeg,
     options.civilDate
