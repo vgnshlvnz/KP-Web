@@ -23,7 +23,7 @@
  * `success: false`, which the UI checks.
  *
  * Open owner decisions, never defaulted in the engine:
- *   - #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ *   - #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  *     `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa` (the ten supported ids).
  *     Missing or unknown is 400. `DEFAULT_AYANAMSA_SELECTION` is only reported, for the UI to preselect.
  *   - TODO(#23), TODO(#24): the two other engine options are set once, in `ENGINE_CONFIG`.
@@ -103,7 +103,7 @@ async function readJsonBody(req: { json(): Promise<unknown> }): Promise<Body> {
   return body as Body;
 }
 
-/** The ayanamsa is always the caller's explicit choice (#22: the default selection is a UI matter; no API fallback). */
+/** The ayanamsa is always the caller's explicit choice (#22 decided: KP New is a UI selection only; no API fallback). */
 function requireAyanamsa(body: Body): AyanamsaMode {
   const err = validateAyanamsa(body.ayanamsa);
   if (err) throw new BadRequestError(err);
@@ -226,7 +226,7 @@ app.get('/api/health', (c) => {
     engine: 'astronomy-engine',
     licensing: 'astronomy-engine is MIT; see THIRD_PARTY_LICENSES.md',
     runtime: 'Cloudflare Workers',
-    // #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+    // #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
     // `defaultSelection` is for the UI's preselected option only; a request without `ayanamsa` is 400.
     defaultSelection: DEFAULT_AYANAMSA_SELECTION,
     ayanamsas: AYANAMSA_MODES,
@@ -361,7 +361,8 @@ app.get('/api/ayanamsa', (c) => {
 
   // Every supported mode. `defaultSelection` is the UI's preselected option, not an API fallback
   // (#22 decided, owner, #29: the API still requires an explicit ayanamsa). "mean" is the ayanamsa of the date;
-  // "true" adds the nutation in longitude, the value subtracted from tropical longitudes.
+  // "true" adds the nutation in longitude (except KPSTLA and Nil, where true = mean), the value
+  // subtracted from tropical longitudes.
   const ayanamsas = AYANAMSA_MODES.map((id) => {
     const a = calculateAyanamsa(jd, id, dPsi);
     return {
