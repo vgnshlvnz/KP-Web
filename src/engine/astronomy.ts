@@ -3,7 +3,6 @@ import { AyanamsaType } from './types.js';
 import { nutationIau2000b } from './nutation.js';
 import {
   AYANAMSA_LABELS,
-  calendarFromJulianDay,
   isAyanamsaMode,
   kpCivilFromJulianDay,
   meanAyanamsaKpAyanamsa,
