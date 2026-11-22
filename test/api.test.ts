@@ -248,7 +248,7 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     }
   );
 
-  // #60 (owner, #29): all ten modes are accepted on every birth and horary route.
+  // #60 (owner, #29): every supported mode is accepted on every birth and horary route.
   it.each(AYANAMSA_MODES)('every route accepts %s (birth and horary) and echoes it back', async (id) => {
     for (const [path, base] of ROUTES) {
       const res = await post(path, { ...base, ayanamsa: id });
@@ -459,12 +459,12 @@ describe('POST /api/horary (horary chart on calculateHoraryChart)', () => {
 });
 
 describe('GET /api/ayanamsa', () => {
-  it('lists the ten supported ids with labels; defaultSelection is the UI preselect only', async () => {
+  it('lists the supported ids with labels; defaultSelection is the UI preselect only', async () => {
     const res = await app.request('/api/ayanamsa?date=2026-11-21T06:00:00Z');
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;
     expect(json.ayanamsas.map((a: any) => a.id)).toEqual([
-      'kp_straight_line_adjusted', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil',
+      'kp_straight_line_adjusted', 'kp_straight_line', 'kp_ayanamsa', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil',
     ]);
     expect(json.ayanamsas.map((a: any) => a.label)).toContain('Lahiri');
     expect(json).not.toHaveProperty('default');
@@ -540,7 +540,7 @@ describe('GET /api/health (folded from worker.test.ts)', () => {
     expect(json.service).toBe('KP-Web');
     expect(json.engine).toBe('astronomy-engine');
     expect(String(json.runtime)).toContain('Cloudflare Workers');
-    expect(json.ayanamsas).toHaveLength(10);
+    expect(json.ayanamsas).toHaveLength(12);
     expect(json.defaultSelection).toBe('kp_new');
     expect(json).not.toHaveProperty('defaultAyanamsa');
     expect(json.endpoints).toContain('POST /api/horary');

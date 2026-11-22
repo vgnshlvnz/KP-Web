@@ -317,9 +317,9 @@ const OPTIONS = (ayanamsa: AyanamsaMode): ChartCalculationOptions => ({
 });
 
 describe('supported ayanamsa modes (#29, owner)', () => {
-  it('lists exactly the ten explicit ids: KPSTLA (#72), KP Old, KP New and the seven added', () => {
+  it('lists the supported ids: KPSTLA (#72), the two KP-Qt formulas, KP Old, KP New and the seven added', () => {
     expect([...AYANAMSA_MODES].sort()).toEqual(
-      ['kp_straight_line_adjusted', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'].sort()
+      ['kp_straight_line_adjusted', 'kp_straight_line', 'kp_ayanamsa', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'].sort()
     );
   });
 

@@ -24,6 +24,8 @@
  *  - 'kp_straight_line_adjusted' subtracts the mean only, with no dPsi term (owner, #29, G3), so its
  *    sidereal longitudes are the true-equinox longitudes minus the formula, and they do follow
  *    this module's nutation.
+ *  - 'kp_straight_line' and 'kp_ayanamsa' are KP-Qt's formulas on the local civil date
+ *    (`options.civilDate`). Their true ayanamsa is mean + dPsi, matching KP-Qt's siderealOffset.
  *
  * Lunar nodes: MEAN node only (#29 (owner, 2026-11-21): "Use mean node only"). IAU polynomial for
  * the mean longitude of the ascending node (mean equinox of date), with dPsi added so it is in the
@@ -34,7 +36,7 @@
 
 import * as Astronomy from 'astronomy-engine';
 import { calculateAyanamsa, normalizeDegrees, nutationAtTime } from './astronomy.js';
-import { isAyanamsaMode, unsupportedAyanamsaMessage } from './ayanamsa-defs.js';
+import { isAyanamsaMode, unsupportedAyanamsaMessage, type KpCivilDate } from './ayanamsa-defs.js';
 import type { AyanamsaMode, ChartCalculationOptions, PlanetName } from './types.js';
 
 /** Julian Day of the J2000.0 epoch. */
@@ -46,7 +48,14 @@ const SPEED_WINDOW_HOURS = 1;
 /**
  * Explicit input. `ayanamsa` has no default (#22 decided: no API default; KP New is the UI's default selection).
  */
-export type EphemerisOptions = Pick<ChartCalculationOptions, 'ayanamsa'>;
+export interface EphemerisOptions {
+  ayanamsa: ChartCalculationOptions['ayanamsa'];
+  /**
+   * Local civil date for KP Straight Line and KP Ayanamsa. Omitted: the Gregorian date of the
+   * Julian day the ayanamsa is evaluated at (KP-Qt's fallback when no KP date was set).
+   */
+  civilDate?: KpCivilDate;
+}
 
 export interface EphemerisPlanet {
   name: PlanetName;
@@ -218,7 +227,12 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
 
   // mean + dPsi for every mode except 'nil' (tropical, both 0) and 'kp_straight_line_adjusted'
   // (true = mean, owner #29 G3; no dPsi term).
-  const ayanamsa = calculateAyanamsa(julianDayTt, options.ayanamsa, nutationInLongitudeDeg);
+  const ayanamsa = calculateAyanamsa(
+    julianDayTt,
+    options.ayanamsa,
+    nutationInLongitudeDeg,
+    options.civilDate
+  );
   const meanAyanamsaDeg = ayanamsa.meanAyanamsa;
   const trueAyanamsaDeg = ayanamsa.trueAyanamsa;
 

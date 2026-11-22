@@ -5,9 +5,13 @@ import {
   AYANAMSA_LABELS,
   isAyanamsaMode,
   isSeDefinedAyanamsaMode,
+  kpCivilFromJulianDay,
+  meanAyanamsaKpAyanamsa,
   meanAyanamsaKpStla,
+  meanAyanamsaKpStraightLine,
   meanAyanamsaSeDefined,
   unsupportedAyanamsaMessage,
+  type KpCivilDate,
 } from './ayanamsa-defs.js';
 
 export const DEG2RAD = Math.PI / 180.0;
@@ -292,6 +296,10 @@ export interface AyanamsaResult {
  * KP Straight Line (Adjusted): mean = T x 50.2388475" / 3600, T = (jd - 1827345.5) / 365.25 (owner, #29;
  *   choices G1 to G3 in `ayanamsa-defs.ts`). G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): no nutation.
  *   The true ayanamsa equals the mean: `dPsiDeg` is ignored, like for Nil.
+ * KP Straight Line and KP Ayanamsa: KP-Qt's formulas in `ayanamsa-defs.ts` (`kpAyanamsa.cpp`),
+ *   evaluated on `civil` (the local date the user entered) or, when `civil` is omitted, on the
+ *   Gregorian date of `jd`. Their mean has no nutation term. The true value is mean + `dPsiDeg`,
+ *   which is what KP-Qt subtracts (`siderealOffset = ayanamsa + nutation`).
  *
  * #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  * `type` is a required parameter (this function used to default it to 'kp_old'), and any value that is
@@ -300,7 +308,8 @@ export interface AyanamsaResult {
 export function calculateAyanamsa(
   jd: number,
   type: AyanamsaType,
-  dPsiDeg: number = 0
+  dPsiDeg: number = 0,
+  civil?: KpCivilDate
 ): AyanamsaResult {
   // Never fall back to another mode (or to Lahiri) for an unknown value.
   if (!isAyanamsaMode(type)) {
@@ -318,8 +327,17 @@ export function calculateAyanamsa(
     return { type, name: AYANAMSA_LABELS.nil, meanAyanamsa: 0, trueAyanamsa: 0 };
   } else if (type === 'kp_straight_line_adjusted') {
     // G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): the formula as given, no nutation term.
+    // `civil` is ignored: this is the owner definition, not KP-Qt's 15 April fractional year.
     const mean = meanAyanamsaKpStla(jd);
     return { type, name: 'KP Straight Line (Adjusted)', meanAyanamsa: mean, trueAyanamsa: mean };
+  } else if (type === 'kp_straight_line') {
+    const date = civil ?? kpCivilFromJulianDay(jd);
+    const mean = meanAyanamsaKpStraightLine(date.year);
+    return { type, name: AYANAMSA_LABELS.kp_straight_line, meanAyanamsa: mean, trueAyanamsa: mean + dPsiDeg };
+  } else if (type === 'kp_ayanamsa') {
+    const date = civil ?? kpCivilFromJulianDay(jd);
+    const mean = meanAyanamsaKpAyanamsa(date);
+    return { type, name: AYANAMSA_LABELS.kp_ayanamsa, meanAyanamsa: mean, trueAyanamsa: mean + dPsiDeg };
   } else if (type === 'kp_new') {
     name = 'KP New (VP291 / Senthilathiban)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI_VP291
