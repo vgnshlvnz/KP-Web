@@ -13,6 +13,7 @@
  *   POST /api/chart/calculate  cusps + planets + significators, `{ success, data }` (UI contract, unchanged)
  *   POST /api/calculate        natal chart, `calculateChart`, bare result
  *   POST /api/horary           horary chart, `calculateHoraryChart`, bare result
+ *   POST /api/match            KP Dasavidha Porutham, `calculateMatch`, bare result (rules 1,3,4,6,7,8,10 only)
  *
  * `public/index.html` asks `POST /api/calculate` for the nine sidereal longitudes, then posts those
  * `{ name, longitude }` rows to `POST /api/chart/calculate` and reads `data`: `julianDateUT`,
@@ -47,10 +48,13 @@ import {
   calculateChart,
   calculateHoraryChart,
   calculateKPChart,
+  calculateMatch,
   calculateNutation,
   formatDms,
   getHorary249Table,
   getHoraryEntry,
+  MATCH_RULE4_ORB_DEG,
+  MatchingDateOutOfRangeError,
   PolarLatitudeError,
   toJulianDate,
 } from './engine/index.js';
@@ -318,6 +322,9 @@ app.onError((err, c) => {
   if (err instanceof PolarLatitudeError) {
     return c.json(errorBody(c.req.path, err.message), 422);
   }
+  if (err instanceof MatchingDateOutOfRangeError) {
+    return c.json(errorBody(c.req.path, err.message), 400);
+  }
   // Not the caller's fault. Log it server-side; the response carries no message from the error and no stack.
   console.error('Unhandled error:', err);
   return c.json(errorBody(c.req.path, 'An internal error occurred while processing the request.'), 500);
@@ -346,6 +353,7 @@ app.get('/api/health', (c) => {
       'POST /api/chart/calculate',
       'POST /api/calculate',
       'POST /api/horary',
+      'POST /api/match',
     ],
   });
 });
@@ -538,6 +546,101 @@ app.post('/api/horary', async (c) => {
     engineOptions(ayanamsa)
   );
   return c.json(location ? { ...result, location } : result);
+});
+
+/** `body[key]` must be a plain JSON object (one of the two people in a matching request). */
+function personField(body: Body, key: 'boy' | 'girl'): Body {
+  const raw = body[key];
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new BadRequestError(`"${key}" is required and must be an object.`);
+  }
+  return raw as Body;
+}
+
+/** How the checking instant's UTC offset was found, echoed back in `checking.offsetSource`. */
+type CheckingOffsetSource = 'girl_location_at_checking_date' | 'request';
+
+/**
+ * The checking date and its UTC offset. The instant is 12:00 civil time on the date, in the girl's place as it was
+ * on that date (KP-Qt `horomatch.cpp` `match()`: the girl's zone offset at the checking date, not at her birth).
+ * - girl by `locationId`: the offset is resolved for her IANA zone at noon on the checking date, with the same
+ *   refusals as a birth time (a DST gap, or an overlap with no `ambiguousTime`, is 400). `checkingDate.utcOffsetHours`
+ *   alongside it is 400.
+ * - girl by `latitude`/`longitude`/`utcOffsetHours`: there is no zone to look up, so `checkingDate.utcOffsetHours`
+ *   is required. It is never copied from her birth offset.
+ */
+function parseCheckingDate(
+  body: Body,
+  girlLocation: { timezone: string } | null
+): { year: number; month: number; day: number; utcOffsetHours: number; offsetSource: CheckingOffsetSource } {
+  const raw = body.checkingDate;
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new BadRequestError('"checkingDate" is required and must be an object with year, month and day.');
+  }
+  const cd = raw as Body;
+  const year = numberField(cd, 'year', undefined);
+  const month = numberField(cd, 'month', undefined);
+  const day = numberField(cd, 'day', undefined);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    throw new BadRequestError('"checkingDate.year", "checkingDate.month" and "checkingDate.day" must be integers.');
+  }
+  const dt = new Date(0);
+  dt.setUTCFullYear(year, month - 1, day);
+  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
+    throw new BadRequestError(`"checkingDate" is not a calendar date: ${year}-${month}-${day}.`);
+  }
+  if (girlLocation) {
+    if (cd.utcOffsetHours !== undefined) {
+      throw new BadRequestError(
+        'Send "checkingDate.utcOffsetHours" only when the girl is given by latitude, longitude and utcOffsetHours; with "locationId" the offset is resolved for the checking date.'
+      );
+    }
+    const utcOffsetHours = historicalOffsetHours(cd, girlLocation.timezone, year, month, day, 12, 0, 0);
+    return { year, month, day, utcOffsetHours, offsetSource: 'girl_location_at_checking_date' };
+  }
+  if (cd.utcOffsetHours === undefined) {
+    throw new BadRequestError(
+      '"checkingDate.utcOffsetHours" is required when the girl is given by latitude, longitude and utcOffsetHours (the offset at the checking date is not taken from her birth).'
+    );
+  }
+  const utcOffsetHours = numberField(cd, 'utcOffsetHours', undefined);
+  if (Math.abs(utcOffsetHours) > 24) {
+    throw new BadRequestError(`"checkingDate.utcOffsetHours" must be between -24 and 24, got ${utcOffsetHours}.`);
+  }
+  return { year, month, day, utcOffsetHours, offsetSource: 'request' };
+}
+
+/**
+ * KP Dasavidha Porutham (owner, 2026-11-22: rules 2, 5 and 9 omitted; see `engine/matching.ts`).
+ * Body:
+ * - `ayanamsa` (required, no default);
+ * - `boy` and `girl`, each the same place and time fields as `/api/calculate`: EITHER `locationId` (the coordinates and
+ *   the historical UTC offset, exact to the second, are resolved from `src/core/locations.ts`; a DST gap, or an overlap
+ *   without `ambiguousTime`, is 400) OR `latitude` + `longitude` + `utcOffsetHours` (never both, no offset is
+ *   assumed);
+ * - `checkingDate: { year, month, day }`, plus `utcOffsetHours` for a girl given by coordinates (see `parseCheckingDate`).
+ * Rule 4's orb is not a request field: it is `MATCH_RULE4_ORB_DEG` (TO BE CONFIRMED by the owner).
+ */
+app.post('/api/match', async (c) => {
+  const body = await readJsonBody(c.req);
+  const ayanamsa = requireAyanamsa(body);
+  const { input: boy, location: boyLocation } = parseDateTimeLocation(personField(body, 'boy'), 'required');
+  const { input: girl, location: girlLocation } = parseDateTimeLocation(personField(body, 'girl'), 'required');
+  const { offsetSource, ...checking } = parseCheckingDate(body, girlLocation);
+
+  const result = calculateMatch({
+    ...engineOptions(ayanamsa),
+    boy,
+    girl,
+    checking,
+    aspectOrbDeg: MATCH_RULE4_ORB_DEG,
+  });
+  return c.json({
+    ...result,
+    boy: { ...result.boy, location: boyLocation },
+    girl: { ...result.girl, location: girlLocation },
+    checking: { ...checking, offsetSource },
+  });
 });
 
 export default app;

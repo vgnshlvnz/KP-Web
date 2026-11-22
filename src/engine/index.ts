@@ -41,6 +41,7 @@ export * from './ephemeris.js';
 export * from './dasha.js';
 export * from './ruling-planets.js';
 export * from './horary.js';
+export * from './matching.js';
 
 /**
  * Main engine entrypoint: Computes Placidus house cusps and chart data for KP astrology.
