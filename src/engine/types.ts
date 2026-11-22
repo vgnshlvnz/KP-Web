@@ -504,8 +504,11 @@ export interface MatchInput {
   boy: DateTimeLocation;
   girl: DateTimeLocation;
   /**
-   * The date the match is being checked, at noon civil time in the girl's UTC offset (as in
-   * KP-Qt's horomatch.cpp). TODO(#NN): this convention (noon, girl's offset) is unconfirmed.
+   * The date the match is being checked: the instant is 12:00 civil time on this date in
+   * `utcOffsetHours`. KP-Qt's `horomatch.cpp` uses noon in the girl's zone as it was on the
+   * checking date, so a caller resolving the offset from a place should use the offset in force at
+   * the checking date, not at her birth (`POST /api/match` does).
+   * TODO(owner): noon and the girl's place are KP-Qt's convention, not confirmed by the owner.
    */
   checking: {
     year: number;
@@ -514,9 +517,8 @@ export interface MatchInput {
     utcOffsetHours: number;
   };
   /**
-   * Rule 4's aspect orb in degrees. Required: unlike the fixed conventions in `conventions.ts`,
-   * this is not a constant. KP-Qt's (and Kuppu's) own default is 7 degrees; callers and the UI
-   * default `aspectOrbDeg` to 7, but the engine itself picks nothing.
+   * Rule 4's aspect orb in degrees, 0 to 30. Required: the engine picks no orb. The API passes
+   * `MATCH_RULE4_ORB_DEG` (`conventions.ts`, 7 degrees, KP-Qt's value, for the owner to confirm).
    */
   aspectOrbDeg: number;
 }
@@ -526,6 +528,8 @@ export interface MatchRuleResult {
   id: number;
   description: string;
   marks: number;
+  /** What the rule is worth: 100 for every kept rule. */
+  maxMarks: number;
   note?: string;
 }
 
@@ -548,6 +552,8 @@ export interface MatchResult {
   total: number;
   maxTotal: number;
   totalPercent: number;
+  /** The checking instant (noon civil time in `MatchInput.checking.utcOffsetHours`), ISO 8601 UTC. */
+  checkingUtc: string;
   boy: MatchChartKeyLords;
   girl: MatchChartKeyLords;
   warnings: ChartWarning[];

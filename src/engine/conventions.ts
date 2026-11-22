@@ -61,3 +61,15 @@ export const NEAR_BOUNDARY_THRESHOLD_ARCSEC = 60;
  * KPSTLA adds no nutation (owner, #29, G3) and Nil is tropical, whatever the model.
  */
 export const NUTATION_MODEL = 'iau2000b_77_terms' as const;
+
+/**
+ * Horoscope matching, rule 4 (GENERAL HAPPINESS): the orb in degrees within which two Ascendant
+ * sign lords count as in aspect (conjunction, sextile, square, trine, opposition).
+ *
+ * Source: KP-Qt `horomatch.cpp` `kKuppuOrbDeg = 7.0`, KP-Qt's reading of Kuppu Ganapathi, "KP
+ * Dasavidha Porutham" (K.P. & Astrology Year Book 1997). FOR THE OWNER TO CONFIRM: this is an
+ * unconfirmed convention, not an owner decision. The engine does not read it: `calculateMatch`
+ * takes the orb as the required input `MatchInput.aspectOrbDeg`, and `POST /api/match` passes this
+ * constant (it is not a request field).
+ */
+export const MATCH_RULE4_ORB_DEG = 7;
