@@ -26,7 +26,7 @@
  * Stack B's `'KP_OLD' | 'KP_NEW'` (uppercase) was local to its `src/types.ts` and went away with it.
  * The lowercase ids are confirmed (#29, owner, 2026-11-21).
  *
- * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ * #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  * This type carries no default member; any `= 'kp_old'` parameter default would be a silent default, and
  * the last one, in `calculateKPChart`, was removed in `final-cleanup` (#69). `DEFAULT_AYANAMSA_SELECTION`
  * in `ayanamsa-defs.ts` is for the preselected UI option only.
@@ -395,7 +395,7 @@ export type RulingPlanetSet = 'asc_star_sign_moon_star_sign_day_lord';
  * no default. Everything else is a fixed convention in `conventions.ts` (#29 (owner, 2026-11-21)).
  */
 export interface ChartCalculationOptions {
-  /** #22 decided: no API default; KPSTLA is the UI preselect only. */
+  /** #22 decided (owner, #29): no API default; KP New is the UI's default selection only. */
   ayanamsa: AyanamsaMode;
   /** TODO(#23): Rahu/Ketu agent rules. */
   nodeAgentRuleSet: NodeAgentRuleSet;

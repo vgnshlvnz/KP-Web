@@ -260,12 +260,14 @@ export interface AyanamsaResult {
  *   modes of the same names, defined in `ayanamsa-defs.ts` (owner decision on #29, 2026-11-21).
  * Nil: the tropical zodiac. The mean and the true ayanamsa are both 0, and `dPsiDeg` is ignored,
  *   so sidereal longitude = tropical longitude.
- * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses.
+ * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses
+ * (except KPSTLA and Nil, whose true value equals the mean).
  *
  * KP Straight Line (Adjusted): mean = T x 50.2388475" / 3600, T = (jd - 1827345.5) / 365.25 (owner, #29;
- *   provisional choices G1 to G3 in `ayanamsa-defs.ts`, TODO(#29 G1), TODO(#29 G2), TODO(#29 G3)).
+ *   choices G1 to G3 in `ayanamsa-defs.ts`). G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): industry standard; no nutation..
+ *   The true ayanamsa equals the mean: `dPsiDeg` is ignored, like for Nil.
  *
- * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ * #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  * `type` is a required parameter (this function used to default it to 'kp_old'), and any value that is
  * not one of the supported modes throws instead of silently becoming KP Old or Lahiri.
  */
@@ -289,8 +291,9 @@ export function calculateAyanamsa(
     // true equinox of date).
     return { type, name: AYANAMSA_LABELS.nil, meanAyanamsa: 0, trueAyanamsa: 0 };
   } else if (type === 'kp_straight_line_adjusted') {
-    name = 'KP Straight Line (Adjusted)';
-    meanAyanamsa = meanAyanamsaKpStla(jd); // TODO(#29 G3): + dPsi below, like every other mode
+    // G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): industry standard; no nutation.: the formula as given, no nutation term.
+    const mean = meanAyanamsaKpStla(jd);
+    return { type, name: 'KP Straight Line (Adjusted)', meanAyanamsa: mean, trueAyanamsa: mean };
   } else if (type === 'kp_new') {
     name = 'KP New (VP291 / Senthilathiban)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI_VP291
