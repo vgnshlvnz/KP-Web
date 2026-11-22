@@ -8,8 +8,9 @@ import fixture from './fixtures/api-chart-calculate-kl-1980.json';
  *
  * The fixture is the handler's own JSON for 1980-01-01 10:00 at Kuala Lumpur
  * (latitude +3.1667, longitude +101.7, utcOffsetHours +8). `ayanamsa` is
- * `kp_straight_line_adjusted` because the route rejects a missing ayanamsa;
- * that id is the option selected in `public/index.html`. No planet longitudes
+ * `kp_straight_line_adjusted` because the route rejects a missing ayanamsa.
+ * The page preselects KP New (#80), so this request pins KPSTLA on purpose: it
+ * is the mode whose output changed in #80 and #83. No planet longitudes
  * are sent: this route does not compute them.
  *
  * `utcOffsetHours` is hours ahead of Universal Time (positive east).
@@ -31,7 +32,7 @@ const JULIAN_DATE_TOLERANCE_DAYS = 1e-8;
 
 /**
  * 1980-01-01 10:00, Kuala Lumpur, offset +8.
- * Ayanamsa is required by the route; KP Straight Line (Adjusted) is the UI's selected option.
+ * Ayanamsa is required by the route; KP Straight Line (Adjusted) is pinned here on purpose (the UI preselects KP New).
  */
 const KUALA_LUMPUR_1980 = {
   year: 1980,
