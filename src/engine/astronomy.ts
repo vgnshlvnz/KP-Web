@@ -290,7 +290,8 @@ export interface AyanamsaResult {
  * Nil: the tropical zodiac. The mean and the true ayanamsa are both 0, and `dPsiDeg` is ignored,
  *   so sidereal longitude = tropical longitude.
  * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses
- * (except KPSTLA and Nil, whose true value equals the mean).
+ * (except KPSTLA and Nil, whose true value equals the mean). KP Straight Line and KP Ayanamsa
+ * use the KP-Qt mean formulas; their true value still adds nutation, as KP-Qt's sidereal offset does.
  *
  * KP Straight Line (Adjusted): mean = T x 50.2388475" / 3600, T = (jd - 1827345.5) / 365.25 (owner, #29;
  *   choices G1 to G3 in `ayanamsa-defs.ts`). G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): no nutation.

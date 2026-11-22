@@ -1,7 +1,8 @@
 /**
  * Mean ayanamsa of Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin and Usha-Shashi,
  * copied from KP-Qt `src/ephemeris/astro.cpp` (`astro::ayanamsa`, `kAya[]`, `deltaT`,
- * `precess`, `meanObliquity`, `coortrf`) at commit 83264c65.
+ * `precess`, `meanObliquity`, `coortrf`) on KP-Qt main @
+ * e987302c3dfa04e579d1ac1605cd188d4750cfab (PR #92, merged).
  *
  * The input is a Julian day in UT, as `EphemerisEngine::ayanamsa` passes it. TT is
  * UT + KP-Qt's Espenak–Meeus ΔT. The result is the mean (no nutation). The caller adds
