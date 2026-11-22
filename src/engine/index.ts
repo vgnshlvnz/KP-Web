@@ -268,7 +268,7 @@ function chartInstantUtc(input: DateTimeLocation): Date {
 /**
  * The one chart function. The conventions in `conventions.ts` are fixed (#29 (owner, 2026-11-21));
  * only three options remain, each required with no default: `ayanamsa` (#22 decided: no API
- * default; KPSTLA is the UI preselect only), `nodeAgentRuleSet` (TODO(#23)) and
+ * default; KP New is the UI's default selection), `nodeAgentRuleSet` (TODO(#23)) and
  * `rulingPlanetSet` (TODO(#24)).
  *
  * - Planets (Sun to Saturn, mean Rahu and Ketu) come from `calculateEphemeris` (astronomy-engine).

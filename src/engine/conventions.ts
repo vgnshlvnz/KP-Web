@@ -3,7 +3,7 @@
  *
  * Each one is an owner decision recorded on the tracking issue (#29, owner, 2026-11-21) and is a
  * constant, not an option. The options stay required in `ChartCalculationOptions`: `ayanamsa`
- * (#22 decided: no API default; KPSTLA is the UI preselect only), plus the still-open
+ * (#22 decided: no API default; KP New is the UI's default selection), plus the still-open
  * `nodeAgentRuleSet` (TODO(#23)) and `rulingPlanetSet` (TODO(#24)).
  */
 
