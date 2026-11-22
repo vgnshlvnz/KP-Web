@@ -1,16 +1,16 @@
 /**
  * KP Straight Line and KP Ayanamsa, ported from KP-Qt `src/livedata/kpAyanamsa.cpp`
- * (commit 83264c65).
+ * on main @ e987302c3dfa04e579d1ac1605cd188d4750cfab (PR #92, merged).
  *
  * The expected means in `test/fixtures/kpqt-ayanamsa-formula.json` were produced by
- * compiling that file's formulas (a verbatim extract, not the KP-Qt application and
- * not the reference CLI a teammate is adding). `kl-1992-dawn` also matches the legacy
- * binary pins quoted in KP-Qt `tests/kp-golden/make_ayanref.py`:
+ * compiling that file's formulas (a verbatim extract, not the KP-Qt application).
+ * `kl-1992-dawn` also matches the legacy binary pins quoted in KP-Qt
+ * `tests/kp-golden/make_ayanref.py`:
  *   KP Ayanamsa 23.657813848801
  *   KP Straight Line 23.737855443750
- * When the CLI JSON arrives it replaces this fixture as
- * `test/fixtures/kpqt-ayanamsa-reference.json`. Tolerance here is 0.001 arcsec, under
- * the 1 arcsec aim for that file.
+ * The EphemerisEngine grid is `test/fixtures/kpqt-ayanamsa-reference.json`
+ * (KP-Qt main @ e987302). This file keeps civil dates that grid does not cover.
+ * Tolerance here is 0.001 arcsec.
  *
  * KP Straight Line (Adjusted) is not these formulas. It stays the owner definition
  * (#29) and is covered by `kpstla.test.ts`. KP-Qt's "User Defined" is not a mode.

@@ -1,5 +1,5 @@
 {
-  "provenance": "Mean ayanamsa from KP-Qt src/livedata/kpAyanamsa.cpp (commit 83264c65a8f932ef911c4fc479a6729affe4a7cf), compiled and run as a verbatim extract. Not Swiss Ephemeris, and not the forthcoming KP-Qt reference CLI. Replace this file with test/fixtures/kpqt-ayanamsa-reference.json when that JSON arrives. kl-1992-dawn matches the legacy binary pins in KP-Qt tests/kp-golden/make_ayanref.py (23.657813848801 and 23.737855443750).",
+  "provenance": "Mean ayanamsa from KP-Qt src/livedata/kpAyanamsa.cpp on main @ e987302c3dfa04e579d1ac1605cd188d4750cfab (PR #92, merged), compiled and run as a verbatim extract. Not Swiss Ephemeris. The EphemerisEngine grid is test/fixtures/kpqt-ayanamsa-reference.json; this file keeps civil dates that grid does not cover. kl-1992-dawn matches the legacy binary pins in KP-Qt tests/kp-golden/make_ayanref.py (23.657813848801 and 23.737855443750).",
   "nutation": "These are the formula values. KP-Web adds nutation in longitude to the true ayanamsa of both systems. KP Straight Line (Adjusted) is not in this file.",
   "toleranceArcsec": 0.001,
   "instants": [

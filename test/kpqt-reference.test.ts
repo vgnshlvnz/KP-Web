@@ -1,10 +1,10 @@
 /**
- * KP-Qt EphemerisEngine reference, copied from
- * vgnshlvnz/KP-Qt pull 92 (`cursor/ayanamsa-ref-79c6`,
- * `e5ca41d65036516b76f47455336b73643366364a`),
+ * KP-Qt EphemerisEngine reference, copied from KP-Qt main @
+ * e987302c3dfa04e579d1ac1605cd188d4750cfab (PR #92, merged),
  * `tools/ayanamsa-ref/ayanamsa_reference.json`.
  *
- * Regenerate there (Qt 6), from the KP-Qt repo root:
+ * Regenerate from KP-Qt main (Qt 6), from that repo root:
+ *   git checkout main
  *   cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DKP_BUILD_AYANAMSA_REF=ON
  *   cmake --build build --target ayanamsa-ref
  *   ./build/ayanamsa-ref --output tools/ayanamsa-ref/ayanamsa_reference.json
@@ -62,7 +62,7 @@ function systemOf(name: string) {
   return reference.systems.find((row) => row.name === name)!;
 }
 
-describe('KP-Qt reference JSON (PR 92, e5ca41d)', () => {
+describe('KP-Qt reference JSON (main @ e987302, PR #92 merged)', () => {
   it('J2000 TT means match the published sanity values', () => {
     const epoch = epochOf('2000-01-01T12:00:00TT');
     const civil = civilOf(epoch.id);
@@ -114,7 +114,6 @@ describe('KP-Qt reference JSON (PR 92, e5ca41d)', () => {
         maxGap = Math.max(maxGap, gap);
       }
     }
-    // IAU 2000B versus KP-Qt's IAU 1980 is more than 0.001 arcsec. Recorded, not collapsed.
     // IAU 2000B versus KP-Qt's IAU 1980. Measured maximum on this grid is 0.00814 arcsec.
     expect(maxGap).toBeGreaterThan(0.008);
     expect(maxGap).toBeLessThan(0.009);
