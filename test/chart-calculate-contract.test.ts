@@ -167,10 +167,24 @@ function expectClose(actual: unknown, expected: unknown, path: string, tolerance
 }
 
 describe('POST /api/chart/calculate contract (Kuala Lumpur 1980-01-01 10:00 +08)', () => {
-  it('returns the captured fixture for the sample request', async () => {
+  it('keeps the captured request and shape; angles follow this branch\'s KPSTLA', async () => {
+    // The fixture file is the #85 capture and is not rewritten. Its request pins
+    // kp_straight_line_adjusted, so the page's KP New preselect does not apply.
+    // On this branch KPSTLA's true ayanamsa does not include nutation, so the
+    // captured angles (main, true = mean + dPsi) are not byte-identical.
+    const captured = fixture as { success: boolean; data: { ayanamsaType: string; ayanamsaValue: number; nutationInLongitude: number; julianDateUT: number; input: { ayanamsa?: string } } };
     const { status, json } = await calculate(KUALA_LUMPUR_1980);
     expect(status).toBe(200);
-    expect(json).toEqual(fixture);
+    expect(json.success).toBe(captured.success);
+    expect(json.data.ayanamsaType).toBe('kp_straight_line_adjusted');
+    expect(json.data.ayanamsaType).toBe(captured.data.ayanamsaType);
+    expect(json.data.input).toEqual(captured.data.input);
+    expect(json.data.julianDateUT).toBe(captured.data.julianDateUT);
+    expect(Object.keys(json.data).sort()).toEqual(Object.keys(captured.data).sort());
+    expect(json.data.ayanamsaValue - captured.data.ayanamsaValue).toBeCloseTo(
+      -captured.data.nutationInLongitude,
+      6
+    );
   });
 
   it('pins the response envelope, chart fields, cusps, ayanamsa, Julian date and sidereal time', async () => {
