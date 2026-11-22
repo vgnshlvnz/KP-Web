@@ -7,7 +7,8 @@
  *   GET  /api/ayanamsa         the supported ayanamsas and their value at `?date=`
  *   GET  /api/horary/table     the 1-249 table, `{ success, count, table }`      (UI contract, unchanged)
  *   GET  /api/horary-table     the 1-249 table, bare; `?number=` for one entry
- *   GET  /api/chart/sample     sample inputs                                      (UI contract, unchanged)
+ *   GET  /api/locations        countries with their places (the owner's locations.db), `{ count, countries }`
+ *   GET  /api/chart/sample     sample inputs, each with a `locationId`
  *   POST /api/chart/cusps      Placidus cusps, `{ success, data }`                (UI contract, unchanged)
  *   POST /api/chart/calculate  cusps + planets + significators, `{ success, data }` (UI contract, unchanged)
  *   POST /api/calculate        natal chart, `calculateChart`, bare result
@@ -19,6 +20,15 @@
  * cusp `formatted` / `signName`, planet `formatted` / `signName` / `signIndex` / `house`,
  * `significators.houseWise`, and `chartWheels.southIndian` / `northIndian` as arrays.
  * `/api/calculate` returns that chart bare. `/api/chart/*` wraps it in `{ success, data }`.
+ *
+ * Place: the three chart routes (and `/api/chart/cusps`) take EITHER `latitude`, `longitude` and `utcOffsetHours`
+ * (the existing path) OR `locationId` (a row of `GET /api/locations`). `locationId` together with any of the three
+ * is 400, and so is an unknown id. With `locationId` the server resolves the coordinates, the zone and the UTC
+ * offset in force at the local date and time (IANA rules through `computeTimezoneOffset`), and the response gains
+ * `location: { id, country, place, latitude, longitude, timezone, utcOffsetHours, preIanaReliableCaution }`
+ * (top level, next to `data` on `/api/chart/*`). A local time inside a DST gap, or one that occurs twice, is 400:
+ * for the second case send `ambiguousTime: "earlier" | "later"` to choose. `hour`, `minute`, `second` must be
+ * integers with `locationId`.
  *
  * Errors: invalid input is 400 `{ error }`; `PolarLatitudeError` (horary) is 422; anything else is
  * 500 with a generic message and no stack trace. The `/api/chart/*` routes also carry
@@ -54,6 +64,9 @@ import type {
 } from './engine/index.js';
 import { AYANAMSA_LABELS, AYANAMSA_MODES, DEFAULT_AYANAMSA_SELECTION } from './engine/ayanamsa-defs.js';
 import { validateAyanamsa } from './core/validation.js';
+import { getLocation, listLocationsByCountry, PRE_IANA_RELIABLE_YEAR } from './core/locations.js';
+import { AmbiguousLocalTimeError, computeTimezoneOffset, NonexistentLocalTimeError } from './core/timezone.js';
+import { LOCATIONS } from './data/locations.js';
 
 // ---------------------------------------------------------------------------
 // Engine configuration: the two decisions that are still open (#23, #24)
@@ -126,23 +139,50 @@ function numberField(body: Body, key: string, missing: number | undefined): numb
   return n;
 }
 
+/** The place a request resolved through `locationId`, as returned in `location`. */
+interface ResolvedLocation {
+  id: number;
+  country: string;
+  place: string | null;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  /** Hours east of Greenwich, in force at the local date and time (exact to the second). */
+  utcOffsetHours: number;
+  /** True for a birth before 1970, where IANA says its zone data may be incomplete. */
+  preIanaReliableCaution: boolean;
+}
+
+const PLACE_FIELDS = ['latitude', 'longitude', 'utcOffsetHours'] as const;
+
 /**
- * Civil date, time and place. `utcOffsetHours` handling is the one difference between the routes:
+ * Civil date, time and place. The place is EITHER `latitude` + `longitude` + `utcOffsetHours` OR `locationId`
+ * (never both). `utcOffsetHours` handling is the one difference between the routes on the first form:
  * `'required'` (`/api/calculate` and `/api/horary`): a missing offset is 400, never silently UTC.
- * `'legacy_utc'` (`/api/chart/*`): a missing offset is still stored as 0. The page sends the offset.
+ * `'legacy_utc'` (`/api/chart/*`): a missing offset is still stored as 0. The page sends `locationId`.
  */
-function parseDateTimeLocation(body: Body, offset: 'required' | 'legacy_utc'): DateTimeLocation {
+function parseDateTimeLocation(
+  body: Body,
+  offset: 'required' | 'legacy_utc'
+): { input: DateTimeLocation; location: ResolvedLocation | null } {
+  const usesLocation = body.locationId !== undefined;
+  if (usesLocation) {
+    const clash = PLACE_FIELDS.filter((k) => body[k] !== undefined);
+    if (clash.length > 0) {
+      throw new BadRequestError(
+        `Send either "locationId" or "latitude", "longitude" and "utcOffsetHours", not both (got "locationId" and ${clash.map((k) => `"${k}"`).join(', ')}).`
+      );
+    }
+  }
   const year = numberField(body, 'year', undefined);
   const month = numberField(body, 'month', undefined);
   const day = numberField(body, 'day', undefined);
   const hour = numberField(body, 'hour', undefined);
   const minute = numberField(body, 'minute', undefined);
   const second = numberField(body, 'second', 0);
-  const latitude = numberField(body, 'latitude', undefined);
-  const longitude = numberField(body, 'longitude', undefined);
-  // TODO(#29 Q10): on `/api/chart/*` a missing offset is still stored as 0 (UT = local clock).
-  // Positive `utcOffsetHours` is east of Greenwich: UT = local − offset. The page always sends it.
-  const utcOffsetHours = numberField(body, 'utcOffsetHours', offset === 'legacy_utc' ? 0 : undefined);
+  const row = usesLocation ? requireLocation(body.locationId) : null;
+  const latitude = row ? row.latitude : numberField(body, 'latitude', undefined);
+  const longitude = row ? row.longitude : numberField(body, 'longitude', undefined);
 
   if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
     throw new BadRequestError('"year", "month" and "day" must be integers.');
@@ -155,6 +195,30 @@ function parseDateTimeLocation(body: Body, offset: 'required' | 'legacy_utc'): D
   if (hour < 0 || hour >= 24 || minute < 0 || minute >= 60 || second < 0 || second >= 60) {
     throw new BadRequestError(`Not a clock time: ${hour}:${minute}:${second}.`);
   }
+
+  let utcOffsetHours: number;
+  let location: ResolvedLocation | null = null;
+  if (row) {
+    if (!Number.isInteger(hour) || !Number.isInteger(minute) || !Number.isInteger(second)) {
+      throw new BadRequestError('"hour", "minute" and "second" must be integers when "locationId" is used.');
+    }
+    utcOffsetHours = historicalOffsetHours(body, row.timezone, year, month, day, hour, minute, second);
+    location = {
+      id: row.id,
+      country: row.country,
+      place: row.place,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      timezone: row.timezone,
+      utcOffsetHours,
+      preIanaReliableCaution: year < PRE_IANA_RELIABLE_YEAR,
+    };
+  } else {
+    // TODO(#29 Q10): on `/api/chart/*` a missing offset is still stored as 0 (UT = local clock).
+    // Positive `utcOffsetHours` is east of Greenwich: UT = local - offset.
+    utcOffsetHours = numberField(body, 'utcOffsetHours', offset === 'legacy_utc' ? 0 : undefined);
+  }
+
   if (latitude < -90 || latitude > 90) {
     throw new BadRequestError(`"latitude" must be between -90 and 90, got ${latitude}.`);
   }
@@ -164,7 +228,46 @@ function parseDateTimeLocation(body: Body, offset: 'required' | 'legacy_utc'): D
   if (Math.abs(utcOffsetHours) > 24) {
     throw new BadRequestError(`"utcOffsetHours" must be between -24 and 24, got ${utcOffsetHours}.`);
   }
-  return { year, month, day, hour, minute, second, utcOffsetHours, latitude, longitude };
+  return { input: { year, month, day, hour, minute, second, utcOffsetHours, latitude, longitude }, location };
+}
+
+/** `locationId` must be the integer id of a row in `GET /api/locations`. */
+function requireLocation(raw: unknown) {
+  if (typeof raw !== 'number' || !Number.isInteger(raw)) {
+    throw new BadRequestError(`"locationId" must be an integer, got ${JSON.stringify(raw)}.`);
+  }
+  const row = getLocation(raw);
+  if (!row) throw new BadRequestError(`Unknown "locationId": ${raw}. Use an id from GET /api/locations.`);
+  return row;
+}
+
+/**
+ * The UTC offset of `timeZone` at the local wall-clock time, from the IANA rules for that date. A time in a
+ * DST gap, or one that occurs twice with no `ambiguousTime` given, is a 400: never resolved silently.
+ */
+function historicalOffsetHours(
+  body: Body,
+  timeZone: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number
+): number {
+  const choice = body.ambiguousTime;
+  if (choice !== undefined && choice !== 'earlier' && choice !== 'later') {
+    throw new BadRequestError('"ambiguousTime" must be "earlier" or "later" when given.');
+  }
+  try {
+    const r = computeTimezoneOffset(year, month, day, hour, minute, second, timeZone, { ambiguous: choice ?? 'reject' });
+    return r.offsetSeconds / 3600;
+  } catch (err) {
+    if (err instanceof NonexistentLocalTimeError || err instanceof AmbiguousLocalTimeError) {
+      throw new BadRequestError(err.message);
+    }
+    throw err;
+  }
 }
 
 function parsePlanets(body: Body): PlanetInput[] {
@@ -237,6 +340,7 @@ app.get('/api/health', (c) => {
       'GET  /api/ayanamsa',
       'GET  /api/horary/table',
       'GET  /api/horary-table',
+      'GET  /api/locations',
       'GET  /api/chart/sample',
       'POST /api/chart/cusps',
       'POST /api/chart/calculate',
@@ -249,19 +353,21 @@ app.get('/api/health', (c) => {
 // Sample inputs for the UI. These are inputs only: the planet longitudes this list used to carry
 // ("verified against Swiss Ephemeris") were invented, were never returned by the route, and are removed.
 // Reference longitudes live in docs/build-fix/audit.md Appendix A and test/chart-reference.test.ts.
+//
+// Each sample names a `locationId` (a row of locations.db) instead of coordinates and an offset. Both samples were
+// stated in UTC at Delhi and Chennai; the same instants are kept, written as the local clock time the offset
+// +5:30 gives (India Independence 14 Aug 1947 18:30 UTC is 15 Aug 1947 00:00 IST).
 const SAMPLE_CHARTS = [
   {
     id: 'india-independence',
     title: 'India Independence (New Delhi)',
     year: 1947,
     month: 8,
-    day: 14,
-    hour: 18,
-    minute: 30,
+    day: 15,
+    hour: 0,
+    minute: 0,
     second: 0,
-    utcOffsetHours: 0,
-    latitude: 28.6139,
-    longitude: 77.209,
+    locationId: 916, // India | Delhi
     ayanamsa: 'kp_old' as AyanamsaMode,
   },
   {
@@ -270,12 +376,10 @@ const SAMPLE_CHARTS = [
     year: 2026,
     month: 11,
     day: 21,
-    hour: 6,
-    minute: 25,
+    hour: 11,
+    minute: 55,
     second: 0,
-    utcOffsetHours: 0,
-    latitude: 13.0827,
-    longitude: 80.2707,
+    locationId: 919, // India | Chennai
     ayanamsa: 'kp_old' as AyanamsaMode,
   },
 ];
@@ -292,9 +396,7 @@ app.get('/api/chart/sample', (c) => {
         hour: s.hour,
         minute: s.minute,
         second: s.second,
-        utcOffsetHours: s.utcOffsetHours,
-        latitude: s.latitude,
-        longitude: s.longitude,
+        locationId: s.locationId,
         ayanamsa: s.ayanamsa,
       },
     })),
@@ -310,17 +412,24 @@ app.get('/api/chart/sample', (c) => {
 async function legacyChart(req: { json(): Promise<unknown> }) {
   const body = await readJsonBody(req);
   const ayanamsa = requireAyanamsa(body); // required, no default (#22 decided: UI preselect only)
-  const input = parseDateTimeLocation(body, 'legacy_utc');
+  const { input, location } = parseDateTimeLocation(body, 'legacy_utc');
   const planets = parsePlanets(body);
-  return calculateKPChart(input, ayanamsa, planets);
+  return { data: calculateKPChart(input, ayanamsa, planets), location };
 }
 
 app.post('/api/chart/cusps', async (c) => {
-  return c.json({ success: true, data: await legacyChart(c.req) });
+  const { data, location } = await legacyChart(c.req);
+  return c.json({ success: true, data, ...(location && { location }) });
 });
 
 app.post('/api/chart/calculate', async (c) => {
-  return c.json({ success: true, data: await legacyChart(c.req) });
+  const { data, location } = await legacyChart(c.req);
+  return c.json({ success: true, data, ...(location && { location }) });
+});
+
+/** Every row of the owner's locations.db, grouped by country: the page's Country then Place selects. */
+app.get('/api/locations', (c) => {
+  return c.json({ count: LOCATIONS.length, countries: listLocationsByCountry() });
 });
 
 app.get('/api/horary/table', (c) => {
@@ -386,14 +495,15 @@ app.get('/api/ayanamsa', (c) => {
 
 /**
  * Natal or event chart: `calculateChart`. Flat body, the fields of `DateTimeLocation` plus
- * `ayanamsa`: year, month, day, hour, minute, second (optional, 0), utcOffsetHours (REQUIRED, no
- * silent UTC), latitude, longitude, ayanamsa (REQUIRED, #22 decided: no API default).
+ * `ayanamsa`: year, month, day, hour, minute, second (optional, 0), then EITHER utcOffsetHours (REQUIRED, no
+ * silent UTC) + latitude + longitude OR `locationId`; ayanamsa (REQUIRED, #22 decided: no API default).
  */
 app.post('/api/calculate', async (c) => {
   const body = await readJsonBody(c.req);
   const ayanamsa = requireAyanamsa(body);
-  const input = parseDateTimeLocation(body, 'required');
-  return c.json(calculateChart(input, engineOptions(ayanamsa)));
+  const { input, location } = parseDateTimeLocation(body, 'required');
+  const chart = calculateChart(input, engineOptions(ayanamsa));
+  return c.json(location ? { ...chart, location } : chart);
 });
 
 /**
@@ -412,12 +522,12 @@ app.post('/api/horary', async (c) => {
   if (body.useSubMidpoint !== undefined && typeof body.useSubMidpoint !== 'boolean') {
     throw new BadRequestError('"useSubMidpoint" must be a boolean when given.');
   }
-  const questionTime = parseDateTimeLocation(body, 'required');
+  const { input: questionTime, location } = parseDateTimeLocation(body, 'required');
   const result = calculateHoraryChart(
     { questionTime, horaryNumber, useSubMidpoint: body.useSubMidpoint === true },
     engineOptions(ayanamsa)
   );
-  return c.json(result);
+  return c.json(location ? { ...result, location } : result);
 });
 
 export default app;

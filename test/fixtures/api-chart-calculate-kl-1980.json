@@ -14,30 +14,30 @@
     },
     "ayanamsaType": "kp_straight_line_adjusted",
     "ayanamsaName": "KP Straight Line (Adjusted)",
-    "ayanamsaValue": 23.567689055757924,
+    "ayanamsaValue": 23.569889555278447,
     "julianDateUT": 2444239.5833333335,
     "greenwichMeanSiderealTime": 8.659730409631074,
-    "greenwichApparentSiderealTime": 8.659595815193217,
-    "localSiderealTimeHours": 15.439595815193218,
-    "localSiderealTimeDegrees": 231.59393722789827,
-    "armc": 231.59393722789827,
+    "greenwichApparentSiderealTime": 8.659597138395917,
+    "localSiderealTimeHours": 15.439597138395918,
+    "localSiderealTimeDegrees": 231.59395707593876,
+    "armc": 231.59395707593876,
     "obliquityMean": 23.44188162888764,
-    "obliquityTrue": 23.439439686503217,
-    "nutationInLongitude": -0.0022004995205223404,
-    "nutationInObliquity": -0.0024419423844207876,
-    "ascendant": 294.7201490547385,
-    "midheaven": 210.40224467232463,
+    "obliquityTrue": 23.43944001494122,
+    "nutationInLongitude": -0.002178866336959189,
+    "nutationInObliquity": -0.002441613946419627,
+    "ascendant": 294.71796896872394,
+    "midheaven": 210.40006363506268,
     "cusps": [
       {
-        "longitude": 294.7201490547385,
+        "longitude": 294.71796896872394,
         "signIndex": 9,
         "signName": "Capricorn",
         "signLord": "Saturn",
-        "degreeInSign": 24.7201490547385,
-        "formatted": "24°43'13\" Cap",
+        "degreeInSign": 24.717968968723937,
+        "formatted": "24°43'05\" Cap",
         "degrees": 24,
         "minutes": 43,
-        "seconds": 13,
+        "seconds": 5,
         "starIndex": 22,
         "starNumber": 23,
         "starName": "Dhanishta",
@@ -46,19 +46,19 @@
         "subSubLord": "Saturn",
         "horary249Number": 205,
         "house": 1,
-        "nextCuspLongitude": 327.1347428470901,
-        "houseSpan": 32.41459379235158
+        "nextCuspLongitude": 327.13256421251634,
+        "houseSpan": 32.414595243792405
       },
       {
-        "longitude": 327.1347428470901,
+        "longitude": 327.13256421251634,
         "signIndex": 10,
         "signName": "Aquarius",
         "signLord": "Saturn",
-        "degreeInSign": 27.13474284709008,
-        "formatted": "27°08'05\" Aqu",
+        "degreeInSign": 27.132564212516343,
+        "formatted": "27°07'57\" Aqu",
         "degrees": 27,
-        "minutes": 8,
-        "seconds": 5,
+        "minutes": 7,
+        "seconds": 57,
         "starIndex": 24,
         "starNumber": 25,
         "starName": "Purva Bhadrapada",
@@ -67,19 +67,19 @@
         "subSubLord": "Moon",
         "horary249Number": 226,
         "house": 2,
-        "nextCuspLongitude": 359.9484140231656,
-        "houseSpan": 32.8136711760755
+        "nextCuspLongitude": 359.94623482459826,
+        "houseSpan": 32.81367061208192
       },
       {
-        "longitude": 359.9484140231656,
+        "longitude": 359.94623482459826,
         "signIndex": 11,
         "signName": "Pisces",
         "signLord": "Jupiter",
-        "degreeInSign": 29.948414023165583,
-        "formatted": "29°56'54\" Pis",
+        "degreeInSign": 29.946234824598264,
+        "formatted": "29°56'46\" Pis",
         "degrees": 29,
         "minutes": 56,
-        "seconds": 54,
+        "seconds": 46,
         "starIndex": 26,
         "starNumber": 27,
         "starName": "Revati",
@@ -88,19 +88,19 @@
         "subSubLord": "Jupiter",
         "horary249Number": 249,
         "house": 3,
-        "nextCuspLongitude": 30.402244672324613,
-        "houseSpan": 30.453830649159045
+        "nextCuspLongitude": 30.400063635062683,
+        "houseSpan": 30.453828810464415
       },
       {
-        "longitude": 30.402244672324613,
+        "longitude": 30.400063635062683,
         "signIndex": 1,
         "signName": "Taurus",
         "signLord": "Venus",
-        "degreeInSign": 0.40224467232461336,
-        "formatted": "00°24'08\" Tau",
+        "degreeInSign": 0.4000636350626827,
+        "formatted": "00°24'00\" Tau",
         "degrees": 0,
         "minutes": 24,
-        "seconds": 8,
+        "seconds": 0,
         "starIndex": 2,
         "starNumber": 3,
         "starName": "Krittika",
@@ -109,19 +109,19 @@
         "subSubLord": "Ketu",
         "horary249Number": 23,
         "house": 4,
-        "nextCuspLongitude": 58.294349898592245,
-        "houseSpan": 27.89210522626763
+        "nextCuspLongitude": 58.29216766879074,
+        "houseSpan": 27.892104033728057
       },
       {
-        "longitude": 58.294349898592245,
+        "longitude": 58.29216766879074,
         "signIndex": 1,
         "signName": "Taurus",
         "signLord": "Venus",
-        "degreeInSign": 28.294349898592245,
-        "formatted": "28°17'40\" Tau",
+        "degreeInSign": 28.29216766879074,
+        "formatted": "28°17'32\" Tau",
         "degrees": 28,
         "minutes": 17,
-        "seconds": 40,
+        "seconds": 32,
         "starIndex": 4,
         "starNumber": 5,
         "starName": "Mrigashira",
@@ -130,19 +130,19 @@
         "subSubLord": "Mercury",
         "horary249Number": 41,
         "house": 5,
-        "nextCuspLongitude": 85.58771475617594,
-        "houseSpan": 27.293364857583697
+        "nextCuspLongitude": 85.58553288442113,
+        "houseSpan": 27.293365215630388
       },
       {
-        "longitude": 85.58771475617594,
+        "longitude": 85.58553288442113,
         "signIndex": 2,
         "signName": "Gemini",
         "signLord": "Mercury",
-        "degreeInSign": 25.58771475617594,
-        "formatted": "25°35'16\" Gem",
+        "degreeInSign": 25.585532884421127,
+        "formatted": "25°35'08\" Gem",
         "degrees": 25,
         "minutes": 35,
-        "seconds": 16,
+        "seconds": 8,
         "starIndex": 6,
         "starNumber": 7,
         "starName": "Punarvasu",
@@ -151,19 +151,19 @@
         "subSubLord": "Saturn",
         "horary249Number": 58,
         "house": 6,
-        "nextCuspLongitude": 114.72014905473849,
-        "houseSpan": 29.132434298562544
+        "nextCuspLongitude": 114.71796896872394,
+        "houseSpan": 29.13243608430281
       },
       {
-        "longitude": 114.72014905473849,
+        "longitude": 114.71796896872394,
         "signIndex": 3,
         "signName": "Cancer",
         "signLord": "Moon",
-        "degreeInSign": 24.720149054738485,
-        "formatted": "24°43'13\" Can",
+        "degreeInSign": 24.717968968723937,
+        "formatted": "24°43'05\" Can",
         "degrees": 24,
         "minutes": 43,
-        "seconds": 13,
+        "seconds": 5,
         "starIndex": 8,
         "starNumber": 9,
         "starName": "Ashlesha",
@@ -172,19 +172,19 @@
         "subSubLord": "Saturn",
         "horary249Number": 81,
         "house": 7,
-        "nextCuspLongitude": 147.13474284709014,
-        "houseSpan": 32.41459379235165
+        "nextCuspLongitude": 147.1325642125164,
+        "houseSpan": 32.41459524379246
       },
       {
-        "longitude": 147.13474284709014,
+        "longitude": 147.1325642125164,
         "signIndex": 4,
         "signName": "Leo",
         "signLord": "Sun",
-        "degreeInSign": 27.134742847090138,
-        "formatted": "27°08'05\" Leo",
+        "degreeInSign": 27.1325642125164,
+        "formatted": "27°07'57\" Leo",
         "degrees": 27,
-        "minutes": 8,
-        "seconds": 5,
+        "minutes": 7,
+        "seconds": 57,
         "starIndex": 11,
         "starNumber": 12,
         "starName": "Uttara Phalguni",
@@ -193,19 +193,19 @@
         "subSubLord": "Mercury",
         "horary249Number": 102,
         "house": 8,
-        "nextCuspLongitude": 179.94841402316558,
-        "houseSpan": 32.813671176075445
+        "nextCuspLongitude": 179.94623482459826,
+        "houseSpan": 32.813670612081864
       },
       {
-        "longitude": 179.94841402316558,
+        "longitude": 179.94623482459826,
         "signIndex": 5,
         "signName": "Virgo",
         "signLord": "Mercury",
-        "degreeInSign": 29.948414023165583,
-        "formatted": "29°56'54\" Vir",
+        "degreeInSign": 29.946234824598264,
+        "formatted": "29°56'46\" Vir",
         "degrees": 29,
         "minutes": 56,
-        "seconds": 54,
+        "seconds": 46,
         "starIndex": 13,
         "starNumber": 14,
         "starName": "Chitra",
@@ -214,19 +214,19 @@
         "subSubLord": "Jupiter",
         "horary249Number": 124,
         "house": 9,
-        "nextCuspLongitude": 210.40224467232463,
-        "houseSpan": 30.453830649159045
+        "nextCuspLongitude": 210.40006363506268,
+        "houseSpan": 30.453828810464415
       },
       {
-        "longitude": 210.40224467232463,
+        "longitude": 210.40006363506268,
         "signIndex": 7,
         "signName": "Scorpio",
         "signLord": "Mars",
-        "degreeInSign": 0.4022446723246276,
-        "formatted": "00°24'08\" Sco",
+        "degreeInSign": 0.40006363506267917,
+        "formatted": "00°24'00\" Sco",
         "degrees": 0,
         "minutes": 24,
-        "seconds": 8,
+        "seconds": 0,
         "starIndex": 15,
         "starNumber": 16,
         "starName": "Vishakha",
@@ -235,19 +235,19 @@
         "subSubLord": "Venus",
         "horary249Number": 146,
         "house": 10,
-        "nextCuspLongitude": 238.29434989859226,
-        "houseSpan": 27.89210522626763
+        "nextCuspLongitude": 238.29216766879074,
+        "houseSpan": 27.89210403372806
       },
       {
-        "longitude": 238.29434989859226,
+        "longitude": 238.29216766879074,
         "signIndex": 7,
         "signName": "Scorpio",
         "signLord": "Mars",
-        "degreeInSign": 28.29434989859226,
-        "formatted": "28°17'40\" Sco",
+        "degreeInSign": 28.29216766879074,
+        "formatted": "28°17'32\" Sco",
         "degrees": 28,
         "minutes": 17,
-        "seconds": 40,
+        "seconds": 32,
         "starIndex": 17,
         "starNumber": 18,
         "starName": "Jyeshtha",
@@ -256,19 +256,19 @@
         "subSubLord": "Mercury",
         "horary249Number": 166,
         "house": 11,
-        "nextCuspLongitude": 265.58771475617596,
-        "houseSpan": 27.293364857583697
+        "nextCuspLongitude": 265.5855328844211,
+        "houseSpan": 27.293365215630388
       },
       {
-        "longitude": 265.58771475617596,
+        "longitude": 265.5855328844211,
         "signIndex": 8,
         "signName": "Sagittarius",
         "signLord": "Jupiter",
-        "degreeInSign": 25.587714756175956,
-        "formatted": "25°35'16\" Sag",
+        "degreeInSign": 25.585532884421127,
+        "formatted": "25°35'08\" Sag",
         "degrees": 25,
         "minutes": 35,
-        "seconds": 16,
+        "seconds": 8,
         "starIndex": 19,
         "starNumber": 20,
         "starName": "Purva Ashadha",
@@ -277,8 +277,8 @@
         "subSubLord": "Jupiter",
         "horary249Number": 183,
         "house": 12,
-        "nextCuspLongitude": 294.7201490547385,
-        "houseSpan": 29.132434298562544
+        "nextCuspLongitude": 294.71796896872394,
+        "houseSpan": 29.13243608430281
       }
     ],
     "chartWheels": {
@@ -297,13 +297,13 @@
           "cusps": [
             {
               "house": 4,
-              "formatted": "00°24'08\" Tau",
-              "longitude": 30.402244672324613
+              "formatted": "00°24'00\" Tau",
+              "longitude": 30.400063635062683
             },
             {
               "house": 5,
-              "formatted": "28°17'40\" Tau",
-              "longitude": 58.294349898592245
+              "formatted": "28°17'32\" Tau",
+              "longitude": 58.29216766879074
             }
           ],
           "planets": []
@@ -315,8 +315,8 @@
           "cusps": [
             {
               "house": 6,
-              "formatted": "25°35'16\" Gem",
-              "longitude": 85.58771475617594
+              "formatted": "25°35'08\" Gem",
+              "longitude": 85.58553288442113
             }
           ],
           "planets": []
@@ -328,8 +328,8 @@
           "cusps": [
             {
               "house": 7,
-              "formatted": "24°43'13\" Can",
-              "longitude": 114.72014905473849
+              "formatted": "24°43'05\" Can",
+              "longitude": 114.71796896872394
             }
           ],
           "planets": []
@@ -341,8 +341,8 @@
           "cusps": [
             {
               "house": 8,
-              "formatted": "27°08'05\" Leo",
-              "longitude": 147.13474284709014
+              "formatted": "27°07'57\" Leo",
+              "longitude": 147.1325642125164
             }
           ],
           "planets": []
@@ -354,8 +354,8 @@
           "cusps": [
             {
               "house": 9,
-              "formatted": "29°56'54\" Vir",
-              "longitude": 179.94841402316558
+              "formatted": "29°56'46\" Vir",
+              "longitude": 179.94623482459826
             }
           ],
           "planets": []
@@ -374,13 +374,13 @@
           "cusps": [
             {
               "house": 10,
-              "formatted": "00°24'08\" Sco",
-              "longitude": 210.40224467232463
+              "formatted": "00°24'00\" Sco",
+              "longitude": 210.40006363506268
             },
             {
               "house": 11,
-              "formatted": "28°17'40\" Sco",
-              "longitude": 238.29434989859226
+              "formatted": "28°17'32\" Sco",
+              "longitude": 238.29216766879074
             }
           ],
           "planets": []
@@ -392,8 +392,8 @@
           "cusps": [
             {
               "house": 12,
-              "formatted": "25°35'16\" Sag",
-              "longitude": 265.58771475617596
+              "formatted": "25°35'08\" Sag",
+              "longitude": 265.5855328844211
             }
           ],
           "planets": []
@@ -405,8 +405,8 @@
           "cusps": [
             {
               "house": 1,
-              "formatted": "24°43'13\" Cap",
-              "longitude": 294.7201490547385
+              "formatted": "24°43'05\" Cap",
+              "longitude": 294.71796896872394
             }
           ],
           "planets": []
@@ -418,8 +418,8 @@
           "cusps": [
             {
               "house": 2,
-              "formatted": "27°08'05\" Aqu",
-              "longitude": 327.1347428470901
+              "formatted": "27°07'57\" Aqu",
+              "longitude": 327.13256421251634
             }
           ],
           "planets": []
@@ -431,8 +431,8 @@
           "cusps": [
             {
               "house": 3,
-              "formatted": "29°56'54\" Pis",
-              "longitude": 359.9484140231656
+              "formatted": "29°56'46\" Pis",
+              "longitude": 359.94623482459826
             }
           ],
           "planets": []
@@ -444,8 +444,8 @@
           "signIndex": 9,
           "signName": "Capricorn",
           "signLord": "Saturn",
-          "cuspLongitude": 294.7201490547385,
-          "cuspFormatted": "24°43'13\" Cap",
+          "cuspLongitude": 294.71796896872394,
+          "cuspFormatted": "24°43'05\" Cap",
           "planets": []
         },
         {
@@ -453,8 +453,8 @@
           "signIndex": 10,
           "signName": "Aquarius",
           "signLord": "Saturn",
-          "cuspLongitude": 327.1347428470901,
-          "cuspFormatted": "27°08'05\" Aqu",
+          "cuspLongitude": 327.13256421251634,
+          "cuspFormatted": "27°07'57\" Aqu",
           "planets": []
         },
         {
@@ -462,8 +462,8 @@
           "signIndex": 11,
           "signName": "Pisces",
           "signLord": "Jupiter",
-          "cuspLongitude": 359.9484140231656,
-          "cuspFormatted": "29°56'54\" Pis",
+          "cuspLongitude": 359.94623482459826,
+          "cuspFormatted": "29°56'46\" Pis",
           "planets": []
         },
         {
@@ -471,8 +471,8 @@
           "signIndex": 1,
           "signName": "Taurus",
           "signLord": "Venus",
-          "cuspLongitude": 30.402244672324613,
-          "cuspFormatted": "00°24'08\" Tau",
+          "cuspLongitude": 30.400063635062683,
+          "cuspFormatted": "00°24'00\" Tau",
           "planets": []
         },
         {
@@ -480,8 +480,8 @@
           "signIndex": 1,
           "signName": "Taurus",
           "signLord": "Venus",
-          "cuspLongitude": 58.294349898592245,
-          "cuspFormatted": "28°17'40\" Tau",
+          "cuspLongitude": 58.29216766879074,
+          "cuspFormatted": "28°17'32\" Tau",
           "planets": []
         },
         {
@@ -489,8 +489,8 @@
           "signIndex": 2,
           "signName": "Gemini",
           "signLord": "Mercury",
-          "cuspLongitude": 85.58771475617594,
-          "cuspFormatted": "25°35'16\" Gem",
+          "cuspLongitude": 85.58553288442113,
+          "cuspFormatted": "25°35'08\" Gem",
           "planets": []
         },
         {
@@ -498,8 +498,8 @@
           "signIndex": 3,
           "signName": "Cancer",
           "signLord": "Moon",
-          "cuspLongitude": 114.72014905473849,
-          "cuspFormatted": "24°43'13\" Can",
+          "cuspLongitude": 114.71796896872394,
+          "cuspFormatted": "24°43'05\" Can",
           "planets": []
         },
         {
@@ -507,8 +507,8 @@
           "signIndex": 4,
           "signName": "Leo",
           "signLord": "Sun",
-          "cuspLongitude": 147.13474284709014,
-          "cuspFormatted": "27°08'05\" Leo",
+          "cuspLongitude": 147.1325642125164,
+          "cuspFormatted": "27°07'57\" Leo",
           "planets": []
         },
         {
@@ -516,8 +516,8 @@
           "signIndex": 5,
           "signName": "Virgo",
           "signLord": "Mercury",
-          "cuspLongitude": 179.94841402316558,
-          "cuspFormatted": "29°56'54\" Vir",
+          "cuspLongitude": 179.94623482459826,
+          "cuspFormatted": "29°56'46\" Vir",
           "planets": []
         },
         {
@@ -525,8 +525,8 @@
           "signIndex": 7,
           "signName": "Scorpio",
           "signLord": "Mars",
-          "cuspLongitude": 210.40224467232463,
-          "cuspFormatted": "00°24'08\" Sco",
+          "cuspLongitude": 210.40006363506268,
+          "cuspFormatted": "00°24'00\" Sco",
           "planets": []
         },
         {
@@ -534,8 +534,8 @@
           "signIndex": 7,
           "signName": "Scorpio",
           "signLord": "Mars",
-          "cuspLongitude": 238.29434989859226,
-          "cuspFormatted": "28°17'40\" Sco",
+          "cuspLongitude": 238.29216766879074,
+          "cuspFormatted": "28°17'32\" Sco",
           "planets": []
         },
         {
@@ -543,8 +543,8 @@
           "signIndex": 8,
           "signName": "Sagittarius",
           "signLord": "Jupiter",
-          "cuspLongitude": 265.58771475617596,
-          "cuspFormatted": "25°35'16\" Sag",
+          "cuspLongitude": 265.5855328844211,
+          "cuspFormatted": "25°35'08\" Sag",
           "planets": []
         }
       ]

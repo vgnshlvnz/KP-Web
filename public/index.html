@@ -247,8 +247,6 @@
         <div class="fields">
           <md-outlined-select id="sampleSelect" label="Sample charts">
             <md-select-option value="" selected><div slot="headline">— Load sample chart —</div></md-select-option>
-            <md-select-option value="india"><div slot="headline">India Independence (14 Aug 1947 18:30 UTC, Delhi)</div></md-select-option>
-            <md-select-option value="chennai"><div slot="headline">Chennai Sample (21 Nov 2026 06:25 UTC)</div></md-select-option>
           </md-outlined-select>
 
           <div class="fields-2">
@@ -256,51 +254,34 @@
             <md-outlined-text-field type="number" id="inpMonth" label="Month" value="8" min="1" max="12"></md-outlined-text-field>
           </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
-          <div class="form-group">
-            <label>Day</label>
-            <input type="number" id="inpDay" value="14" min="1" max="31">
+          <div class="fields-3">
+            <md-outlined-text-field type="number" id="inpDay" label="Day" value="15" min="1" max="31"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpHour" label="Hour (local)" value="0" min="0" max="23"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpMinute" label="Min" value="0" min="0" max="59"></md-outlined-text-field>
           </div>
-          <div class="form-group">
-            <label>Hour (local)</label>
-            <input type="number" id="inpHour" value="18" min="0" max="23">
-          </div>
-          <div class="form-group">
-            <label>Min</label>
-            <input type="number" id="inpMinute" value="30" min="0" max="59">
-          </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-          <div class="form-group">
-            <label>Sec</label>
-            <input type="number" id="inpSecond" value="0" min="0" max="59">
-          </div>
-          <div class="form-group">
-            <label>UTC offset (hours)</label>
-            <input type="number" step="0.25" id="inpUtcOffset" value="0">
-          </div>
-        </div>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin: -0.35rem 0 0.85rem;">
-          Local civil time. The offset is hours east of Greenwich (Kuala Lumpur +8, India +5.5, the Americas negative). Universal time is this clock time minus the offset. A missing offset would be read as 0. Planet positions are computed by the server.
-        </p>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-          <div class="form-group">
-            <label>Latitude (° N)</label>
-            <input type="number" step="0.0001" id="inpLat" value="28.6139">
-          </div>
-          <div class="form-group">
-            <label>Longitude (° E)</label>
-            <input type="number" step="0.0001" id="inpLon" value="77.2090">
-          </div>
-          <p class="supporting">Local civil time. The offset is hours east of Greenwich (Kuala Lumpur +8, India +5.5, the Americas negative). Universal time is this clock time minus the offset. A missing offset would be read as 0. Planet positions are computed by the server.</p>
 
           <div class="fields-2">
-            <md-outlined-text-field type="number" step="0.0001" id="inpLat" label="Latitude" suffix-text="° N" value="28.6139"></md-outlined-text-field>
-            <md-outlined-text-field type="number" step="0.0001" id="inpLon" label="Longitude" suffix-text="° E" value="77.2090"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
+            <md-outlined-select id="inpAmbiguous" label="Repeated time">
+              <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
+              <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
+              <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+            </md-outlined-select>
           </div>
+          <p class="supporting">Local civil time at the place chosen below. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date (zone changes and daylight saving included). A clock time that does not exist is refused. One that occurs twice (the clocks go back) is refused until you choose the earlier or the later one in "Repeated time".</p>
 
-        <button class="btn" id="btnCalculate">Calculate Chart</button>
+          <md-outlined-select id="inpCountry" label="Country"></md-outlined-select>
+          <md-outlined-select id="inpPlace" label="Place"></md-outlined-select>
+          <p class="supporting" id="placeNote">Each place is one reference point for a city, a state or the country, not your exact birthplace. Its coordinates are used as they are; a birth far from the point moves the Ascendant.</p>
+
+          <md-outlined-select id="inpAyanamsa" label="KP Ayanamsa">
+            <md-select-option value="kp_straight_line_adjusted"><div slot="headline">KP Straight Line (Adjusted)</div></md-select-option>
+            <md-select-option value="kp_old"><div slot="headline">KP Old (Original Krishnamurti)</div></md-select-option>
+            <md-select-option value="kp_new" selected><div slot="headline">KP New (Krishnamurti VP291)</div></md-select-option>
+          </md-outlined-select>
+        </div>
+
+        <md-filled-button class="block" id="btnCalculate"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M314-228h50v-88h88v-50h-88v-88h-50v88h-88v50h88v88Zm215-35h201v-49H529v49Zm0-107h201v-50H529v50Zm37-163 61-61 61 61 36-36-61-61 61-61-36-36-61 61-61-61-36 36 61 61-61 61 36 36Zm-325-72h196v-50H241v50Zm-61 485q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm0-600v600-600Z"/></svg></md-icon>Calculate Chart</md-filled-button>
       </div>
 
       <div class="card">
@@ -316,6 +297,22 @@
     <div>
       <!-- Meta Information -->
       <div class="meta-bar" id="metaBar" style="display: none;">
+        <div class="meta-item">
+          <span>Place</span>
+          <span id="metaPlace">-</span>
+        </div>
+        <div class="meta-item">
+          <span>Coordinates</span>
+          <span id="metaCoords">-</span>
+        </div>
+        <div class="meta-item">
+          <span>Time zone</span>
+          <span id="metaZone">-</span>
+        </div>
+        <div class="meta-item">
+          <span>UTC offset applied</span>
+          <span id="metaOffset">-</span>
+        </div>
         <div class="meta-item">
           <span>Julian Date (UT)</span>
           <span id="metaJD">-</span>
@@ -336,6 +333,10 @@
           <span>KP Ayanamsa</span>
           <span id="metaAyan">-</span>
         </div>
+      </div>
+
+      <div class="notice-box" id="preIanaNotice" style="display: none; margin-bottom: var(--space-4);" role="note">
+        <div><strong>Birth before 1970:</strong> IANA warns that its time zone data before 1970 may be incomplete or approximate for this place. Check the UTC offset applied above against a record of the birth.</div>
       </div>
 
       <!-- Tabs -->
@@ -402,12 +403,12 @@
       <!-- Tab 3: Significators -->
       <div class="card tab-content" id="tab-significators">
         <h2>KP 4-Level Significators</h2>
-        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
-          <div>
-            <h3 style="font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem;">House-wise Significators</h3>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-              Level 1: Planet in star of occupant &bull; Level 2: Occupant &bull; Level 3: Planet in star of lord &bull; Level 4: House lord
-            </p>
+        <div>
+          <h3>House-wise Significators</h3>
+          <p class="supporting">
+            Level 1: Planet in star of occupant &bull; Level 2: Occupant &bull; Level 3: Planet in star of lord &bull; Level 4: House lord
+          </p>
+          <div class="table-wrap">
             <table id="houseWiseTable">
               <thead>
                 <tr>
@@ -504,28 +505,83 @@
       northCont.style.display = 'block';
     });
 
-    function fillSample(values) {
-      document.getElementById('inpYear').value = values.year;
-      document.getElementById('inpMonth').value = values.month;
-      document.getElementById('inpDay').value = values.day;
-      document.getElementById('inpHour').value = values.hour;
-      document.getElementById('inpMinute').value = values.minute;
-      document.getElementById('inpSecond').value = 0;
-      document.getElementById('inpUtcOffset').value = 0;
-      document.getElementById('inpLat').value = values.latitude;
-      document.getElementById('inpLon').value = values.longitude;
-      document.getElementById('inpAyanamsa').value = 'kp_old';
+    // ---- Place: Country then Place, from GET /api/locations (the owner's locations.db) ----
+    const countrySel = document.getElementById('inpCountry');
+    const placeSel = document.getElementById('inpPlace');
+    let locationData = []; // [{ country, places: [{ id, country, place, latitude, longitude, timezone }] }]
+
+    function makeOption(value, label) {
+      const opt = document.createElement('md-select-option');
+      opt.setAttribute('value', value);
+      const headline = document.createElement('div');
+      headline.slot = 'headline';
+      headline.textContent = label;
+      opt.appendChild(headline);
+      return opt;
     }
 
-    // Sample selection. Both samples are stated in UTC, so the offset is 0.
-    document.getElementById('sampleSelect').addEventListener('change', (e) => {
-      const val = e.target.value;
-      if (val === 'india') {
-        fillSample({ year: 1947, month: 8, day: 14, hour: 18, minute: 30, latitude: 28.6139, longitude: 77.2090 });
-      } else if (val === 'chennai') {
-        fillSample({ year: 2026, month: 11, day: 21, hour: 6, minute: 25, latitude: 13.0827, longitude: 80.2707 });
+    function placeLabel(row) {
+      return row.place === null ? row.country + ' (country point)' : row.place;
+    }
+
+    async function fillPlaces(country, selectedId) {
+      placeSel.replaceChildren();
+      const entry = locationData.find(c => c.country === country);
+      const places = entry ? entry.places : [];
+      places.forEach(row => placeSel.appendChild(makeOption(String(row.id), placeLabel(row))));
+      await placeSel.updateComplete;
+      const pick = places.find(r => r.id === selectedId) || places[0];
+      placeSel.value = pick ? String(pick.id) : '';
+    }
+
+    async function selectLocation(id) {
+      for (const entry of locationData) {
+        if (entry.places.some(r => r.id === id)) {
+          countrySel.value = entry.country;
+          await fillPlaces(entry.country, id);
+          return;
+        }
       }
+    }
+
+    countrySel.addEventListener('change', () => { fillPlaces(countrySel.value, null); });
+
+    async function loadLocations() {
+      const res = await fetch('/api/locations');
+      const json = await res.json();
+      locationData = json.countries;
+      locationData.forEach(c => countrySel.appendChild(makeOption(c.country, c.country)));
+      await countrySel.updateComplete;
+      await selectLocation(916); // India | Delhi, the first sample's place
+    }
+
+    // ---- Samples: GET /api/chart/sample, each names a locationId ----
+    let samples = [];
+    async function loadSamples() {
+      const res = await fetch('/api/chart/sample');
+      const json = await res.json();
+      samples = json.samples;
+      const sel = document.getElementById('sampleSelect');
+      samples.forEach(sm => sel.appendChild(makeOption(sm.id, sm.title)));
+    }
+
+    async function fillSample(input) {
+      document.getElementById('inpYear').value = input.year;
+      document.getElementById('inpMonth').value = input.month;
+      document.getElementById('inpDay').value = input.day;
+      document.getElementById('inpHour').value = input.hour;
+      document.getElementById('inpMinute').value = input.minute;
+      document.getElementById('inpSecond').value = input.second;
+      document.getElementById('inpAyanamsa').value = input.ayanamsa;
+      await selectLocation(input.locationId);
+    }
+
+    document.getElementById('sampleSelect').addEventListener('change', (e) => {
+      const sample = samples.find(sm => sm.id === e.target.value);
+      if (sample) fillSample(sample.input);
     });
+
+    Promise.all([loadLocations(), loadSamples()]).catch(err => alert('Could not load the places: ' + err.message));
 
     function readInt(id) {
       const raw = String(document.getElementById(id).value).trim();
@@ -533,6 +589,8 @@
       return Number(raw);
     }
 
+    // Sends the place as `locationId` only: the server resolves the coordinates, the zone and the
+    // historical UTC offset, and returns them as `location`.
     function readChartRequest() {
       const year = readInt('inpYear');
       const month = readInt('inpMonth');
@@ -540,9 +598,8 @@
       const hour = readInt('inpHour');
       const minute = readInt('inpMinute');
       const second = readInt('inpSecond');
-      const latitude = Number(String(document.getElementById('inpLat').value).trim());
-      const longitude = Number(String(document.getElementById('inpLon').value).trim());
-      const utcOffsetHours = Number(String(document.getElementById('inpUtcOffset').value).trim());
+      const locationId = Number(placeSel.value);
+      const ambiguousTime = document.getElementById('inpAmbiguous').value;
       const ayanamsa = document.getElementById('inpAyanamsa').value;
       const errors = [];
       if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
@@ -556,21 +613,13 @@
       if (!Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59 || !Number.isInteger(second) || second < 0 || second > 59) {
         errors.push('Time must be a real clock time (hour 0–23, minute and second 0–59).');
       }
-      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-        errors.push('Latitude must be a number from -90 to 90.');
-      }
-      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-        errors.push('Longitude must be a number from -180 to 180.');
-      }
-      // Positive is east of Greenwich. The chart routes store a missing offset as 0.
-      if (!Number.isFinite(utcOffsetHours) || Math.abs(utcOffsetHours) > 24) {
-        errors.push('UTC offset must be a number from -24 to 24 hours (positive east of Greenwich).');
+      if (!placeSel.value || !Number.isInteger(locationId)) {
+        errors.push('Choose a country and a place.');
       }
       if (!ayanamsa) errors.push('Choose an ayanamsa.');
-      return {
-        errors,
-        payload: { year, month, day, hour, minute, second, utcOffsetHours, latitude, longitude, ayanamsa }
-      };
+      const payload = { year, month, day, hour, minute, second, locationId, ayanamsa };
+      if (ambiguousTime) payload.ambiguousTime = ambiguousTime;
+      return { errors, payload };
     }
 
     function formatFixed(value, digits, suffix) {
@@ -598,8 +647,6 @@
           alert(errors.join('\n'));
           return;
         }
-        const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
-        const planets = positions.map(p => ({ name: p.name, longitude: p.longitude }));
 
         const computed = await postJson('/api/calculate', payload);
         if (!computed.res.ok) {
@@ -615,14 +662,31 @@
           return;
         }
 
-        renderChart(chart.json.data);
+        renderChart(chart.json.data, chart.json.location);
       } catch (err) {
         alert('Fetch error: ' + err.message);
       }
     });
 
-    function renderChart(data) {
+    // Hours east of Greenwich as "UTC+05:30", exact to the minute.
+    function formatUtcOffset(hours) {
+      const totalMin = Math.round(Math.abs(hours) * 60);
+      const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+      const mm = String(totalMin % 60).padStart(2, '0');
+      return 'UTC' + (hours < 0 ? '-' : '+') + hh + ':' + mm;
+    }
+
+    function renderChart(data, location) {
       document.getElementById('metaBar').style.display = 'flex';
+      if (location) {
+        document.getElementById('metaPlace').textContent = (location.place === null ? '' : location.place + ', ') + location.country;
+        document.getElementById('metaCoords').textContent =
+          formatFixed(Math.abs(location.latitude), 4, location.latitude < 0 ? '° S' : '° N') + ', ' +
+          formatFixed(Math.abs(location.longitude), 4, location.longitude < 0 ? '° W' : '° E');
+        document.getElementById('metaZone').textContent = location.timezone;
+        document.getElementById('metaOffset').textContent = formatUtcOffset(location.utcOffsetHours) + ' (' + formatFixed(location.utcOffsetHours, 4, ' h') + ')';
+        document.getElementById('preIanaNotice').style.display = location.preIanaReliableCaution ? 'flex' : 'none';
+      }
       document.getElementById('metaJD').textContent = formatFixed(data.julianDateUT, 4, '');
       document.getElementById('metaST').textContent = formatFixed(data.localSiderealTimeDegrees, 4, '°');
       document.getElementById('metaEps').textContent = formatFixed(data.obliquityTrue, 4, '°');
@@ -659,9 +723,9 @@
           <td><strong>${p.name}</strong></td>
           <td>${p.formatted}</td>
           <td>${p.signName}</td>
-          <td><span style="font-weight: 700; color: var(--accent);">House ${p.house}</span></td>
+          <td><span style="font-weight: 500; color: var(--md-custom-color-kp-accent);">House ${p.house}</span></td>
           <td>${formatFixed(p.distancePassedCusp, 4, '°')} / ${formatFixed(p.distanceToNextCusp, 4, '°')}</td>
-          <td>${p.starLord} / <strong style="color: var(--primary);">${p.subLord}</strong></td>
+          <td>${p.starLord} / <strong style="color: var(--md-sys-color-primary);">${p.subLord}</strong></td>
           <td>
             ${isDiff
               ? `<span class="badge badge-diff">Sign ${signNo} ≠ House ${p.house}</span>`
@@ -754,7 +818,7 @@
         const planetsText = h.planets.length > 0 ? h.planets.map(p => p.name).join(', ') : 'None';
         box.innerHTML = `
           <div class="house-title">House ${h.house} (${h.signName})</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">Cusp: ${h.cuspFormatted}</div>
+          <div style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Cusp: ${h.cuspFormatted}</div>
           <div class="house-planets">Planets: ${planetsText}</div>
         `;
         northWheel.appendChild(box);

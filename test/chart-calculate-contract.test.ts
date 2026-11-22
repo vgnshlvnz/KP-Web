@@ -8,12 +8,21 @@ import fixture from './fixtures/api-chart-calculate-kl-1980.json';
  *
  * The fixture is the handler's own JSON for 1980-01-01 10:00 at Kuala Lumpur
  * (latitude +3.1667, longitude +101.7, utcOffsetHours +8). `ayanamsa` is
- * `kp_straight_line_adjusted` because the route rejects a missing ayanamsa;
- * that id is the option selected in `public/index.html`. No planet longitudes
+ * `kp_straight_line_adjusted` because the route rejects a missing ayanamsa.
+ * The page preselects KP New (#80), so this request pins KPSTLA on purpose: it
+ * is the mode whose output changed in #80 and #83. No planet longitudes
  * are sent: this route does not compute them.
  *
  * `utcOffsetHours` is hours ahead of Universal Time (positive east).
  * UT = local clock − utcOffsetHours, so 10:00 at +8 is 02:00 UT.
+ *
+ * Fixture provenance: captured from the Hono handler (`app.request`) in #85.
+ * Regenerated 2026-11-22 (#89) with the same request and the same method, because the
+ * engine changed by owner decision: #80 (KPSTLA no longer adds nutation, owner decision
+ * #29 18:14Z) and #83 (IAU 2000B nutation). The ayanamsa rose by 7.9218 arcsec, the
+ * cusps, Asc and MC moved by -7.84 to -7.86 arcsec, and ARMC, GAST, nutation and
+ * true obliquity moved by at most 0.08 arcsec. No lord, star, sub or sign changed.
+ * The per-field comparison is in https://github.com/vgnshlvnz/KP-Web/issues/89.
  */
 
 /** Absolute tolerance for angles and sidereal time, in the field's own unit. 1e-6 deg is 0.0036 arcsec; 1e-6 hour is 0.0036 seconds of time. */
@@ -23,7 +32,7 @@ const JULIAN_DATE_TOLERANCE_DAYS = 1e-8;
 
 /**
  * 1980-01-01 10:00, Kuala Lumpur, offset +8.
- * Ayanamsa is required by the route; KP Straight Line (Adjusted) is the UI's selected option.
+ * Ayanamsa is required by the route; KP Straight Line (Adjusted) is pinned here on purpose (the UI preselects KP New).
  */
 const KUALA_LUMPUR_1980 = {
   year: 1980,

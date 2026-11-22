@@ -54,8 +54,10 @@ Other open items are marked `TODO(#29 Qn)` in the code (Q10 UI contract, Q16 whi
 `assignedHouse`, …) and still asks the user to paste planet longitudes. It is **not** fixed; the owner will design the UI/API
 contract later (#29 answer 10). See #68. `src/client/html.ts` was deleted in #68: nothing imported it,
 and it called `/api/places/search`, `/api/timezone/offset` and `/api/charts/validate-input`, which do not exist.
-Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/cities.ts`
-(only `src/core/validation.ts` is used).
+Wired in by #12 (`locations-select`): `src/core/timezone.ts` and `src/core/locations.ts`. The page selects Country then Place
+from `src/data/locations.ts`, generated from the owner's `locations.db` by `scripts/import-locations.py`; the server
+resolves coordinates, zone and the historical UTC offset from `locationId`. `src/core/validation.ts` is also used.
+Not wired into the app: `src/core/{places,storage}.ts`, `src/data/cities.ts`.
 
 ## Target state
 

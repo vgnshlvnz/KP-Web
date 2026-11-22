@@ -64,8 +64,52 @@ export function isDstActive(year: number, offsetMinutes: number, timeZone: strin
   }
 }
 
+/** What to do when a local clock time occurs twice (a fall-back overlap). */
+export type AmbiguousTimeChoice = 'earlier' | 'later' | 'reject';
+
+export interface ComputeTimezoneOptions {
+  /**
+   * `'earlier'`: the first occurrence (before the clocks went back, the larger UTC offset).
+   * `'later'`: the second occurrence (after the clocks went back, the smaller UTC offset).
+   * `'reject'`: throw `AmbiguousLocalTimeError`.
+   * Default `'earlier'` with an "Ambiguous local time" warning in the result (the behaviour before
+   * `locations-select`). The API passes `'reject'` unless the caller chose, so it never picks silently.
+   */
+  ambiguous?: AmbiguousTimeChoice;
+}
+
+/** The local time falls in a gap: the clocks skipped it. */
+export class NonexistentLocalTimeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NonexistentLocalTimeError';
+  }
+}
+
+/** The local time occurs twice and no choice was given. `offsetsMinutes` is [earlier, later]. */
+export class AmbiguousLocalTimeError extends Error {
+  readonly offsetsMinutes: [number, number];
+  constructor(message: string, offsetsMinutes: [number, number]) {
+    super(message);
+    this.name = 'AmbiguousLocalTimeError';
+    this.offsetsMinutes = offsetsMinutes;
+  }
+}
+
+/** Milliseconds since the epoch of a UTC civil date-time; years 0-99 are not read as 1900-1999. */
+function utcMs(year: number, month: number, day: number, hours: number, minutes: number, seconds: number): number {
+  const d = new Date(0);
+  d.setUTCFullYear(year, month - 1, day);
+  d.setUTCHours(hours, minutes, seconds, 0);
+  return d.getTime();
+}
+
 /**
- * Computes exact UTC date and offset for local date and time in an IANA timezone.
+ * Computes exact UTC date and offset for local date and time in an IANA timezone, from the zone's rules at
+ * that date (historical offsets, DST, zone changes), never the zone's current offset.
+ *
+ * A local time inside a gap throws `NonexistentLocalTimeError`. A local time that occurs twice follows
+ * `options.ambiguous`. The offset is exact to the second (`offsetSeconds`); `offsetMinutes` is rounded.
  */
 export function computeTimezoneOffset(
   year: number,
@@ -74,14 +118,12 @@ export function computeTimezoneOffset(
   hours: number,
   minutes: number,
   seconds: number,
-  timeZone: string
+  timeZone: string,
+  options: ComputeTimezoneOptions = {}
 ): TimezoneOffsetResult {
   if (!isValidTimezone(timeZone)) {
     throw new Error(`Invalid or unsupported IANA timezone identifier: "${timeZone}"`);
   }
-
-  // Iteratively converge from local wall clock time to UTC
-  let utcGuess = Date.UTC(year, month - 1, day, hours, minutes, seconds);
 
   const dtf = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -94,56 +136,64 @@ export function computeTimezoneOffset(
     hourCycle: 'h23',
   });
 
-  function getParts(d: number): number {
-    const parts = dtf.formatToParts(new Date(d));
+  /** The zone's UTC offset in seconds at the UTC instant `ms` (whole seconds). */
+  function offsetSecondsAt(ms: number): number {
+    const whole = Math.floor(ms / 1000) * 1000;
     const map: Record<string, number> = {};
-    for (const p of parts) {
-      if (p.type !== 'literal') {
-        map[p.type] = parseInt(p.value, 10);
-      }
+    for (const p of dtf.formatToParts(new Date(whole))) {
+      if (p.type !== 'literal') map[p.type] = parseInt(p.value, 10);
     }
-    return Date.UTC(map.year, map.month - 1, map.day, map.hour, map.minute, map.second);
+    const asLocal = utcMs(map.year, map.month, map.day, map.hour, map.minute, map.second);
+    return Math.round((asLocal - whole) / 1000);
   }
 
-  for (let i = 0; i < 4; i++) {
-    const asTarget = getParts(utcGuess);
-    const diff = asTarget - Date.UTC(year, month - 1, day, hours, minutes, seconds);
-    if (diff === 0) break;
-    utcGuess -= diff;
-  }
+  const localAsUtc = utcMs(year, month, day, hours, minutes, seconds);
+  const DAY = 86400000;
 
-  // Verify round-trip accuracy to detect nonexistent DST spring-forward times
-  const roundTripLocal = getParts(utcGuess);
-  const targetLocal = Date.UTC(year, month - 1, day, hours, minutes, seconds);
-  if (roundTripLocal !== targetLocal) {
-    throw new Error(
-      `The local time ${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
-      `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} ` +
-      `does not exist in timezone "${timeZone}" due to a daylight saving time spring-forward transition.`
-    );
-  }
+  // The offsets in force a day before and a day after the wall-clock time. A UTC instant `localAsUtc - o`
+  // is a valid reading of the wall clock only if the zone's offset at that instant is `o`.
+  const before = offsetSecondsAt(localAsUtc - DAY);
+  const after = offsetSecondsAt(localAsUtc + DAY);
+  const valid = [...new Set([before, after])]
+    .filter((o) => offsetSecondsAt(localAsUtc - o * 1000) === o)
+    .sort((a, b) => b - a);
 
-  const localUtcRepresentation = Date.UTC(year, month - 1, day, hours, minutes, seconds);
-  const offsetMs = localUtcRepresentation - utcGuess;
-  const offsetMinutes = Math.round(offsetMs / 60000);
-  const offsetSeconds = offsetMinutes * 60;
-  const offsetString = formatOffsetMinutes(offsetMinutes);
-  const isDst = isDstActive(year, offsetMinutes, timeZone);
-
-  const utcDate = new Date(utcGuess);
   const pad = (n: number) => String(n).padStart(2, '0');
   const localDateTimeString = `${year}-${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  const fmt = (offsetSec: number) => formatOffsetMinutes(Math.round(offsetSec / 60));
 
-  const warnings: string[] = [];
-
-  // Check for ambiguous fall-back time (time occurs twice during DST transition)
-  const candidateEarlier = utcGuess - 3600000;
-  const candidateLater = utcGuess + 3600000;
-  if (getParts(candidateEarlier) === targetLocal || getParts(candidateLater) === targetLocal) {
-    warnings.push(
-      `Ambiguous local time: This wall-clock time occurs twice in timezone "${timeZone}" due to a daylight saving fall-back transition.`
+  if (valid.length === 0) {
+    throw new NonexistentLocalTimeError(
+      `The local time ${localDateTimeString} does not exist in timezone "${timeZone}" due to a daylight saving time spring-forward transition ` +
+        `(the clocks skipped from ${fmt(before)} to ${fmt(after)}).`
     );
   }
+
+  const warnings: string[] = [];
+  let offsetSeconds = valid[0]; // the earlier occurrence has the larger offset
+  if (valid.length > 1) {
+    const earlier = valid[0];
+    const later = valid[valid.length - 1];
+    const choice = options.ambiguous ?? 'earlier';
+    if (choice === 'reject') {
+      throw new AmbiguousLocalTimeError(
+        `Ambiguous local time: ${localDateTimeString} occurs twice in timezone "${timeZone}" ` +
+          `(${fmt(earlier)} before the clocks went back, ${fmt(later)} after). Choose "earlier" or "later".`,
+        [Math.round(earlier / 60), Math.round(later / 60)]
+      );
+    }
+    offsetSeconds = choice === 'later' ? later : earlier;
+    warnings.push(
+      options.ambiguous === undefined
+        ? `Ambiguous local time: This wall-clock time occurs twice in timezone "${timeZone}" due to a daylight saving fall-back transition. The earlier occurrence (${fmt(earlier)}) was used.`
+        : `Ambiguous local time: This wall-clock time occurs twice in timezone "${timeZone}"; the ${choice} occurrence (${fmt(offsetSeconds)}) was used, as chosen.`
+    );
+  }
+
+  const offsetMinutes = Math.round(offsetSeconds / 60);
+  const offsetString = formatOffsetMinutes(offsetMinutes);
+  const isDst = isDstActive(year, offsetMinutes, timeZone);
+  const utcDate = new Date(localAsUtc - offsetSeconds * 1000);
 
   if (year < 1970) {
     warnings.push(
