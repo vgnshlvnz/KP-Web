@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import app from '../src/index.js';
 import page from '../public/index.html?raw';
-import fixture from './fixtures/api-chart-calculate-kl-1980.json';
 
 /**
- * The page contract for #68, checked against the captured
- * `POST /api/chart/calculate` response in `api-chart-calculate-kl-1980.json` (#85).
- *
- * That fixture has no `planets` or `significators`: the route only adds them when
- * longitudes are posted. The page gets the nine sidereal longitudes from
- * `POST /api/calculate` and forwards `{ name, longitude }`.
+ * The page contract for #68. The captured chart/calculate fixture lives in #85;
+ * this file does not copy it. It checks the page source, then the same Kuala Lumpur
+ * request the page sends: longitudes from `POST /api/calculate`, forwarded as
+ * `{ name, longitude }` to `POST /api/chart/calculate`.
  */
 
 /** 1980-01-01 10:00, Kuala Lumpur, offset +8. Same body as the fixture. */
@@ -80,17 +77,7 @@ describe('public/index.html request and response contract', () => {
     }
   });
 
-  it('Kuala Lumpur 1980: fixture has no planets, and forwarding /api/calculate longitudes fills them', async () => {
-    const captured = fixture as { success: boolean; data: Record<string, unknown> };
-    expect(captured.success).toBe(true);
-    expect(captured.data).not.toHaveProperty('planets');
-    expect(captured.data).not.toHaveProperty('significators');
-    expect(captured.data.julianDateUT).toEqual(expect.any(Number));
-    expect(captured.data.localSiderealTimeDegrees).toEqual(expect.any(Number));
-    expect(captured.data.obliquityTrue).toEqual(expect.any(Number));
-    expect(captured.data.nutationInLongitude).toEqual(expect.any(Number));
-    expect(captured.data.ayanamsaValue).toEqual(expect.any(Number));
-
+  it('Kuala Lumpur 1980: no longitudes omits planets, and forwarding /api/calculate longitudes fills them', async () => {
     const bareRes = await post('/api/calculate', KUALA_LUMPUR_1980);
     expect(bareRes.status).toBe(200);
     const bare = (await bareRes.json()) as { planets: Array<{ name: string; longitude: number }> };
@@ -102,20 +89,28 @@ describe('public/index.html request and response contract', () => {
       expect(Number.isFinite(p.longitude)).toBe(true);
     }
 
+    const withoutLongitudes = (await (await post('/api/chart/calculate', KUALA_LUMPUR_1980)).json()) as {
+      success: boolean;
+      data: Record<string, unknown>;
+    };
+    expect(withoutLongitudes.success).toBe(true);
+    expect(withoutLongitudes.data).not.toHaveProperty('planets');
+    expect(withoutLongitudes.data).not.toHaveProperty('significators');
+
     const chartRes = await post('/api/chart/calculate', { ...KUALA_LUMPUR_1980, planets });
     expect(chartRes.status).toBe(200);
     const chart = (await chartRes.json()) as { success: boolean; data: any };
     expect(chart.success).toBe(true);
     const data = chart.data;
 
-    // Same instant as the fixture. Adding longitudes must not move the cusps or the clock.
-    expect(data.julianDateUT).toBe(captured.data.julianDateUT);
-    expect(data.localSiderealTimeDegrees).toBe(captured.data.localSiderealTimeDegrees);
-    expect(data.obliquityTrue).toBe(captured.data.obliquityTrue);
-    expect(data.nutationInLongitude).toBe(captured.data.nutationInLongitude);
-    expect(data.ayanamsaValue).toBe(captured.data.ayanamsaValue);
+    // Adding longitudes must not move the cusps or the clock.
+    expect(data.julianDateUT).toBe(withoutLongitudes.data.julianDateUT);
+    expect(data.localSiderealTimeDegrees).toBe(withoutLongitudes.data.localSiderealTimeDegrees);
+    expect(data.obliquityTrue).toBe(withoutLongitudes.data.obliquityTrue);
+    expect(data.nutationInLongitude).toBe(withoutLongitudes.data.nutationInLongitude);
+    expect(data.ayanamsaValue).toBe(withoutLongitudes.data.ayanamsaValue);
     expect(data.ayanamsaType).toBe('kp_straight_line_adjusted');
-    expect(data.cusps).toEqual((captured.data as { cusps: unknown }).cusps);
+    expect(data.cusps).toEqual(withoutLongitudes.data.cusps);
 
     expect(data.planets).toHaveLength(9);
     const text = (value: unknown) => {
@@ -172,7 +167,6 @@ describe('public/index.html request and response contract', () => {
       await post('/api/chart/calculate', { ...KUALA_LUMPUR_1980, utcOffsetHours: 0 })
     ).json()) as { data: { julianDateUT: number } };
 
-    expect(withOffset.data.julianDateUT).toBe((fixture as { data: { julianDateUT: number } }).data.julianDateUT);
     // 8 hours earlier than the same clock time read as UT.
     expect(atUtc.data.julianDateUT - withOffset.data.julianDateUT).toBeCloseTo(8 / 24, 8);
     expect(missing.data.julianDateUT).toBe(atUtc.data.julianDateUT);
