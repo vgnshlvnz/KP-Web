@@ -236,7 +236,7 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     expect(typeof fresh.error).toBe('string');
   });
 
-  it.each(['kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'])(
+  it.each(['kp_straight_line', 'kp_ayanamsa', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'])(
     '/api/chart/calculate and /api/calculate accept %s and echo it back',
     async (id) => {
       const legacy = (await (await post('/api/chart/calculate', { ...KL_1992, ayanamsa: id })).json()) as any;
@@ -464,7 +464,7 @@ describe('GET /api/ayanamsa', () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;
     expect(json.ayanamsas.map((a: any) => a.id)).toEqual([
-      'kp_straight_line_adjusted', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil',
+      'kp_straight_line_adjusted', 'kp_straight_line', 'kp_ayanamsa', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil',
     ]);
     expect(json.ayanamsas.map((a: any) => a.label)).toContain('Lahiri');
     expect(json).not.toHaveProperty('default');
@@ -540,7 +540,7 @@ describe('GET /api/health (folded from worker.test.ts)', () => {
     expect(json.service).toBe('KP-Web');
     expect(json.engine).toBe('astronomy-engine');
     expect(String(json.runtime)).toContain('Cloudflare Workers');
-    expect(json.ayanamsas).toHaveLength(10);
+    expect(json.ayanamsas).toHaveLength(12);
     expect(json.defaultSelection).toBe('kp_new');
     expect(json).not.toHaveProperty('defaultAyanamsa');
     expect(json.endpoints).toContain('POST /api/horary');

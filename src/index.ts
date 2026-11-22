@@ -36,7 +36,7 @@
  *
  * Open owner decisions, never defaulted in the engine:
  *   - #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
- *     `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa` (the ten supported ids).
+ *     `ayanamsa` is REQUIRED in every request and validated with `validateAyanamsa` (the twelve supported ids).
  *     Missing or unknown is 400. `DEFAULT_AYANAMSA_SELECTION` is only reported, for the UI to preselect.
  *   - TODO(#23), TODO(#24): the two other engine options are set once, in `ENGINE_CONFIG`.
  */
@@ -473,7 +473,8 @@ app.get('/api/ayanamsa', (c) => {
   // Every supported mode. `defaultSelection` is the UI's preselected option, not an API fallback
   // (#22 decided, owner, #29: the API still requires an explicit ayanamsa). "mean" is the ayanamsa of the date;
   // "true" adds the nutation in longitude (except KPSTLA and Nil, where true = mean), the value
-  // subtracted from tropical longitudes.
+  // subtracted from tropical longitudes. KP Straight Line and KP Ayanamsa use the KP-Qt mean
+  // formulas and then add nutation, the same way the other sidereal modes do.
   const ayanamsas = AYANAMSA_MODES.map((id) => {
     const a = calculateAyanamsa(jd, id, dPsi);
     return {

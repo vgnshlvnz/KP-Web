@@ -34,7 +34,7 @@
 
 import * as Astronomy from 'astronomy-engine';
 import { calculateAyanamsa, normalizeDegrees, nutationAtTime } from './astronomy.js';
-import { isAyanamsaMode, unsupportedAyanamsaMessage } from './ayanamsa-defs.js';
+import { isAyanamsaMode, unsupportedAyanamsaMessage, type KpCalendarDate } from './ayanamsa-defs.js';
 import type { AyanamsaMode, ChartCalculationOptions, PlanetName } from './types.js';
 
 /** Julian Day of the J2000.0 epoch. */
@@ -46,7 +46,10 @@ const SPEED_WINDOW_HOURS = 1;
 /**
  * Explicit input. `ayanamsa` has no default (#22 decided: no API default; KP New is the UI's default selection).
  */
-export type EphemerisOptions = Pick<ChartCalculationOptions, 'ayanamsa'>;
+export type EphemerisOptions = Pick<ChartCalculationOptions, 'ayanamsa'> & {
+  /** Local clock for the KP-Qt calendar ayanamsas. Omitted: the UT date of `date`. */
+  civil?: KpCalendarDate;
+};
 
 export interface EphemerisPlanet {
   name: PlanetName;
@@ -218,7 +221,12 @@ export function calculateEphemeris(date: Date, options: EphemerisOptions): Ephem
 
   // mean + dPsi for every mode except 'nil' (tropical, both 0) and 'kp_straight_line_adjusted'
   // (true = mean, owner #29 G3; no dPsi term).
-  const ayanamsa = calculateAyanamsa(julianDayTt, options.ayanamsa, nutationInLongitudeDeg);
+  const ayanamsa = calculateAyanamsa(
+    julianDayTt,
+    options.ayanamsa,
+    nutationInLongitudeDeg,
+    options.civil
+  );
   const meanAyanamsaDeg = ayanamsa.meanAyanamsa;
   const trueAyanamsaDeg = ayanamsa.trueAyanamsa;
 

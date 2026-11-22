@@ -28,9 +28,11 @@ import type { AyanamsaMode as CoreAyanamsaMode } from '../src/core/types';
 import type { calculateKPChart } from '../src/engine/index';
 
 describe('AyanamsaMode', () => {
-  it('is exactly the ten supported ids (#29, owner; KPSTLA added in #72): no default member, no free string', () => {
+  it('is exactly the twelve supported ids (#29, owner; KPSTLA added in #72; KP-Qt calendar formulas added): no default member, no free string', () => {
     expectTypeOf<AyanamsaMode>().toEqualTypeOf<
       | 'kp_straight_line_adjusted'
+      | 'kp_straight_line'
+      | 'kp_ayanamsa'
       | 'kp_old'
       | 'kp_new'
       | 'lahiri'

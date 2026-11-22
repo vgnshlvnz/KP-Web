@@ -46,6 +46,8 @@ export const DEFAULT_AYANAMSA_SELECTION: AyanamsaMode = 'kp_new';
 /** Every supported mode, in the order they are shown to the user. */
 export const AYANAMSA_MODES: readonly AyanamsaMode[] = [
   'kp_straight_line_adjusted',
+  'kp_straight_line',
+  'kp_ayanamsa',
   'kp_old',
   'kp_new',
   'lahiri',
@@ -60,6 +62,8 @@ export const AYANAMSA_MODES: readonly AyanamsaMode[] = [
 /** Display names. */
 export const AYANAMSA_LABELS: Readonly<Record<AyanamsaMode, string>> = {
   kp_straight_line_adjusted: 'KP Straight Line (Adjusted)',
+  kp_straight_line: 'KP Straight Line',
+  kp_ayanamsa: 'KP Ayanamsa',
   kp_old: 'KP Old',
   kp_new: 'KP New',
   lahiri: 'Lahiri',
@@ -81,8 +85,11 @@ export function unsupportedAyanamsaMessage(value: unknown): string {
   return `Unsupported ayanamsa mode: ${String(value)} (expected one of ${AYANAMSA_MODES.join(', ')}; there is no default and no fallback)`;
 }
 
-/** Modes computed from a Swiss Ephemeris definition (all except KPSTLA, KP Old, KP New and Nil). */
-export type SeDefinedAyanamsaMode = Exclude<AyanamsaMode, 'kp_straight_line_adjusted' | 'kp_old' | 'kp_new' | 'nil'>;
+/** Modes computed from a Swiss Ephemeris definition (all except the two KP-Qt calendar formulas, KPSTLA, KP Old, KP New and Nil). */
+export type SeDefinedAyanamsaMode = Exclude<
+  AyanamsaMode,
+  'kp_straight_line_adjusted' | 'kp_straight_line' | 'kp_ayanamsa' | 'kp_old' | 'kp_new' | 'nil'
+>;
 
 export interface SeAyanamsaDefinition {
   /** Swiss Ephemeris constant, used by name. */
@@ -209,4 +216,107 @@ export const KPSTLA_PRECESSION_ARCSEC_PER_YEAR = 50.2388475;
 export function meanAyanamsaKpStla(jd: number): number {
   const years = (jd - KPSTLA_ZERO_JD) / KPSTLA_YEAR_DAYS;
   return (years * KPSTLA_PRECESSION_ARCSEC_PER_YEAR) / 3600;
+}
+
+// ---------------------------------------------------------------------------
+// KP-Qt vendor formulas (src/livedata/kpAyanamsa.cpp). Mean ayanamsa only.
+// KP Straight Line (Adjusted) above is the owner's JD formula, not this one.
+// KP-Qt's "User Defined" (SE_SIDM_USER, t0 and ayan_t0 left at 0) is not a
+// formula and is not a mode here.
+// ---------------------------------------------------------------------------
+
+/** Local calendar date the KP-Qt formulas are evaluated on. */
+export interface KpCalendarDate {
+  year: number;
+  month: number; // 1-12
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+/** KP-Qt rate, arcsec/year. Same constant as KPSTLA. */
+const KPQT_RATE_ARCSEC = 50.2388475;
+const KPQT_EPOCH_YEAR = 291;
+const KPQT_BASE_YEAR = 1900;
+const KPQT_OFFSET_ARCSEC = 1350;
+const KPQT_CONST_DEG = 22;
+const KPQT_QUAD_ARCSEC = 0.000111;
+
+/** Legacy leap rule from kpAyanamsa.cpp: Julian for y < 1582, Gregorian otherwise. */
+function kpqtLeap(year: number): boolean {
+  if (year < 1582) return year % 4 === 0;
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function kpqtDaysInYear(year: number): number {
+  return kpqtLeap(year) ? 366 : 365;
+}
+
+/** Days from 15 April 00:00 of `year` to the given clock time. May be negative. */
+export function kpqtDaysFromAnchor(date: KpCalendarDate): number {
+  const dim = [31, kpqtLeap(date.year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let doy = date.day;
+  for (let i = 0; i < date.month - 1; i++) doy += dim[i];
+  const anchor = 31 + dim[1] + 31 + 15;
+  const clock = (date.hour + date.minute / 60 + date.second / 3600) / 24;
+  return doy - anchor + clock;
+}
+
+/** KP-Qt fractional year. Before the April 15 anchor the previous year's length is used. */
+export function kpqtFracYear(date: KpCalendarDate): number {
+  const delta = kpqtDaysFromAnchor(date);
+  if (delta >= 0) return date.year + delta / kpqtDaysInYear(date.year);
+  return date.year - -delta / kpqtDaysInYear(date.year - 1);
+}
+
+/** KP Straight Line: (year − 291) × 50.2388475″ / 3600. The month and time are ignored. */
+export function meanAyanamsaKpStraightLine(year: number): number {
+  return ((year - KPQT_EPOCH_YEAR) * KPQT_RATE_ARCSEC) / 3600;
+}
+
+/** KP Straight Line (Adjusted), KP-Qt form: (frac − 291) × 50.2388475″ / 3600. */
+export function meanAyanamsaKpStraightLineAdjustedQt(fracYear: number): number {
+  return ((fracYear - KPQT_EPOCH_YEAR) * KPQT_RATE_ARCSEC) / 3600;
+}
+
+/**
+ * KP Ayanamsa: t = frac − 1900;
+ * (t × 50.2388475 + 1350) / 3600 + 22 + t² × 0.000111 / 3600.
+ */
+export function meanAyanamsaKpAyanamsa(fracYear: number): number {
+  const t = fracYear - KPQT_BASE_YEAR;
+  return (t * KPQT_RATE_ARCSEC + KPQT_OFFSET_ARCSEC) / 3600 + KPQT_CONST_DEG + (t * t * KPQT_QUAD_ARCSEC) / 3600;
+}
+
+/**
+ * Gregorian calendar of a Julian day, for callers that have no civil date.
+ * The day fraction is the UT time of day. Used only when a chart does not pass its local clock.
+ */
+export function calendarFromJulianDay(jd: number): KpCalendarDate {
+  const z0 = Math.floor(jd + 0.5);
+  const f = jd + 0.5 - z0;
+  let a = z0;
+  if (z0 >= 2299161) {
+    const alpha = Math.floor((z0 - 1867216.25) / 36524.25);
+    a = z0 + 1 + alpha - Math.floor(alpha / 4);
+  }
+  const b = a + 1524;
+  const c = Math.floor((b - 122.1) / 365.25);
+  const d = Math.floor(365.25 * c);
+  const e = Math.floor((b - d) / 30.6001);
+  const dayFloat = b - d - Math.floor(30.6001 * e) + f;
+  const month = e < 14 ? e - 1 : e - 13;
+  const year = month > 2 ? c - 4716 : c - 4715;
+  const day = Math.floor(dayFloat);
+  let seconds = Math.round((dayFloat - day) * 86400);
+  if (seconds >= 86400) {
+    // Within half a second of the next midnight. z0 + 0.5 is that midnight.
+    return calendarFromJulianDay(z0 + 0.5);
+  }
+  const hour = Math.floor(seconds / 3600);
+  seconds -= hour * 3600;
+  const minute = Math.floor(seconds / 60);
+  seconds -= minute * 60;
+  return { year, month, day, hour, minute, second: seconds };
 }

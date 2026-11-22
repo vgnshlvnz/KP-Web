@@ -28,8 +28,10 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 - **Fixed conventions** (owner decisions on #29) are constants in `src/engine/conventions.ts`, not options: mean node only,
   no outer planets, Porphyry fallback with a visible `polar_fallback` warning (horary at polar latitude throws),
   sunrise = upper limb with standard refraction, dasha year 365.2425 days, near-boundary threshold 60 arcsec.
-- **Ayanamsa:** ten explicit ids in `src/engine/ayanamsa-defs.ts`: `kp_straight_line_adjusted` (KPSTLA, first), `kp_old`,
-  `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`, `usha_shashi`, `nil`. All except KPSTLA are
+- **Ayanamsa:** twelve explicit ids in `src/engine/ayanamsa-defs.ts`: `kp_straight_line_adjusted` (KPSTLA, first),
+  `kp_straight_line`, `kp_ayanamsa` (KP-Qt formulas), `kp_old`,
+  `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`, `usha_shashi`, `nil`. KP-Qt's
+  "User Defined" is not ported (it is `SE_SIDM_USER` with no formula). All except KPSTLA and the two KP-Qt calendar formulas are
   defined as Swiss Ephemeris defines them; KPSTLA follows the owner's formula (#29: T x 50.2388475" / 3600, T from 291 AD),
   and its definition is final (#29): zero point 291-01-01 0h UT Julian, 365.25-day year, no nutation (true = mean). The UI
   preselects KP New (`DEFAULT_AYANAMSA_SELECTION`, #22). The API has **no default and no fallback**: `calculateChart`, `calculateKPChart`,
