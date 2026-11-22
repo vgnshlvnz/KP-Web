@@ -258,9 +258,15 @@
 
           <div class="fields-3">
             <md-outlined-text-field type="number" id="inpDay" label="Day" value="14" min="1" max="31"></md-outlined-text-field>
-            <md-outlined-text-field type="number" id="inpHour" label="Hour (UTC)" value="18" min="0" max="23"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpHour" label="Hour (local)" value="18" min="0" max="23"></md-outlined-text-field>
             <md-outlined-text-field type="number" id="inpMinute" label="Min" value="30" min="0" max="59"></md-outlined-text-field>
           </div>
+
+          <div class="fields-2">
+            <md-outlined-text-field type="number" id="inpSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
+            <md-outlined-text-field type="number" step="0.25" id="inpUtcOffset" label="UTC offset (hours)" value="0"></md-outlined-text-field>
+          </div>
+          <p class="supporting">Local civil time. The offset is hours east of Greenwich (Kuala Lumpur +8, India +5.5, the Americas negative). Universal time is this clock time minus the offset. A missing offset would be read as 0. Planet positions are computed by the server.</p>
 
           <div class="fields-2">
             <md-outlined-text-field type="number" step="0.0001" id="inpLat" label="Latitude" suffix-text="° N" value="28.6139"></md-outlined-text-field>
@@ -272,8 +278,6 @@
             <md-select-option value="kp_old"><div slot="headline">KP Old (Original Krishnamurti)</div></md-select-option>
             <md-select-option value="kp_new" selected><div slot="headline">KP New (Krishnamurti VP291)</div></md-select-option>
           </md-outlined-select>
-
-          <md-outlined-text-field type="textarea" rows="9" class="mono" id="inpPlanets" label="Test Planets (JSON: name, longitude in degrees)"></md-outlined-text-field>
         </div>
 
         <md-filled-button class="block" id="btnCalculate"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M314-228h50v-88h88v-50h-88v-88h-50v88h-88v50h88v88Zm215-35h201v-49H529v49Zm0-107h201v-50H529v50Zm37-163 61-61 61 61 36-36-61-61 61-61-36-36-61 61-61-61-36 36 61 61-61 61 36 36Zm-325-72h196v-50H241v50Zm-61 485q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm0-600v600-600Z"/></svg></md-icon>Calculate Chart</md-filled-button>
@@ -297,7 +301,7 @@
           <span id="metaJD">-</span>
         </div>
         <div class="meta-item">
-          <span>Sidereal Time (GAST)</span>
+          <span>Local sidereal time</span>
           <span id="metaST">-</span>
         </div>
         <div class="meta-item">
@@ -363,7 +367,7 @@
                 <th>Longitude</th>
                 <th>Zodiac Sign</th>
                 <th>Assigned House</th>
-                <th>House Span</th>
+                <th>Passed cusp / to next</th>
                 <th>Star / Sub</th>
                 <th>Sign vs House</th>
               </tr>
@@ -384,7 +388,7 @@
             Level 1: Planet in star of occupant &bull; Level 2: Occupant &bull; Level 3: Planet in star of lord &bull; Level 4: House lord
           </p>
           <div class="table-wrap">
-            <table id="houseSignificatorsTable">
+            <table id="houseWiseTable">
               <thead>
                 <tr>
                   <th>House</th>
@@ -448,19 +452,6 @@
   </div>
 
   <script>
-    // Default test planets (a textarea text field takes its multi-line value from script)
-    document.getElementById('inpPlanets').value = `[
-  {"name": "Sun", "longitude": 118.0},
-  {"name": "Moon", "longitude": 84.0},
-  {"name": "Mars", "longitude": 67.0},
-  {"name": "Mercury", "longitude": 114.0},
-  {"name": "Jupiter", "longitude": 211.0},
-  {"name": "Venus", "longitude": 105.0},
-  {"name": "Saturn", "longitude": 110.0},
-  {"name": "Rahu", "longitude": 35.0},
-  {"name": "Ketu", "longitude": 215.0}
-]`;
-
     // Theme toggle (dark is the default; light is generated from the same seed)
     // Icons are inline Material Symbols (Outlined, weight 400) so the page needs no icon font.
     const ICON_LIGHT_MODE = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M579-381q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-240.5 42.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-450H40v-60h160v60Zm720 0H760v-60h160v60ZM450-760v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-99-537 98-99 44 42-99 98-43-41ZM162-205l99-98 42 42-98 99-43-43Zm318-275Z"/></svg>';
@@ -493,68 +484,116 @@
       northCont.style.display = 'block';
     });
 
-    // Sample selection
+    function fillSample(values) {
+      document.getElementById('inpYear').value = values.year;
+      document.getElementById('inpMonth').value = values.month;
+      document.getElementById('inpDay').value = values.day;
+      document.getElementById('inpHour').value = values.hour;
+      document.getElementById('inpMinute').value = values.minute;
+      document.getElementById('inpSecond').value = 0;
+      document.getElementById('inpUtcOffset').value = 0;
+      document.getElementById('inpLat').value = values.latitude;
+      document.getElementById('inpLon').value = values.longitude;
+      document.getElementById('inpAyanamsa').value = 'kp_old';
+    }
+
+    // Sample selection. Both samples are stated in UTC, so the offset is 0.
     document.getElementById('sampleSelect').addEventListener('change', (e) => {
       const val = e.target.value;
       if (val === 'india') {
-        document.getElementById('inpYear').value = 1947;
-        document.getElementById('inpMonth').value = 8;
-        document.getElementById('inpDay').value = 14;
-        document.getElementById('inpHour').value = 18;
-        document.getElementById('inpMinute').value = 30;
-        document.getElementById('inpLat').value = 28.6139;
-        document.getElementById('inpLon').value = 77.2090;
-        document.getElementById('inpAyanamsa').value = 'kp_old';
+        fillSample({ year: 1947, month: 8, day: 14, hour: 18, minute: 30, latitude: 28.6139, longitude: 77.2090 });
       } else if (val === 'chennai') {
-        document.getElementById('inpYear').value = 2026;
-        document.getElementById('inpMonth').value = 11;
-        document.getElementById('inpDay').value = 21;
-        document.getElementById('inpHour').value = 6;
-        document.getElementById('inpMinute').value = 25;
-        document.getElementById('inpLat').value = 13.0827;
-        document.getElementById('inpLon').value = 80.2707;
-        document.getElementById('inpAyanamsa').value = 'kp_old';
+        fillSample({ year: 2026, month: 11, day: 21, hour: 6, minute: 25, latitude: 13.0827, longitude: 80.2707 });
       }
     });
 
-    // Calculate Chart
+    function readInt(id) {
+      const raw = String(document.getElementById(id).value).trim();
+      if (!/^-?\d+$/.test(raw)) return NaN;
+      return Number(raw);
+    }
+
+    function readChartRequest() {
+      const year = readInt('inpYear');
+      const month = readInt('inpMonth');
+      const day = readInt('inpDay');
+      const hour = readInt('inpHour');
+      const minute = readInt('inpMinute');
+      const second = readInt('inpSecond');
+      const latitude = Number(String(document.getElementById('inpLat').value).trim());
+      const longitude = Number(String(document.getElementById('inpLon').value).trim());
+      const utcOffsetHours = Number(String(document.getElementById('inpUtcOffset').value).trim());
+      const ayanamsa = document.getElementById('inpAyanamsa').value;
+      const errors = [];
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+        errors.push('Year, month and day must be integers.');
+      } else {
+        const probe = new Date(Date.UTC(year, month - 1, day));
+        if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) {
+          errors.push('That is not a calendar date.');
+        }
+      }
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59 || !Number.isInteger(second) || second < 0 || second > 59) {
+        errors.push('Time must be a real clock time (hour 0–23, minute and second 0–59).');
+      }
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        errors.push('Latitude must be a number from -90 to 90.');
+      }
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        errors.push('Longitude must be a number from -180 to 180.');
+      }
+      // Positive is east of Greenwich. The chart routes store a missing offset as 0.
+      if (!Number.isFinite(utcOffsetHours) || Math.abs(utcOffsetHours) > 24) {
+        errors.push('UTC offset must be a number from -24 to 24 hours (positive east of Greenwich).');
+      }
+      if (!ayanamsa) errors.push('Choose an ayanamsa.');
+      return {
+        errors,
+        payload: { year, month, day, hour, minute, second, utcOffsetHours, latitude, longitude, ayanamsa }
+      };
+    }
+
+    function formatFixed(value, digits, suffix) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n.toFixed(digits) + suffix : '—';
+    }
+
+    async function postJson(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      return { res, json };
+    }
+
+    // Positions come from POST /api/calculate (bare chart). House cusps, lords and
+    // significators come from POST /api/chart/calculate, which only returns planets
+    // when those longitudes are posted. Only name and longitude are forwarded.
     document.getElementById('btnCalculate').addEventListener('click', async () => {
       try {
-        const planetsText = document.getElementById('inpPlanets').value;
-        let planets = [];
-        try {
-          planets = JSON.parse(planetsText);
-        } catch (e) {
-          alert('Invalid JSON in Test Planets: ' + e.message);
+        const { errors, payload } = readChartRequest();
+        if (errors.length) {
+          alert(errors.join('\n'));
           return;
         }
 
-        const payload = {
-          year: parseInt(document.getElementById('inpYear').value),
-          month: parseInt(document.getElementById('inpMonth').value),
-          day: parseInt(document.getElementById('inpDay').value),
-          hour: parseInt(document.getElementById('inpHour').value),
-          minute: parseInt(document.getElementById('inpMinute').value),
-          second: 0,
-          latitude: parseFloat(document.getElementById('inpLat').value),
-          longitude: parseFloat(document.getElementById('inpLon').value),
-          ayanamsa: document.getElementById('inpAyanamsa').value,
-          planets: planets
-        };
+        const computed = await postJson('/api/calculate', payload);
+        if (!computed.res.ok) {
+          alert('Calculation error: ' + (computed.json.error || computed.res.status));
+          return;
+        }
+        const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
+        const planets = positions.map(p => ({ name: p.name, longitude: p.longitude }));
 
-        const res = await fetch('/api/chart/calculate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const json = await res.json();
-        if (!json.success) {
-          alert('Calculation error: ' + json.error);
+        const chart = await postJson('/api/chart/calculate', { ...payload, planets });
+        if (!chart.res.ok || !chart.json.success) {
+          alert('Calculation error: ' + (chart.json.error || chart.res.status));
           return;
         }
 
-        renderChart(json.data);
+        renderChart(chart.json.data);
       } catch (err) {
         alert('Fetch error: ' + err.message);
       }
@@ -562,21 +601,20 @@
 
     function renderChart(data) {
       document.getElementById('metaBar').style.display = 'flex';
-      document.getElementById('metaJD').textContent = data.julianDate.toFixed(4);
-      document.getElementById('metaST').textContent = data.siderealTimeDeg.toFixed(4) + '°';
-      document.getElementById('metaEps').textContent = data.obliquityDeg.toFixed(4) + '°';
-      document.getElementById('metaNut').textContent = (data.nutationInLongitudeArcsec).toFixed(2) + '"';
-      document.getElementById('metaAyan').textContent = data.ayanamsaDeg.toFixed(4) + '° (' + data.ayanamsaType + ')';
+      document.getElementById('metaJD').textContent = formatFixed(data.julianDateUT, 4, '');
+      document.getElementById('metaST').textContent = formatFixed(data.localSiderealTimeDegrees, 4, '°');
+      document.getElementById('metaEps').textContent = formatFixed(data.obliquityTrue, 4, '°');
+      document.getElementById('metaNut').textContent = formatFixed(data.nutationInLongitude, 6, '°');
+      document.getElementById('metaAyan').textContent = formatFixed(data.ayanamsaValue, 4, '°') + ' (' + (data.ayanamsaType || '—') + ')';
 
-      // 1. Cusps Table
       const cuspsBody = document.getElementById('cuspsTableBody');
       cuspsBody.innerHTML = '';
-      data.cusps.forEach(c => {
+      (data.cusps || []).forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>Cusp ${c.house}</strong></td>
-          <td>${c.formattedDms}</td>
-          <td>${c.sign}</td>
+          <td>${c.formatted}</td>
+          <td>${c.signName}</td>
           <td>${c.signLord}</td>
           <td>${c.starLord}</td>
           <td><strong style="color: var(--md-sys-color-primary);">${c.subLord}</strong></td>
@@ -585,22 +623,26 @@
         cuspsBody.appendChild(tr);
       });
 
-      // 2. Planets Table
       const planetsBody = document.getElementById('planetsTableBody');
       planetsBody.innerHTML = '';
-      data.planets.forEach(p => {
-        const isDiff = p.zodiacSignIndex + 1 !== p.assignedHouse;
+      const planets = Array.isArray(data.planets) ? data.planets : [];
+      if (planets.length === 0) {
+        planetsBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No planets in the response.</td></tr>';
+      }
+      planets.forEach(p => {
+        const signNo = p.signIndex + 1;
+        const isDiff = signNo !== p.house;
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>${p.name}</strong></td>
-          <td>${p.formattedDms}</td>
-          <td>${p.zodiacSign}</td>
-          <td><span style="font-weight: 500; color: var(--md-custom-color-kp-accent);">House ${p.assignedHouse}</span></td>
-          <td>[C${p.houseStartCusp.house} ... C${p.houseEndCusp.house})</td>
+          <td>${p.formatted}</td>
+          <td>${p.signName}</td>
+          <td><span style="font-weight: 500; color: var(--md-custom-color-kp-accent);">House ${p.house}</span></td>
+          <td>${formatFixed(p.distancePassedCusp, 4, '°')} / ${formatFixed(p.distanceToNextCusp, 4, '°')}</td>
           <td>${p.starLord} / <strong style="color: var(--md-sys-color-primary);">${p.subLord}</strong></td>
           <td>
             ${isDiff
-              ? `<span class="badge badge-diff">Sign ${p.zodiacSignIndex + 1} ≠ House ${p.assignedHouse}</span>`
+              ? `<span class="badge badge-diff">Sign ${signNo} ≠ House ${p.house}</span>`
               : `<span class="badge badge-same">Sign = House</span>`
             }
           </td>
@@ -608,26 +650,26 @@
         planetsBody.appendChild(tr);
       });
 
-      // 3. Significators
       const houseSigBody = document.getElementById('houseSigBody');
       houseSigBody.innerHTML = '';
-      data.significators.houseSignificators.forEach(hs => {
+      const houseWise = data.significators && Array.isArray(data.significators.houseWise) ? data.significators.houseWise : [];
+      if (houseWise.length === 0) {
+        houseSigBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No significators in the response.</td></tr>';
+      }
+      houseWise.forEach(hs => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>House ${hs.house}</strong></td>
-          <td>${hs.level1.join(', ') || '—'}</td>
-          <td>${hs.level2.join(', ') || '—'}</td>
-          <td>${hs.level3.join(', ') || '—'}</td>
-          <td>${hs.level4.join(', ') || '—'}</td>
+          <td>${(hs.level1 || []).join(', ') || '—'}</td>
+          <td>${(hs.level2 || []).join(', ') || '—'}</td>
+          <td>${(hs.level3 || []).join(', ') || '—'}</td>
+          <td>${(hs.level4 || []).join(', ') || '—'}</td>
         `;
         houseSigBody.appendChild(tr);
       });
 
-      // 4. Wheels
-      renderWheels(data.chartWheels);
-
-      // 5. Benchmark
-      renderBenchmark(data.cusps);
+      renderWheels(data.chartWheels || { southIndian: [], northIndian: [] });
+      renderBenchmark(data.cusps || []);
     }
 
     function renderWheels(wheels) {
@@ -657,12 +699,16 @@
           return;
         }
 
-        const box = wheels.southIndian.signs.find(s => s.signNumber === signNum);
+        const box = (wheels.southIndian || []).find(s => s.signIndex === signNum - 1);
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
+        if (!box) {
+          southGrid.appendChild(cell);
+          return;
+        }
 
         const cuspsHtml = box.cusps.length > 0
-          ? box.cusps.map(c => `<div class="cell-cusp">C${c.house}: ${c.formattedDms.split(' ')[0]}</div>`).join('')
+          ? box.cusps.map(c => `<div class="cell-cusp">C${c.house}: ${(c.formatted || '').split(' ')[0]}</div>`).join('')
           : '';
 
         const planetsHtml = box.planets.length > 0
@@ -680,13 +726,13 @@
       // North Indian Wheel
       const northWheel = document.getElementById('northIndianWheel');
       northWheel.innerHTML = '';
-      wheels.northIndian.houses.forEach(h => {
+      (wheels.northIndian || []).forEach(h => {
         const box = document.createElement('div');
         box.className = 'house-box';
         const planetsText = h.planets.length > 0 ? h.planets.map(p => p.name).join(', ') : 'None';
         box.innerHTML = `
-          <div class="house-title">House ${h.houseNumber} (${h.signName})</div>
-          <div style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Cusp: ${h.cuspFormattedDms}</div>
+          <div class="house-title">House ${h.house} (${h.signName})</div>
+          <div style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Cusp: ${h.cuspFormatted}</div>
           <div class="house-planets">Planets: ${planetsText}</div>
         `;
         northWheel.appendChild(box);
