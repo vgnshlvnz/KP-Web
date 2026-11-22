@@ -56,7 +56,7 @@ describe('KPSTLA id, label and default selection', () => {
   it('DEFAULT_AYANAMSA_SELECTION is KP New (#22, #59), and near-miss ids are still rejected', () => {
     expect(DEFAULT_AYANAMSA_SELECTION).toBe('kp_new');
     expect(DEFAULT_AYANAMSA_SELECTION).not.toBe(ID);
-    for (const bad of ['kpstla', 'KPSTLA', 'kp_straightline_adjusted', 'kp_straight_line_adjust', '']) {
+    for (const bad of ['kpstla', 'KPSTLA', 'kp_straightline_adjusted', 'kp_straight', '']) {
       expect(isAyanamsaMode(bad), bad).toBe(false);
       expect(validateAyanamsa(bad), bad).toContain('no silent fallback');
     }

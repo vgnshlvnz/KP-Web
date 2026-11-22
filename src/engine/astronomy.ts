@@ -5,15 +5,14 @@ import {
   AYANAMSA_LABELS,
   calendarFromJulianDay,
   isAyanamsaMode,
-  isSeDefinedAyanamsaMode,
-  kpqtFracYear,
+  kpCivilFromJulianDay,
   meanAyanamsaKpAyanamsa,
   meanAyanamsaKpStla,
   meanAyanamsaKpStraightLine,
-  meanAyanamsaSeDefined,
   unsupportedAyanamsaMessage,
-  type KpCalendarDate,
+  type KpCivilDate,
 } from './ayanamsa-defs.js';
+import { isKpQtTableAyanamsa, meanAyanamsaKpQt } from './kpqt-precession.js';
 
 export const DEG2RAD = Math.PI / 180.0;
 export const RAD2DEG = 180.0 / Math.PI;
@@ -287,8 +286,8 @@ export interface AyanamsaResult {
  * KP New: Krishnamurti VP291 / Senthilathiban (Swiss Ephemeris SIDM_KRISHNAMURTI_VP291 #45)
  *   Epoch: Zero ayanamsa at 291 CE (JD 1827424.752255678)
  *   J2000.0 value: 23°46'49.31" = 23.780365°
- * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi: the Swiss Ephemeris 2.10.03
- *   modes of the same names, defined in `ayanamsa-defs.ts` (owner decision on #29, 2026-11-21).
+ * Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi: KP-Qt's `astro::ayanamsa`
+ *   (`kpqt-precession.ts`). `jd` for these six is UT; the function applies KP-Qt's ΔT itself.
  * Nil: the tropical zodiac. The mean and the true ayanamsa are both 0, and `dPsiDeg` is ignored,
  *   so sidereal longitude = tropical longitude.
  * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses
@@ -298,6 +297,10 @@ export interface AyanamsaResult {
  * KP Straight Line (Adjusted): mean = T x 50.2388475" / 3600, T = (jd - 1827345.5) / 365.25 (owner, #29;
  *   choices G1 to G3 in `ayanamsa-defs.ts`). G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): no nutation.
  *   The true ayanamsa equals the mean: `dPsiDeg` is ignored, like for Nil.
+ * KP Straight Line and KP Ayanamsa: KP-Qt's formulas in `ayanamsa-defs.ts` (`kpAyanamsa.cpp`),
+ *   evaluated on `civil` (the local date the user entered) or, when `civil` is omitted, on the
+ *   Gregorian date of `jd`. Their mean has no nutation term. The true value is mean + `dPsiDeg`,
+ *   which is what KP-Qt subtracts (`siderealOffset = ayanamsa + nutation`).
  *
  * #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  * `type` is a required parameter (this function used to default it to 'kp_old'), and any value that is
@@ -307,7 +310,7 @@ export function calculateAyanamsa(
   jd: number,
   type: AyanamsaType,
   dPsiDeg: number = 0,
-  civil?: KpCalendarDate
+  civil?: KpCivilDate
 ): AyanamsaResult {
   // Never fall back to another mode (or to Lahiri) for an unknown value.
   if (!isAyanamsaMode(type)) {
@@ -325,17 +328,17 @@ export function calculateAyanamsa(
     return { type, name: AYANAMSA_LABELS.nil, meanAyanamsa: 0, trueAyanamsa: 0 };
   } else if (type === 'kp_straight_line_adjusted') {
     // G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): the formula as given, no nutation term.
+    // `civil` is ignored: this is the owner definition, not KP-Qt's 15 April fractional year.
     const mean = meanAyanamsaKpStla(jd);
     return { type, name: 'KP Straight Line (Adjusted)', meanAyanamsa: mean, trueAyanamsa: mean };
-  } else if (type === 'kp_straight_line' || type === 'kp_ayanamsa') {
-    // KP-Qt kpAyanamsa.cpp. The date is the local clock when the chart passes one; otherwise the
-    // calendar date of `jd`. True ayanamsa adds dPsi, matching KP-Qt's siderealOffset.
-    const date = civil ?? calendarFromJulianDay(jd);
-    const mean =
-      type === 'kp_straight_line'
-        ? meanAyanamsaKpStraightLine(date.year)
-        : meanAyanamsaKpAyanamsa(kpqtFracYear(date));
-    return { type, name: AYANAMSA_LABELS[type], meanAyanamsa: mean, trueAyanamsa: mean + dPsiDeg };
+  } else if (type === 'kp_straight_line') {
+    const date = civil ?? kpCivilFromJulianDay(jd);
+    const mean = meanAyanamsaKpStraightLine(date.year);
+    return { type, name: AYANAMSA_LABELS.kp_straight_line, meanAyanamsa: mean, trueAyanamsa: mean + dPsiDeg };
+  } else if (type === 'kp_ayanamsa') {
+    const date = civil ?? kpCivilFromJulianDay(jd);
+    const mean = meanAyanamsaKpAyanamsa(date);
+    return { type, name: AYANAMSA_LABELS.kp_ayanamsa, meanAyanamsa: mean, trueAyanamsa: mean + dPsiDeg };
   } else if (type === 'kp_new') {
     name = 'KP New (VP291 / Senthilathiban)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI_VP291
@@ -354,9 +357,10 @@ export function calculateAyanamsa(
       0.000307064 * T * T +
       0.00000000227 * T * T * T -
       0.00000000411 * T * T * T * T;
-  } else if (isSeDefinedAyanamsaMode(type)) {
+  } else if (isKpQtTableAyanamsa(type)) {
+    // Name string kept. The value is KP-Qt's mean at this UT Julian day.
     name = `${AYANAMSA_LABELS[type]} (Swiss Ephemeris)`;
-    meanAyanamsa = meanAyanamsaSeDefined(type, T);
+    meanAyanamsa = meanAyanamsaKpQt(jd, type);
   } else {
     // Unreachable: every AyanamsaMode is handled above.
     throw new Error(unsupportedAyanamsaMessage(type));

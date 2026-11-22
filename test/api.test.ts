@@ -248,7 +248,7 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     }
   );
 
-  // #60 (owner, #29): all ten modes are accepted on every birth and horary route.
+  // #60 (owner, #29): every supported mode is accepted on every birth and horary route.
   it.each(AYANAMSA_MODES)('every route accepts %s (birth and horary) and echoes it back', async (id) => {
     for (const [path, base] of ROUTES) {
       const res = await post(path, { ...base, ayanamsa: id });
@@ -270,7 +270,7 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     const sun = (c: any) => c.planets.find((p: any) => p.name === 'Sun').longitude as number;
     expect(Math.abs(sun(old) - 326.9440666)).toBeLessThan(2 * ARCSEC); // A.1, KP Old
     expect(Math.abs(sun(nw) - 326.9239411)).toBeLessThan(2 * ARCSEC); // A.1, KP New
-    expect(Math.abs(sun(lahiri) - 326.8472142)).toBeLessThan(2 * ARCSEC); // SE Lahiri, ayanamsa-reference.test.ts
+    expect(Math.abs(sun(lahiri) - 326.8471034)).toBeLessThan(2 * ARCSEC); // moved 0.399" from the old SE pin 326.8472142 when Lahiri became KP-Qt's precession
   });
 });
 
@@ -459,7 +459,7 @@ describe('POST /api/horary (horary chart on calculateHoraryChart)', () => {
 });
 
 describe('GET /api/ayanamsa', () => {
-  it('lists the ten supported ids with labels; defaultSelection is the UI preselect only', async () => {
+  it('lists the supported ids with labels; defaultSelection is the UI preselect only', async () => {
     const res = await app.request('/api/ayanamsa?date=2026-11-21T06:00:00Z');
     expect(res.status).toBe(200);
     const json = (await res.json()) as any;

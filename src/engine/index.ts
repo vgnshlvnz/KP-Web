@@ -364,7 +364,7 @@ export function calculateChartWithArmc(
   const threshold = { nearBoundaryThresholdArcsec: NEAR_BOUNDARY_THRESHOLD_ARCSEC };
 
   // Planets, with the ayanamsa and the nutation that go with them.
-  const civil = {
+  const civilDate = {
     year: input.year,
     month: input.month,
     day: input.day,
@@ -374,7 +374,7 @@ export function calculateChartWithArmc(
   };
   const ephemeris = calculateEphemeris(birthUtc, {
     ayanamsa: options.ayanamsa,
-    civil,
+    civilDate,
   });
   const jdUT = ephemeris.julianDayUt;
 
@@ -383,7 +383,7 @@ export function calculateChartWithArmc(
   const nutInObl = ephemeris.nutationInObliquityDeg;
   const obl = calculateObliquity(jdUT, nutInObl);
   const clockSt = calculateSiderealTime(jdUT, input.longitude, nutInLon, obl.trueObliquity);
-  const aya = calculateAyanamsa(jdUT, options.ayanamsa, nutInLon, civil);
+  const aya = calculateAyanamsa(jdUT, options.ayanamsa, nutInLon, civilDate);
   const st = resolveArmc
     ? siderealTimeForArmc(
         resolveArmc({
