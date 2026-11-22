@@ -163,15 +163,21 @@ export function calculateKPChart(
  * geographic latitude, obliquity, and ayanamsa.
  * Useful for Horary (Prashna) where Ascendant is fixed at sub start and ARMC is inverted.
  *
+ * `obliquityDegrees` and `ayanamsaDegrees` are required, with no default: an omitted or non-finite
+ * value throws a `RangeError` instead of silently computing sub lords with an ayanamsa that matches
+ * none of the supported modes (#22 decided: no silent ayanamsa fallback).
+ *
  * Throws `PolarLatitudeError` where Placidus is undefined: this returns bare cusps and cannot carry
  * the `polar_fallback` warning, so it never substitutes Porphyry silently.
  */
 export function calculateCuspsFromARMC(
   armcDegrees: number,
   latitude: number,
-  obliquityDegrees: number = 23.439291,
-  ayanamsaDegrees: number = 24.1358
+  obliquityDegrees: number,
+  ayanamsaDegrees: number
 ): KPCusp[] {
+  assertFiniteNumber('obliquityDegrees', obliquityDegrees);
+  assertFiniteNumber('ayanamsaDegrees', ayanamsaDegrees);
   const result = calculatePlacidusCusps(
     armcDegrees,
     latitude,

@@ -210,6 +210,21 @@ describe('Placidus House Cusps Engine', () => {
     expect(cusps[9].longitude).toBeCloseTo(294.205, 2);
   });
 
+  it('calculateCuspsFromARMC has no default for obliquity or ayanamsa (#107)', () => {
+    // Compile time: both parameters are required.
+    // @ts-expect-error obliquity and ayanamsa are required
+    const missingBoth = () => calculateCuspsFromARMC(320.776189, 13.0827);
+    // @ts-expect-error ayanamsa is required
+    const missingAyanamsa = () => calculateCuspsFromARMC(320.776189, 13.0827, 23.437818);
+    // Runtime: an omitted or non-finite value throws instead of using a made-up ayanamsa.
+    expect(missingBoth).toThrow(RangeError);
+    expect(missingAyanamsa).toThrow(/ayanamsaDegrees must be a finite number/);
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      expect(() => calculateCuspsFromARMC(320.776189, 13.0827, 23.437818, bad)).toThrow(RangeError);
+      expect(() => calculateCuspsFromARMC(320.776189, 13.0827, bad, 24.135864)).toThrow(RangeError);
+    }
+  });
+
   it('handles MC to ARMC inversion correctly', () => {
     const obliquity = 23.439291;
     for (const testArmc of [0, 45, 90, 135, 180, 225, 270, 315]) {
