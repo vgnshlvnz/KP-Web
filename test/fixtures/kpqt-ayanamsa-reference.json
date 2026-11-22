@@ -1,0 +1,831 @@
+{
+  "description": "Mean ayanamsa, in degrees, from KP-Qt's own EphemerisEngine. true_deg is labeled separately.",
+  "epochs": [
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 1800
+      },
+      "delta_t_days": 0.00015878049572432977,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 13.718634830582092,
+      "id": "1800-01-01T00:00:00UT",
+      "jd": 2378496.5,
+      "jd_tt": 2378496.5001587807,
+      "jd_ut": 2378496.5,
+      "label": "1800-01-01 00:00:00 UT",
+      "note": "00:00:00 UT. The request named the date and not a time scale; UT is the scale EphemerisEngine::ayanamsa takes.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": -0.0023691025194062547,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 1850
+      },
+      "delta_t_days": 8.22597875534154e-05,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 7.107245644615091,
+      "id": "1850-01-01T00:00:00UT",
+      "jd": 2396758.5,
+      "jd_tt": 2396758.50008226,
+      "jd_ut": 2396758.5,
+      "label": "1850-01-01 00:00:00 UT",
+      "note": "00:00:00 UT. Same convention as 1800-01-01.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": -0.002498450223800807,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 1900
+      },
+      "delta_t_days": -3.226799507850252e-05,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": -2.787954774782618,
+      "id": "1900-01-01T00:00:00UT",
+      "jd": 2415020.5,
+      "jd_tt": 2415020.499967732,
+      "jd_ut": 2415020.5,
+      "label": "1900-01-01 00:00:00 UT",
+      "note": "00:00:00 UT.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": 0.00484070185233852,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 1950
+      },
+      "delta_t_days": 0.00033645833333333336,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 29.070000000000004,
+      "id": "1950-01-01T00:00:00UT",
+      "jd": 2433282.5,
+      "jd_tt": 2433282.5003364584,
+      "jd_ut": 2433282.5,
+      "label": "1950-01-01 00:00:00 UT",
+      "note": "00:00:00 UT.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": -0.0009181954758867376,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 2,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 1980
+      },
+      "delta_t_days": 0.0005846492737089484,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 50.51369724845314,
+      "id": "1980-01-01T02:00:00UT",
+      "jd": 2444239.5833333335,
+      "jd_tt": 2444239.583917983,
+      "jd_ut": 2444239.5833333335,
+      "label": "1980-01-01 02:00:00 UT",
+      "note": "02:00:00 UT, as requested.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": -0.0021766655516412816,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 12,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 2000
+      },
+      "delta_t_days": 0.0007391203625359385,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 63.859999323105086,
+      "id": "2000-01-01T12:00:00TT",
+      "jd": 2451545,
+      "jd_tt": 2451545,
+      "jd_ut": 2451544.9992608796,
+      "label": "2000-01-01 12:00:00 TT",
+      "note": "12:00:00 TT, J2000 (JD 2451545.0). jd_ut is the UT argument passed to ayanamsa() and nutationLon(), solved so astro::jdTt(jd_ut) equals this TT. The KP civil date stays 2000-01-01 12:00:00 as written; those formulas do not use jd_ut or delta T.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": -0.0038676069915284986,
+      "time_scale": "TT",
+      "tt_residual_days": 0
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 2025
+      },
+      "delta_t_days": 0.0008618956804290056,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 74.46778678906608,
+      "id": "2025-01-01T00:00:00UT",
+      "jd": 2460676.5,
+      "jd_tt": 2460676.5008618957,
+      "jd_ut": 2460676.5,
+      "label": "2025-01-01 00:00:00 UT",
+      "note": "00:00:00 UT.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": 5.404028936550231e-05,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 2050
+      },
+      "delta_t_days": 0.0017277777777777775,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 149.27999999999997,
+      "id": "2050-01-01T00:00:00UT",
+      "jd": 2469807.5,
+      "jd_tt": 2469807.501727778,
+      "jd_ut": 2469807.5,
+      "label": "2050-01-01 00:00:00 UT",
+      "note": "00:00:00 UT.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": 0.004212971448065441,
+      "time_scale": "UT"
+    },
+    {
+      "calendar": {
+        "day": 1,
+        "hour": 0,
+        "minute": 0,
+        "month": 1,
+        "second": 0,
+        "year": 2100
+      },
+      "delta_t_days": 0.0026721938297649423,
+      "delta_t_function": "astro::deltaT",
+      "delta_t_seconds": 230.87754689169103,
+      "id": "2100-01-01T00:00:00UT",
+      "jd": 2488069.5,
+      "jd_tt": 2488069.502672194,
+      "jd_ut": 2488069.5,
+      "label": "2100-01-01 00:00:00 UT",
+      "note": "00:00:00 UT.",
+      "nutation_function": "EphemerisEngine::nutationLon",
+      "nutation_lon_deg": 0.0009123631419203188,
+      "time_scale": "UT"
+    }
+  ],
+  "excluded": [],
+  "exclusion_note": "Nothing is excluded. None of the 11 product ayanamsas read a degree from the gitignored KPAstro databases (data/*.db). DataStore::ayanamsaNames reads only Name from TableAyanamsaMaster. The spellings used here are the in-repo kp::kAyanamsaNames copies. User Defined does not read the database either; its zero point is the unimplemented (0, 0) default and is flagged placeholder_zero_point.",
+  "generator": "tools/ayanamsa-ref",
+  "mean_deg_definition": "EphemerisEngine::ayanamsa. No nutation.",
+  "notes": [
+    "mean_deg is EphemerisEngine::ayanamsa: the mean ayanamsa, without nutation. This is the value the app shows.",
+    "true_deg is the tropical-to-sidereal offset the app subtracts. For every system except Nil Ayanamsa (Sayana) that is EphemerisEngine::siderealOffset, mean ayanamsa plus IAU 1980 nutation in longitude. For Nil, the app forces the offset to 0 and does not add nutation. nutation_lon_deg is still recorded on the epoch.",
+    "Copied from vgnshlvnz/KP-Qt pull 92, tools/ayanamsa-ref/ayanamsa_reference.json, commit e5ca41d65036516b76f47455336b73643366364a. Regenerate there with cmake --build build --target ayanamsa-ref and ./build/ayanamsa-ref --output tools/ayanamsa-ref/ayanamsa_reference.json.",
+    "The running app is unchanged. Nutation stays on there. This tool only prints both numbers.",
+    "No degree is read from a database. data/*.db is not opened. Display names and sidmodes come from kp::kAyanamsaNames and kp::kAyanamsaSidMode.",
+    "User Defined is included and marked placeholder_zero_point. The editor is a stub, so the app passes t0 = 0 and ayan_t0 = 0. That pair is not a published ayanamsa."
+  ],
+  "schema": 1,
+  "source": {
+    "repo": "vgnshlvnz/KP-Qt",
+    "pull": 92,
+    "commit": "e5ca41d65036516b76f47455336b73643366364a",
+    "path": "tools/ayanamsa-ref/ayanamsa_reference.json"
+  },
+  "systems": [
+    {
+      "id": 1,
+      "kind": "tropical-constant",
+      "name": "Nil Ayanamsa (Sayana)",
+      "nutation_in_true": false,
+      "placeholder_zero_point": false,
+      "sid_mode": -2,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 0,
+          "true_deg": 0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "kp-closed-form",
+      "name": "KP Ayanamsa",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": -3,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 20.97581026499182,
+          "true_deg": 20.973441162472415
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 21.673339907286337,
+          "true_deg": 21.670841457062537
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 22.371023716247528,
+          "true_deg": 22.375864418099866
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 23.068861691875384,
+          "true_deg": 23.067943496399497
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 23.487603417511885,
+          "true_deg": 23.485426751960244
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 23.766834708985698,
+          "true_deg": 23.76296710199417
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 24.115918587974544,
+          "true_deg": 24.11597262826391
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 24.46500014313109,
+          "true_deg": 24.469213114579155
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 25.163300618758942,
+          "true_deg": 25.164212981900864
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "kp-closed-form",
+      "name": "KP Straight Line",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": -4,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 21.05845024375,
+          "true_deg": 21.056081141230592
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 21.756212014583333,
+          "true_deg": 21.753713564359533
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 22.453973785416665,
+          "true_deg": 22.458814487269002
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 23.15173555625,
+          "true_deg": 23.150817360774113
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 23.57039261875,
+          "true_deg": 23.568215953198358
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 23.84949732708333,
+          "true_deg": 23.845629720091804
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 24.1983782125,
+          "true_deg": 24.198432252789367
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 24.547259097916665,
+          "true_deg": 24.55147206936473
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 25.245020868749997,
+          "true_deg": 25.245933231891918
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "zero-point-precession",
+      "name": "Lahiri",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": 1,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 21.064482249349282,
+          "true_deg": 21.062113146829876
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 21.762408462393218,
+          "true_deg": 21.759910012169417
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 22.460489113810254,
+          "true_deg": 22.465329815662592
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 23.158724190989957,
+          "true_deg": 23.15780599551407
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 23.5777348796753,
+          "true_deg": 23.57555821412366
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 23.85713274253795,
+          "true_deg": 23.853265135546422
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 24.206404507172564,
+          "true_deg": 24.20645854746193
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 24.555695733602494,
+          "true_deg": 24.55990870505056
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 25.254393901933515,
+          "true_deg": 25.255306265075436
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "zero-point-precession",
+      "name": "B.V.Raman",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": 3,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 19.618452249349275,
+          "true_deg": 19.61608314682987
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 20.31637846239321,
+          "true_deg": 20.31388001216941
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 21.014459113810247,
+          "true_deg": 21.019299815662585
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 21.71269419098995,
+          "true_deg": 21.711775995514063
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 22.131704879675294,
+          "true_deg": 22.129528214123653
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 22.411102742537942,
+          "true_deg": 22.407235135546415
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 22.760374507172557,
+          "true_deg": 22.760428547461924
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 23.109665733602487,
+          "true_deg": 23.113878705050553
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 23.808363901933507,
+          "true_deg": 23.80927626507543
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "zero-point-precession",
+      "name": "Fagan Bradley",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": 0,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 21.947802784292502,
+          "true_deg": 21.945433681773096
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 22.64572889304135,
+          "true_deg": 22.64323044281755
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 23.34380945473002,
+          "true_deg": 23.34865015658236
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 24.04204445686568,
+          "true_deg": 24.041126261389792
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 24.46105510761641,
+          "true_deg": 24.45887844206477
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 24.740452948154186,
+          "true_deg": 24.73658534116266
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 25.08972468823089,
+          "true_deg": 25.08977872852026
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 25.43901589383173,
+          "true_deg": 25.443228865279796
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 26.137714031718453,
+          "true_deg": 26.138626394860374
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "zero-point-precession",
+      "name": "Yukteshwar",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": 7,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 19.686234249349297,
+          "true_deg": 19.68386514682989
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 20.384160462393233,
+          "true_deg": 20.381662012169432
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 21.08224111381027,
+          "true_deg": 21.087081815662607
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 21.780476190989972,
+          "true_deg": 21.779557995514086
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 22.199486879675316,
+          "true_deg": 22.197310214123675
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 22.478884742537964,
+          "true_deg": 22.475017135546437
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 22.82815650717258,
+          "true_deg": 22.828210547461946
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 23.17744773360251,
+          "true_deg": 23.181660705050575
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 23.87614590193353,
+          "true_deg": 23.87705826507545
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "zero-point-precession",
+      "name": "J.N.Bhasin",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": 8,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 19.969568249349322,
+          "true_deg": 19.967199146829916
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 20.667494462393257,
+          "true_deg": 20.664996012169457
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 21.365575113810294,
+          "true_deg": 21.370415815662632
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 22.063810190989997,
+          "true_deg": 22.06289199551411
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 22.48282087967534,
+          "true_deg": 22.4806442141237
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 22.76221874253799,
+          "true_deg": 22.758351135546462
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 23.111490507172604,
+          "true_deg": 23.11154454746197
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 23.460781733602534,
+          "true_deg": 23.4649947050506
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 24.159479901933555,
+          "true_deg": 24.160392265075476
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "zero-point-precession",
+      "name": "Usha Shashi",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": 4,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 17.264972249349285,
+          "true_deg": 17.26260314682988
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 17.96289846239322,
+          "true_deg": 17.96040001216942
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 18.660979113810257,
+          "true_deg": 18.665819815662594
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 19.35921419098996,
+          "true_deg": 19.358295995514073
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 19.778224879675303,
+          "true_deg": 19.776048214123662
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 20.05762274253795,
+          "true_deg": 20.053755135546425
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 20.406894507172566,
+          "true_deg": 20.406948547461933
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 20.756185733602496,
+          "true_deg": 20.760398705050562
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 21.454883901933517,
+          "true_deg": 21.45579626507544
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "kp-closed-form",
+      "name": "KP Straight Line (Adjusted)",
+      "nutation_in_true": true,
+      "placeholder_zero_point": false,
+      "sid_mode": -5,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 21.05447395749429,
+          "true_deg": 21.052104854974885
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 21.752235728327626,
+          "true_deg": 21.749737278103826
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 22.449997499160958,
+          "true_deg": 22.454838201013295
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 23.147759269994292,
+          "true_deg": 23.146841074518406
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 23.56638128509941,
+          "true_deg": 23.56420461954777
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 23.84550192406678,
+          "true_deg": 23.841634317075254
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 24.19441279041439,
+          "true_deg": 24.194466830703757
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 24.54328281166096,
+          "true_deg": 24.547495783109024
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 25.24104458249429,
+          "true_deg": 25.24195694563621
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "user-zero-point",
+      "name": "User Defined",
+      "nutation_in_true": true,
+      "placeholder_zero_point": true,
+      "sid_mode": 255,
+      "values": [
+        {
+          "epoch": "1800-01-01T00:00:00UT",
+          "mean_deg": 89.74155458135519,
+          "true_deg": 89.73918547883578
+        },
+        {
+          "epoch": "1850-01-01T00:00:00UT",
+          "mean_deg": 90.43941110606512,
+          "true_deg": 90.43691265584133
+        },
+        {
+          "epoch": "1900-01-01T00:00:00UT",
+          "mean_deg": 91.13742075004055,
+          "true_deg": 91.14226145189289
+        },
+        {
+          "epoch": "1950-01-01T00:00:00UT",
+          "mean_deg": 91.83558355838852,
+          "true_deg": 91.83466536291263
+        },
+        {
+          "epoch": "1980-01-01T02:00:00UT",
+          "mean_deg": 92.25455030547134,
+          "true_deg": 92.2523736399197
+        },
+        {
+          "epoch": "2000-01-01T12:00:00TT",
+          "mean_deg": 92.53391863722871,
+          "true_deg": 92.53005103023717
+        },
+        {
+          "epoch": "2025-01-01T00:00:00UT",
+          "mean_deg": 92.88315323285904,
+          "true_deg": 92.88320727314841
+        },
+        {
+          "epoch": "2050-01-01T00:00:00UT",
+          "mean_deg": 93.23240701498011,
+          "true_deg": 93.23661998642818
+        },
+        {
+          "epoch": "2100-01-01T00:00:00UT",
+          "mean_deg": 93.93102949454942,
+          "true_deg": 93.93194185769134
+        }
+      ]
+    }
+  ],
+  "true_deg_definition": "Sidereal offset subtracted from tropical longitude. mean_deg + nutation_lon_deg where nutation_in_true is true; 0 where it is false (Nil Ayanamsa)."
+}
