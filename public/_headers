@@ -1,0 +1,7 @@
+# Security headers for the static pages (Workers static assets read this file; it is not applied to Worker responses).
+# No Content-Security-Policy yet: the pages use inline scripts and styles, and a CSP would need a nonce or hash setup first.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

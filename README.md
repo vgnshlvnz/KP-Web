@@ -78,32 +78,41 @@ The ayanamsas a user can select:
 
 KP Old and KP New match Swiss Ephemeris 2.10.03 to within 0.05 arcseconds on the pinned dates. A request with no ayanamsa is rejected. The page preselects KP New.
 
-## Cloudflare Wrangler deployment
+## Deploy
 
-The engine is built in pure TypeScript and deployed as a Cloudflare Worker using Wrangler (`wrangler.jsonc`):
+The engine is pure TypeScript and runs as a Cloudflare Worker (`wrangler.jsonc`), serving the pages in `public/` as
+static assets. Nothing is deployed yet; the step-by-step guide for the first deploy, logs, rollback and limits is
+[docs/deploy.md](docs/deploy.md).
 
 ```bash
-# Install dependencies
-npm install
-
-# Run type check and unit tests
-npm run build
-npm test
-
-# Run local Cloudflare Worker development server
-npm run dev
-
-# Deploy to Cloudflare Workers
-npm run deploy
+npm ci
+npm run typecheck && npm test   # `npm run deploy` runs these first
+npm run dev                     # local Worker on http://localhost:8787
+npm run deploy                  # publishes to Cloudflare; run it yourself, see docs/deploy.md
 ```
 
-### API Endpoints
+### Pages
 
-- `GET /api/health` — Engine status, versions, and NASA JPL licensing confirmation.
+- `/` — natal chart (cusps, planets, lords, significators, South and North Indian wheels).
+- `/match` — KP Dasavidha Porutham (horoscope matching).
+- `/animate` — animated chart over time.
+
+### API endpoints
+
+Every chart route needs an explicit `ayanamsa`; there is no default. The three chart routes take either
+`latitude`, `longitude` and `utcOffsetHours`, or a `locationId` from `GET /api/locations`. Unknown `/api/*` paths return a
+JSON 404. `/api/*` allows any origin (CORS `*`); the API has no cookies or auth.
+
+- `GET /api/health` — status, engine, licensing note, the supported ayanamsa ids and the endpoint list.
 - `GET /api/ayanamsa?date=2026-11-21T00:00:00Z` — every supported ayanamsa at that UTC instant.
-- `GET /api/horary-table` or `GET /api/horary-table?number=108` — Complete canonical 1–249 Horary table or specific entry lookup.
-- `POST /api/calculate` — Computes full natal or event chart (planetary positions, Placidus cusps, sign/star/sub/sub-sub lords, 4-level significators, ruling planets, Vimshottari dasha).
-- `POST /api/horary` — Computes Horary chart for numbers 1–249 with Lagna at start of sub (or midpoint toggle) via RAMC inversion.
+- `GET /api/horary/table` — the 1–249 table as `{ success, count, table }` (used by the page).
+- `GET /api/horary-table` or `GET /api/horary-table?number=108` — the same table, bare, or a single entry.
+- `GET /api/locations` — countries with their places (`{ count, countries }`).
+- `GET /api/chart/sample` — sample inputs for the page.
+- `POST /api/chart/cusps` and `POST /api/chart/calculate` — Placidus cusps, planets, significators and wheels as `{ success, data }` (the page's contract).
+- `POST /api/calculate` — the full natal or event chart, bare: planetary positions, Placidus cusps, sign/star/sub/sub-sub lords, 4-level significators, ruling planets, Vimshottari dasha.
+- `POST /api/horary` — horary chart for numbers 1–249 with the lagna at the start of the sub (midpoint only behind `useSubMidpoint`), via RAMC inversion.
+- `POST /api/match` — KP Dasavidha Porutham for two charts (rules 1, 3, 4, 6, 7, 8 and 10 only).
 
 ### Time and place
 

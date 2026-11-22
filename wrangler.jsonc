@@ -3,8 +3,14 @@
   "name": "kp-web",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-21",
-  "compatibility_flags": ["nodejs_compat"],
+  // Workers Logs (dashboard) and `wrangler tail`.
+  "observability": {
+    "enabled": true
+  },
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    // Every /api/* request goes to the Worker first, so no static file can ever shadow an API path and an unknown
+    // /api/... path gets the Worker's JSON 404, not an HTML page.
+    "run_worker_first": ["/api/*"]
   }
 }
