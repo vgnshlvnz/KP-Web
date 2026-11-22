@@ -117,6 +117,22 @@ describe('Astronomical Calculations', () => {
     expect(Math.abs(err) * 3600).toBeLessThan(0.2);
   });
 
+  // New in #57 (the 0.2" / 0.1" checks above are kept as they were): with the 77-term IAU 2000B
+  // nutation the engine agrees with Swiss Ephemeris far more closely. The ARMC value in Appendix A
+  // has 7 decimals (0.00036"), and what is left is Swiss Ephemeris' complementary terms of the
+  // equation of the equinoxes (about 0.003").
+  it.each(REFERENCE)('nutation to 0.001", true obliquity to 0.001", ARMC to 0.005": $label', (c) => {
+    const nut = calculateNutation(c.jd);
+    expect(Math.abs(nut.dPsi * 3600 - c.dPsiArcsec)).toBeLessThan(0.001);
+
+    const obl = calculateObliquity(c.jd, nut.dEps);
+    expect(Math.abs(obl.trueObliquity - c.trueObl) * 3600).toBeLessThan(0.001);
+
+    const st = calculateSiderealTime(c.jd, c.lon, nut.dPsi, obl.trueObliquity);
+    const err = ((((st.armc - c.armc) % 360) + 540) % 360) - 180;
+    expect(Math.abs(err) * 3600).toBeLessThan(0.005);
+  });
+
   it('keeps the exported shapes: true obliquity = mean + dEps, GAST = GMST + dPsi*cos(eps)', () => {
     const jd = 2461365.541666667;
     const nut = calculateNutation(jd);

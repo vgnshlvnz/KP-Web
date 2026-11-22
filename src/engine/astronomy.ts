@@ -1,5 +1,6 @@
 import * as Astronomy from 'astronomy-engine';
 import { AyanamsaType } from './types.js';
+import { nutationIau2000b } from './nutation.js';
 import {
   AYANAMSA_LABELS,
   isAyanamsaMode,
@@ -116,15 +117,25 @@ export interface NutationResult {
 /**
  * Nutation in longitude (dPsi) and obliquity (dEps), in degrees, for a Julian Day in UT.
  *
- * Delegates to astronomy-engine (IAU 2000B), so that planets, cusps and the ayanamsa correction
- * all use one nutation model (port-ephemeris, #41; see #33). The signature is unchanged.
+ * The one nutation function of the engine (#57). It evaluates the full 77-term IAU 2000B series
+ * (`nutation.ts`), the model Swiss Ephemeris uses, at the TT of the instant. astronomy-engine's own
+ * `e_tilt` (a 5-term truncation) is not used for any nutation value any more; see `ephemeris.ts` for how
+ * the planet longitudes, which astronomy-engine produces in its own true equinox, are put on this
+ * nutation. The signature is unchanged.
  */
 export function calculateNutation(jd: number): NutationResult {
-  const tilt = Astronomy.e_tilt(astroTimeFromJd(jd));
-  // astronomy-engine reports both angles in arcseconds.
+  return nutationAtTime(astroTimeFromJd(jd));
+}
+
+/**
+ * Same as `calculateNutation`, for an astronomy-engine time (which already carries the UT -> TT
+ * conversion). `ephemeris.ts` uses this so that a `Date` and its Julian Day give one answer.
+ */
+export function nutationAtTime(time: Astronomy.AstroTime): NutationResult {
+  const nut = nutationIau2000b(time.tt + JD_J2000);
   return {
-    dPsi: tilt.dpsi / 3600.0,
-    dEps: tilt.deps / 3600.0,
+    dPsi: nut.dPsiArcsec / 3600.0,
+    dEps: nut.dEpsArcsec / 3600.0,
   };
 }
 
@@ -158,12 +169,31 @@ export interface SiderealTimeResult {
 }
 
 /**
+ * Greenwich Mean Sidereal Time in degrees (0-360) for an astronomy-engine time: the Earth Rotation
+ * Angle (from UT) plus the IAU 2006 polynomial in TT (Capitaine, Wallace & Chapront 2003; the same
+ * expression astronomy-engine uses, without its equation of the equinoxes). It uses no nutation.
+ */
+function greenwichMeanSiderealDegrees(time: Astronomy.AstroTime): number {
+  const t = time.tt / 36525.0;
+  // Earth Rotation Angle: UT days since J2000, in turns.
+  const thet1 = 0.779057273264 + 0.00273781191135448 * time.ut;
+  const thet3 = time.ut % 1;
+  const eraDeg = 360.0 * ((thet1 + thet3) % 1);
+  const polyArcsec =
+    0.014506 +
+    ((((-0.0000000368 * t - 0.000029956) * t - 0.00000044) * t + 1.3915817) * t + 4612.156534) * t;
+  return normalizeDegrees(eraDeg + polyArcsec / 3600.0);
+}
+
+/**
  * Greenwich Mean Sidereal Time (GMST), Greenwich Apparent Sidereal Time (GAST), Local Apparent
  * Sidereal Time and ARMC, in hours and degrees, for a Julian Day in UT.
  *
- * GMST comes from astronomy-engine (IAU 2006). GAST = GMST + caller-supplied equation of the
- * equinoxes `dPsiDeg * cos(trueEpsDeg)`, as before, so a caller that passes dPsi = 0 still gets
- * GMST.
+ * GMST is the IAU 2006 expression (ERA + polynomial, no nutation). GAST = GMST + the caller's
+ * equation of the equinoxes `dPsiDeg * cos(trueEpsDeg)`, with dPsi and the true obliquity from
+ * `calculateNutation` / `calculateObliquity` (#57), so a caller that passes dPsi = 0 still gets
+ * GMST. As in Swiss Ephemeris `swe_sidtime`, the equation of the equinoxes uses the TRUE obliquity.
+ * What is left against Swiss Ephemeris is its complementary terms (under about 3 mas).
  */
 export function calculateSiderealTime(
   jd: number,
@@ -172,12 +202,8 @@ export function calculateSiderealTime(
   trueEpsDeg: number = 23.439291
 ): SiderealTimeResult {
   const time = astroTimeFromJd(jd);
-  // astronomy-engine returns apparent (GAST) hours; `ee` is the equation of the equinoxes it added,
-  // in seconds of time. Removing it leaves GMST.
-  const gastAeHours = Astronomy.SiderealTime(time);
-  const eeAeHours = Astronomy.e_tilt(time).ee / 3600.0;
-  const gmstHours = (((gastAeHours - eeAeHours) % 24.0) + 24.0) % 24.0;
-  const gmstDegrees = normalizeDegrees(gmstHours * 15.0);
+  const gmstDegrees = greenwichMeanSiderealDegrees(time);
+  const gmstHours = gmstDegrees / 15.0;
 
   // Equation of the equinoxes: EE = dPsi * cos(trueEps)
   const eqEquinoxesDeg = dPsiDeg * cosd(trueEpsDeg);
@@ -260,12 +286,14 @@ export interface AyanamsaResult {
  *   modes of the same names, defined in `ayanamsa-defs.ts` (owner decision on #29, 2026-11-21).
  * Nil: the tropical zodiac. The mean and the true ayanamsa are both 0, and `dPsiDeg` is ignored,
  *   so sidereal longitude = tropical longitude.
- * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses.
+ * Returns true ayanamsa (mean + nutation in longitude) to match Swiss Ephemeris sidereal houses
+ * (except KPSTLA and Nil, whose true value equals the mean).
  *
  * KP Straight Line (Adjusted): mean = T x 50.2388475" / 3600, T = (jd - 1827345.5) / 365.25 (owner, #29;
- *   provisional choices G1 to G3 in `ayanamsa-defs.ts`, TODO(#29 G1), TODO(#29 G2), TODO(#29 G3)).
+ *   choices G1 to G3 in `ayanamsa-defs.ts`). G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): no nutation.
+ *   The true ayanamsa equals the mean: `dPsiDeg` is ignored, like for Nil.
  *
- * #22 decided (owner, #29): default *selection* is KPSTLA; the API still requires an explicit ayanamsa (no fallback).
+ * #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
  * `type` is a required parameter (this function used to default it to 'kp_old'), and any value that is
  * not one of the supported modes throws instead of silently becoming KP Old or Lahiri.
  */
@@ -289,8 +317,9 @@ export function calculateAyanamsa(
     // true equinox of date).
     return { type, name: AYANAMSA_LABELS.nil, meanAyanamsa: 0, trueAyanamsa: 0 };
   } else if (type === 'kp_straight_line_adjusted') {
-    name = 'KP Straight Line (Adjusted)';
-    meanAyanamsa = meanAyanamsaKpStla(jd); // TODO(#29 G3): + dPsi below, like every other mode
+    // G3 decided (owner, #29, 2026-11-21 18:14Z / 2026-11-22 00:25Z): the formula as given, no nutation term.
+    const mean = meanAyanamsaKpStla(jd);
+    return { type, name: 'KP Straight Line (Adjusted)', meanAyanamsa: mean, trueAyanamsa: mean };
   } else if (type === 'kp_new') {
     name = 'KP New (VP291 / Senthilathiban)';
     // High-precision polynomial derived from IAU precession & Swiss Ephemeris SIDM_KRISHNAMURTI_VP291

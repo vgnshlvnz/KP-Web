@@ -145,7 +145,7 @@ describe('chart result and warnings', () => {
   });
 });
 
-// #22 decided (no API default; KPSTLA is the UI preselect only), TODO(#23), TODO(#24): none of these options has a default.
+// #22 decided (no API default; KP New is the UI's default selection), TODO(#23), TODO(#24): none of these options has a default.
 describe('owner-decision options have no default', () => {
   it('every option field is required', () => {
     expectTypeOf<Required<ChartCalculationOptions>>().toEqualTypeOf<ChartCalculationOptions>();

@@ -31,8 +31,8 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 - **Ayanamsa:** ten explicit ids in `src/engine/ayanamsa-defs.ts`: `kp_straight_line_adjusted` (KPSTLA, first), `kp_old`,
   `kp_new`, `lahiri`, `raman`, `fagan_bradley`, `yukteshwar`, `jn_bhasin`, `usha_shashi`, `nil`. All except KPSTLA are
   defined as Swiss Ephemeris defines them; KPSTLA follows the owner's formula (#29: T x 50.2388475" / 3600, T from 291 AD),
-  and its G1 to G3 choices (zero point, year length, nutation) are provisional (`TODO(#29 G1..G3)`). The UI preselects KPSTLA
-  (`DEFAULT_AYANAMSA_SELECTION`, #22). The API has **no default and no fallback**: `calculateChart`, `calculateKPChart`,
+  and its definition is final (#29): zero point 291-01-01 0h UT Julian, 365.25-day year, no nutation (true = mean). The UI
+  preselects KP New (`DEFAULT_AYANAMSA_SELECTION`, #22). The API has **no default and no fallback**: `calculateChart`, `calculateKPChart`,
   `calculateAyanamsa`, `calculateEphemeris` and every API route require it; missing or unknown is an error (HTTP 400).
 - **Accuracy of `astronomy-engine` vs Swiss Ephemeris 2.10.03** (audit, #53; local comparison only, SE is not a dependency):
   mean ayanamsa 0.0002″, Sun 0.90″, Moon 4.37″, Mercury to Saturn up to 10.21″ (Saturn 2026), mean node 0.23″, Placidus
@@ -43,7 +43,7 @@ The two parallel stacks are merged into one. `npm run typecheck` and `npm test` 
 
 | Issue | Decision | Where it applies |
 |---|---|---|
-| #22 | decided (owner, #29): default *selection* = KPSTLA (UI preselect, `DEFAULT_AYANAMSA_SELECTION`); the API requires an explicit ayanamsa. Still open: G1 to G3 confirmation and an independent reference value (#29); #59 to #61 (owner) on availability in birth and horary input, and labelling | `AyanamsaMode` and `ChartCalculationOptions.ayanamsa` in `src/engine/types.ts`; `calculateAyanamsa` in `src/engine/astronomy.ts`; `requireAyanamsa` in `src/index.ts` |
+| #22 | decided (owner, #29): KP New is the UI's default selection (`DEFAULT_AYANAMSA_SELECTION`); the API requires an explicit ayanamsa. KPSTLA is final, no nutation (#29). #59 and #60 closed with it; #61 (labelling) is still open | `AyanamsaMode` and `ChartCalculationOptions.ayanamsa` in `src/engine/types.ts`; `calculateAyanamsa` in `src/engine/astronomy.ts`; `requireAyanamsa` in `src/index.ts` |
 | #23 | Rahu/Ketu agent rule set | `NodeAgentRuleSet` in `types.ts`; `calculateFourLevelSignificators` in `significators.ts`; `ENGINE_CONFIG.nodeAgentRuleSet` in `src/index.ts` (interim `'none'`, owner answer on #29) |
 | #24 | ruling-planet set | `RulingPlanetSet` in `types.ts`; `calculateRulingPlanets` in `ruling-planets.ts`; `ENGINE_CONFIG.rulingPlanetSet` in `src/index.ts` |
 
@@ -67,11 +67,11 @@ Not wired into the app: `src/core/{timezone,places,storage}.ts`, `src/data/citie
 ## Rules that hold for every task
 
 - **KP correctness is the product.** Never change a calculation result to make a test pass. If a test and the code disagree, find out which is right (cite the reference value and where it came from) and say so.
-- Ayanamsa is an explicit choice from the supported list (KP Straight Line (Adjusted), KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). The UI preselects KP Straight Line (Adjusted) (#22). **The API never falls back: a request without an ayanamsa is rejected.**
+- Ayanamsa is an explicit choice from the supported list (KP Straight Line (Adjusted), KP Old, KP New, Lahiri, Raman, Fagan-Bradley, Yukteshwar, J.N. Bhasin, Usha-Shashi, Nil — owner, #29). The UI preselects KP New (#22). KP Straight Line (Adjusted) is final and has no nutation (#29). **The API never falls back: a request without an ayanamsa is rejected.**
 - Horary lagna is the **start** of the chosen sub, not the midpoint (midpoint only behind an explicit toggle).
 - Day lord for ruling planets changes at **sunrise**, not midnight.
 - A planet's house comes from Placidus cusps, not its sign.
-- Open rule decisions (#23, #24) are made by the repo owner: do not pick defaults for them; keep them as explicit config with a `TODO(#NN)` comment. #22 is decided (owner, #29): KPSTLA is the UI's default selection; the API requires an explicit ayanamsa.
+- Open rule decisions (#23, #24) are made by the repo owner: do not pick defaults for them; keep them as explicit config with a `TODO(#NN)` comment. #22 is decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
 - Do not delete a module until everything it uniquely provides has been ported and is covered by a test.
 - Don't add dependencies beyond `astronomy-engine` without asking. No native/C++ addons — the code must run in Workers V8 isolates.
 - Never run `wrangler deploy`, `git push --force`, or anything that publishes. Pushing `build/*` branches and opening PRs into `build/integration` is part of the workflow. Never push to `main`.

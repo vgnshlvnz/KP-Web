@@ -1,304 +1,240 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KP-Web — Placidus House Cusps & KP Astrology</title>
+  <link rel="stylesheet" href="/styles/kp-m3-tokens.css">
+  <script src="/vendor/material-web-2.5.0.js"></script>
   <style>
-    :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #38bdf8;
-      --primary-hover: #0ea5e9;
-      --accent: #f59e0b;
-      --success: #10b981;
-      --danger: #ef4444;
-      --highlight: #818cf8;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Reset only plain elements: a global * rule would override Material Web's :host padding. */
+    :where(div, span, p, h1, h2, h3, table, td, th, header) { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      padding: 1.5rem;
+      margin: 0;
+      font: 400 1rem/1.5rem var(--font-plain);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      padding: var(--space-4);
     }
+    @media (min-width: 600px) { body { padding: var(--space-6); } }
 
+    /* Top app bar */
     header {
       max-width: 1200px;
-      margin: 0 auto 1.5rem auto;
+      margin: 0 auto var(--space-6) auto;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--card-border);
-      padding-bottom: 1rem;
+      gap: var(--space-4);
     }
     header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: var(--primary);
+      font: 400 1.5rem/2rem var(--font-brand);          /* headline-small */
+      color: var(--md-sys-color-primary);
     }
     header p {
-      color: var(--text-muted);
-      font-size: 0.9rem;
+      font: 400 0.875rem/1.25rem var(--font-plain);    /* body-medium */
+      letter-spacing: 0.015625rem;
+      color: var(--md-sys-color-on-surface-variant);
     }
+    .header-actions { display: flex; align-items: center; gap: var(--space-2); }
 
     .container {
       max-width: 1200px;
       margin: 0 auto;
       display: grid;
       grid-template-columns: 340px 1fr;
-      gap: 1.5rem;
+      gap: var(--space-6);
     }
+    @media (max-width: 839px) { .container { grid-template-columns: 1fr; } }
 
-    @media (max-width: 900px) {
-      .container { grid-template-columns: 1fr; }
-    }
-
+    /* Cards: M3 filled card on surface-container-low */
     .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 0.75rem;
-      padding: 1.25rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      margin-bottom: 1.5rem;
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-sys-shape-corner-medium);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
     }
-
     .card h2 {
-      font-size: 1.15rem;
-      margin-bottom: 1rem;
-      color: var(--primary);
+      font: 400 1.375rem/1.75rem var(--font-plain);    /* title-large */
+      color: var(--md-sys-color-on-surface);
+      margin-bottom: var(--space-4);
+    }
+    .card h3 {
+      font: 500 1rem/1.5rem var(--font-plain);         /* title-medium */
+      letter-spacing: 0.009375rem;
+      color: var(--md-custom-color-kp-accent);
+      margin-bottom: var(--space-2);
+    }
+    .supporting {
+      font: 400 0.875rem/1.25rem var(--font-plain);    /* body-medium */
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: var(--space-4);
+    }
+
+    /* Form */
+    .fields { display: grid; gap: var(--space-3); }
+    .fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+    .fields-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-2); }
+    md-outlined-text-field, md-outlined-select { width: 100%; min-width: 0; }
+    md-outlined-text-field.mono { --md-outlined-text-field-input-text-font: var(--font-mono); --md-outlined-text-field-input-text-size: 0.75rem; }
+    md-filled-button.block { width: 100%; margin-top: var(--space-4); }
+
+    /* Notice: M3 tonal container */
+    .notice-box {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      gap: var(--space-3);
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      font: 400 0.875rem/1.25rem var(--font-plain);
     }
+    .notice-box md-icon { flex: none; }
 
-    .form-group {
-      margin-bottom: 0.85rem;
-    }
-    label {
-      display: block;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 0.25rem;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      border-radius: 0.375rem;
-      border: 1px solid var(--card-border);
-      background: #0f172a;
-      color: var(--text);
-      font-size: 0.9rem;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      padding: 0.6rem 1rem;
-      background: var(--primary);
-      color: #0f172a;
-      font-weight: 600;
-      border: none;
-      border-radius: 0.375rem;
-      cursor: pointer;
-      transition: background 0.15s ease;
-      font-size: 0.95rem;
-    }
-    .btn:hover { background: var(--primary-hover); }
-
-    .btn-secondary {
-      background: #334155;
-      color: var(--text);
-      margin-top: 0.5rem;
-    }
-    .btn-secondary:hover { background: #475569; }
-
+    /* Meta bar */
     .meta-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
-      background: #0f172a;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-      border: 1px solid var(--card-border);
+      gap: var(--space-2) var(--space-6);
+      background: var(--md-sys-color-surface-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      margin-bottom: var(--space-4);
     }
     .meta-item { display: flex; flex-direction: column; }
-    .meta-item span:first-child { color: var(--text-muted); font-size: 0.75rem; }
-    .meta-item span:last-child { font-weight: 600; color: var(--primary); }
-
-    /* Tables */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-      text-align: left;
+    .meta-item span:first-child {
+      font: 500 0.75rem/1rem var(--font-plain);        /* label-medium */
+      letter-spacing: 0.03125rem;
+      color: var(--md-sys-color-on-surface-variant);
     }
-    th, td {
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--card-border);
-    }
-    th {
-      background: #0f172a;
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.05em;
-    }
-    tr:hover td { background: rgba(255, 255, 255, 0.02); }
-
-    .badge {
-      display: inline-block;
-      padding: 0.15rem 0.4rem;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .badge-diff {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--accent);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-    .badge-same {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--success);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+    .meta-item span:last-child {
+      font: 400 0.875rem/1.25rem var(--font-mono);
+      color: var(--md-sys-color-primary);
     }
 
     /* Tabs */
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid var(--card-border);
-      margin-bottom: 1rem;
-      gap: 0.5rem;
+    md-tabs.results { margin-bottom: var(--space-4); --md-primary-tab-container-color: var(--md-sys-color-surface); }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font: 400 0.875rem/1.25rem var(--font-plain);    /* body-medium */
+      text-align: left;
     }
-    .tab {
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s ease;
+    th, td {
+      padding: var(--space-2) var(--space-3);
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
     }
-    .tab.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
+    th {
+      font: 500 0.75rem/1rem var(--font-plain);        /* label-medium */
+      letter-spacing: 0.03125rem;
+      color: var(--md-sys-color-on-surface-variant);
+      background: var(--md-sys-color-surface-container);
+    }
+    tbody tr:hover td {
+      background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);  /* hover state layer */
+    }
+    td.empty { text-align: center; color: var(--md-sys-color-on-surface-variant); }
+
+    /* Status marks (M3 assist-chip look, static) */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 var(--space-2);
+      border-radius: var(--md-sys-shape-corner-small);
+      font: 500 0.75rem/1rem var(--font-plain);        /* label-medium */
+      letter-spacing: 0.03125rem;
+      white-space: nowrap;
+    }
+    .badge-diff {
+      background: var(--md-custom-color-kp-accent-container);
+      color: var(--md-custom-color-on-kp-accent-container);
+    }
+    .badge-same {
+      background: var(--md-custom-color-kp-success-container);
+      color: var(--md-custom-color-on-kp-success-container);
     }
 
+    /* Tab panels */
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* Chart Wheels Grid (South Indian Style) */
+    /* Chart wheels */
+    .wheel-toggle { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); }
+    .wheel-title { text-align: center; }
+
     .south-indian-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(4, 1fr);
-      gap: 4px;
+      gap: var(--space-1);
       aspect-ratio: 1;
-      max-width: 500px;
-      margin: 1rem auto;
-      background: var(--card-border);
-      border: 2px solid var(--primary);
-      padding: 4px;
-      border-radius: 4px;
+      max-width: var(--kp-chart-max);
+      margin: var(--space-4) auto;
+      background: var(--md-sys-color-outline-variant);
+      padding: var(--space-1);
+      border-radius: var(--md-sys-shape-corner-medium);
     }
     .grid-cell {
-      background: #0f172a;
+      background: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-extra-small);
       padding: 6px;
       display: flex;
       flex-direction: column;
-      font-size: 0.75rem;
+      gap: 2px;
+      font: 400 0.75rem/1rem var(--font-plain);
       min-height: 80px;
-      border: 1px solid var(--card-border);
-      position: relative;
+      overflow: hidden;
     }
-    .grid-cell .sign-name {
-      font-weight: bold;
-      color: var(--accent);
-      margin-bottom: 2px;
-    }
-    .grid-cell .cell-cusp {
-      color: var(--primary);
-      font-size: 0.7rem;
-    }
-    .grid-cell .cell-planet {
-      color: var(--text);
-      font-weight: 600;
-      font-size: 0.75rem;
-    }
+    .grid-cell .sign-name { font-weight: 500; color: var(--md-custom-color-kp-accent); }
+    .grid-cell .cell-cusp { color: var(--md-sys-color-primary); font-size: 0.6875rem; }
+    .grid-cell .cell-planet { color: var(--md-sys-color-on-surface); font-weight: 500; }
     .center-box {
       grid-column: 2 / span 2;
       grid-row: 2 / span 2;
-      background: #1e293b;
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-sys-shape-corner-extra-small);
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 1rem;
+      color: var(--md-sys-color-on-surface-variant);
+      font: 500 0.875rem/1.25rem var(--font-plain);
+      padding: var(--space-4);
     }
 
     .north-indian-wheel {
-      max-width: 500px;
-      margin: 1rem auto;
+      max-width: var(--kp-chart-max);
+      margin: var(--space-4) auto;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
+      gap: var(--space-2);
     }
     .house-box {
-      background: #0f172a;
-      border: 1px solid var(--card-border);
-      padding: 0.75rem;
-      border-radius: 0.375rem;
+      background: var(--md-sys-color-surface-container);
+      padding: var(--space-3);
+      border-radius: var(--md-sys-shape-corner-small);
     }
     .house-title {
-      font-weight: bold;
-      color: var(--primary);
-      font-size: 0.85rem;
-      margin-bottom: 0.25rem;
+      font: 500 0.875rem/1.25rem var(--font-plain);    /* title-small */
+      color: var(--md-sys-color-primary);
+      margin-bottom: var(--space-1);
     }
-    .house-planets {
-      font-size: 0.8rem;
-      color: var(--text);
-    }
-
-    .notice-box {
-      background: rgba(56, 189, 248, 0.08);
-      border-left: 4px solid var(--primary);
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      border-radius: 0 0.375rem 0.375rem 0;
-      font-size: 0.85rem;
-    }
+    .house-planets { font: 400 0.8125rem/1.125rem var(--font-plain); color: var(--md-sys-color-on-surface); }
   </style>
 </head>
 <body>
-
   <header>
     <div>
       <h1>KP-Web</h1>
       <p>Placidus House Cusps, KP Ayanamsas, Planet House Assignments, and 4-Level Significators</p>
     </div>
-    <div>
+    <div class="header-actions">
       <span class="badge badge-same">Cloudflare Worker</span>
+      <md-icon-button id="btnTheme" aria-label="Switch to light theme"><md-icon><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M579-381q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-240.5 42.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-450H40v-60h160v60Zm720 0H760v-60h160v60ZM450-760v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-99-537 98-99 44 42-99 98-43-41ZM162-205l99-98 42 42-98 99-43-43Zm318-275Z"/></svg></md-icon></md-icon-button>
     </div>
   </header>
 
@@ -308,25 +244,17 @@
       <div class="card">
         <h2>Chart Parameters</h2>
 
-        <div class="form-group">
-          <label>Sample Charts</label>
-          <select id="sampleSelect">
-            <option value="">-- Load Sample Chart --</option>
-            <option value="india">India Independence (14 Aug 1947 18:30 UTC, Delhi)</option>
-            <option value="chennai">Chennai Sample (21 Nov 2026 06:25 UTC)</option>
-          </select>
-        </div>
+        <div class="fields">
+          <md-outlined-select id="sampleSelect" label="Sample charts">
+            <md-select-option value="" selected><div slot="headline">— Load sample chart —</div></md-select-option>
+            <md-select-option value="india"><div slot="headline">India Independence (14 Aug 1947 18:30 UTC, Delhi)</div></md-select-option>
+            <md-select-option value="chennai"><div slot="headline">Chennai Sample (21 Nov 2026 06:25 UTC)</div></md-select-option>
+          </md-outlined-select>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-          <div class="form-group">
-            <label>Year</label>
-            <input type="number" id="inpYear" value="1947">
+          <div class="fields-2">
+            <md-outlined-text-field type="number" id="inpYear" label="Year" value="1947"></md-outlined-text-field>
+            <md-outlined-text-field type="number" id="inpMonth" label="Month" value="8" min="1" max="12"></md-outlined-text-field>
           </div>
-          <div class="form-group">
-            <label>Month</label>
-            <input type="number" id="inpMonth" value="8" min="1" max="12">
-          </div>
-        </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
           <div class="form-group">
@@ -341,7 +269,6 @@
             <label>Min</label>
             <input type="number" id="inpMinute" value="30" min="0" max="59">
           </div>
-        </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
           <div class="form-group">
@@ -366,16 +293,12 @@
             <label>Longitude (° E)</label>
             <input type="number" step="0.0001" id="inpLon" value="77.2090">
           </div>
-        </div>
+          <p class="supporting">Local civil time. The offset is hours east of Greenwich (Kuala Lumpur +8, India +5.5, the Americas negative). Universal time is this clock time minus the offset. A missing offset would be read as 0. Planet positions are computed by the server.</p>
 
-        <div class="form-group">
-          <label>KP Ayanamsa</label>
-          <select id="inpAyanamsa">
-            <option value="kp_straight_line_adjusted" selected>KP Straight Line (Adjusted)</option>
-            <option value="kp_old">KP Old (Original Krishnamurti)</option>
-            <option value="kp_new">KP New (Krishnamurti VP291)</option>
-          </select>
-        </div>
+          <div class="fields-2">
+            <md-outlined-text-field type="number" step="0.0001" id="inpLat" label="Latitude" suffix-text="° N" value="28.6139"></md-outlined-text-field>
+            <md-outlined-text-field type="number" step="0.0001" id="inpLon" label="Longitude" suffix-text="° E" value="77.2090"></md-outlined-text-field>
+          </div>
 
         <button class="btn" id="btnCalculate">Calculate Chart</button>
       </div>
@@ -383,7 +306,8 @@
       <div class="card">
         <h2>KP Core Rule Notice</h2>
         <div class="notice-box">
-          <strong>Cuspal House Assignment:</strong> In KP astrology, house boundaries are determined strictly by Placidus cusps, NOT sign boundaries. A planet immediately before a cusp belongs to the previous house even if it is in the same zodiac sign as the cusp.
+          <md-icon><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M453-280h60v-240h-60v240Zm50.5-323.2q9.5-9.2 9.5-22.8 0-14.45-9.48-24.22-9.48-9.78-23.5-9.78t-23.52 9.78Q447-640.45 447-626q0 13.6 9.48 22.8 9.48 9.2 23.5 9.2t23.52-9.2ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></svg></md-icon>
+          <div><strong>Cuspal House Assignment:</strong> In KP astrology, house boundaries are determined strictly by Placidus cusps, NOT sign boundaries. A planet immediately before a cusp belongs to the previous house even if it is in the same zodiac sign as the cusp.</div>
         </div>
       </div>
     </div>
@@ -415,21 +339,21 @@
       </div>
 
       <!-- Tabs -->
-      <div class="tabs">
-        <div class="tab active" data-tab="tab-cusps">KP Cusp Table</div>
-        <div class="tab" data-tab="tab-planets">Planet House Assignments</div>
-        <div class="tab" data-tab="tab-significators">4-Level Significators</div>
-        <div class="tab" data-tab="tab-wheels">Chart Wheels</div>
-        <div class="tab" data-tab="tab-benchmark">JH Benchmark Check</div>
-      </div>
+      <md-tabs class="results" id="resultTabs" aria-label="Chart results">
+        <md-primary-tab data-tab="tab-cusps" active><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M780-121H180q-24 0-42-18t-18-42v-599q0-24 18-42t42-18h600q24 0 42 18t18 42v599q0 24-18 42t-42 18ZM180-639h600v-141H180v141Zm130 60H180v398h130v-398Zm340 0v398h130v-398H650Zm-60 0H370v398h220v-398Z"/></svg></md-icon>KP Cusp Table</md-primary-tab>
+        <md-primary-tab data-tab="tab-planets"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480t31.5-156Q143-709 197-763t127-85.5Q397-880 480-880t156 31.5Q709-817 763-763t85.5 127Q880-563 880-480t-31.5 156Q817-251 763-197t-127 85.5Q563-80 480-80t-156-31.5ZM437-141v-82q-35 0-59-26t-24-61v-44L149-559q-5 20-7 39.5t-2 39.5q0 130 84.5 227T437-141Zm294-108q44-48 66.5-107.5T820-480q0-106-58-192.5T607-799v18q0 35-24 61t-59 26h-87v87q0 17-13.5 28T393-568h-83v88h258q17 0 28 13t11 30v127h43q29 0 51 17t30 44Z"/></svg></md-icon>Planet House Assignments</md-primary-tab>
+        <md-primary-tab data-tab="tab-significators"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m323-245 157-94 157 95-42-178 138-120-182-16-71-168-71 167-182 16 138 120-42 178Zm-90 125 65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-355Z"/></svg></md-icon>4-Level Significators</md-primary-tab>
+        <md-primary-tab data-tab="tab-wheels"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M120-510v-330h330v330H120Zm0 390v-330h330v330H120Zm390-390v-330h330v330H510Zm0 390v-330h330v330H510ZM180-570h210v-210H180v210Zm390 0h210v-210H570v210Zm0 390h210v-210H570v210Zm-390 0h210v-210H180v210Zm390-390Zm0 180Zm-180 0Zm0-180Z"/></svg></md-icon>Chart Wheels</md-primary-tab>
+        <md-primary-tab data-tab="tab-benchmark"><md-icon slot="icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m421-298 283-283-46-45-237 237-120-120-45 45 165 166Zm59 218q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-156t86-127Q252-817 325-848.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 82-31.5 155T763-197.5q-54 54.5-127 86T480-80Zm0-60q142 0 241-99.5T820-480q0-142-99-241t-241-99q-141 0-240.5 99T140-480q0 141 99.5 240.5T480-140Zm0-340Z"/></svg></md-icon>JH Benchmark Check</md-primary-tab>
+      </md-tabs>
 
       <!-- Tab 1: Cusps -->
       <div class="card tab-content active" id="tab-cusps">
         <h2>Placidus House Cusps (Arc-Second Precision)</h2>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        <p class="supporting">
           Computed using iterative Placidus semi-arc division with sub-arcsecond convergence and KP ayanamsa.
         </p>
-        <div style="overflow-x: auto;">
+        <div class="table-wrap">
           <table>
             <thead>
               <tr>
@@ -443,7 +367,7 @@
               </tr>
             </thead>
             <tbody id="cuspsTableBody">
-              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Click "Calculate Chart" to view cusps.</td></tr>
+              <tr><td colspan="7" class="empty">Click "Calculate Chart" to view cusps.</td></tr>
             </tbody>
           </table>
         </div>
@@ -452,10 +376,10 @@
       <!-- Tab 2: Planets -->
       <div class="card tab-content" id="tab-planets">
         <h2>Planet House Assignment by Cusp (Not Sign)</h2>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        <p class="supporting">
           Demonstrates that a planet belongs to the house of the cusp it has passed. If a planet's longitude is just before a cusp, it is assigned to the previous house.
         </p>
-        <div style="overflow-x: auto;">
+        <div class="table-wrap">
           <table>
             <thead>
               <tr>
@@ -469,7 +393,7 @@
               </tr>
             </thead>
             <tbody id="planetsTableBody">
-              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No planets calculated yet.</td></tr>
+              <tr><td colspan="7" class="empty">No planets calculated yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -495,7 +419,7 @@
                 </tr>
               </thead>
               <tbody id="houseSigBody">
-                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Calculate chart to view significators.</td></tr>
+                <tr><td colspan="5" class="empty">Calculate chart to view significators.</td></tr>
               </tbody>
             </table>
           </div>
@@ -505,18 +429,18 @@
       <!-- Tab 4: Chart Wheels -->
       <div class="card tab-content" id="tab-wheels">
         <h2>Chart Wheels</h2>
-        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-          <button class="btn" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;" id="btnShowSouth">South Indian Grid</button>
-          <button class="btn btn-secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem; margin-top: 0;" id="btnShowNorth">North Indian Diamonds</button>
+        <div class="wheel-toggle">
+          <md-filled-tonal-button id="btnShowSouth">South Indian Grid</md-filled-tonal-button>
+          <md-outlined-button id="btnShowNorth">North Indian Diamonds</md-outlined-button>
         </div>
 
         <div id="southWheelContainer">
-          <h3 style="font-size: 0.95rem; color: var(--accent); text-align: center;">South Indian Chart (Sign Grid with Cusps & Planets)</h3>
+          <h3 class="wheel-title">South Indian Chart (Sign Grid with Cusps & Planets)</h3>
           <div class="south-indian-grid" id="southIndianGrid"></div>
         </div>
 
         <div id="northWheelContainer" style="display: none;">
-          <h3 style="font-size: 0.95rem; color: var(--accent); text-align: center; margin-bottom: 1rem;">North Indian Chart (Houses 1 - 12)</h3>
+          <h3 class="wheel-title">North Indian Chart (Houses 1 - 12)</h3>
           <div class="north-indian-wheel" id="northIndianWheel"></div>
         </div>
       </div>
@@ -524,36 +448,48 @@
       <!-- Tab 5: Benchmark Check -->
       <div class="card tab-content" id="tab-benchmark">
         <h2>Swiss Ephemeris / Jagannatha Hora Benchmark Check</h2>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        <p class="supporting">
           Comparison for India Independence (New Delhi: 14 Aug 1947 18:30:00 UTC, Lat 28.6139° N, Lon 77.2090° E, KP Old Ayanamsa):
         </p>
-        <table>
-          <thead>
-            <tr>
-              <th>Cusp</th>
-              <th>Calculated (KP-Web)</th>
-              <th>Jagannatha Hora / SwissEph</th>
-              <th>Difference (arcsec)</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="benchmarkBody">
-            <!-- Dynamically populated or verified -->
-          </tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cusp</th>
+                <th>Calculated (KP-Web)</th>
+                <th>Jagannatha Hora / SwissEph</th>
+                <th>Difference (arcsec)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarkBody">
+              <!-- Dynamically populated or verified -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    // Theme toggle (dark is the default; light is generated from the same seed)
+    // Icons are inline Material Symbols (Outlined, weight 400) so the page needs no icon font.
+    const ICON_LIGHT_MODE = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M579-381q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-240.5 42.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-450H40v-60h160v60Zm720 0H760v-60h160v60ZM450-760v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-99-537 98-99 44 42-99 98-43-41ZM162-205l99-98 42 42-98 99-43-43Zm318-275Z"/></svg>';
+    const ICON_DARK_MODE = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 90 63 153t153 63q52 0 99-18.5t79-51.5q1 12 1.5 19.5t.5 14.5q0 150-105 255T480-120Zm0-60q109 0 190-67.5T771-406q-25 11-53.67 16.5Q688.67-384 660-384q-114.69 0-195.34-80.66Q384-545.31 384-660q0-24 5-51.5t18-62.5q-98 27-162.5 109.5T180-480q0 125 87.5 212.5T480-180Zm-4-297Z"/></svg>';
+    const themeBtn = document.getElementById('btnTheme');
+    themeBtn.addEventListener('click', () => {
+      const root = document.documentElement;
+      const toLight = root.dataset.theme !== 'light';
+      root.dataset.theme = toLight ? 'light' : 'dark';
+      themeBtn.querySelector('md-icon').innerHTML = toLight ? ICON_DARK_MODE : ICON_LIGHT_MODE;
+      themeBtn.setAttribute('aria-label', toLight ? 'Switch to dark theme' : 'Switch to light theme');
+    });
+
     // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-      });
+    const resultTabs = document.getElementById('resultTabs');
+    resultTabs.addEventListener('change', () => {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(resultTabs.activeTab.dataset.tab).classList.add('active');
     });
 
     // Wheel toggle
@@ -662,6 +598,8 @@
           alert(errors.join('\n'));
           return;
         }
+        const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
+        const planets = positions.map(p => ({ name: p.name, longitude: p.longitude }));
 
         const computed = await postJson('/api/calculate', payload);
         if (!computed.res.ok) {
@@ -701,7 +639,7 @@
           <td>${c.signName}</td>
           <td>${c.signLord}</td>
           <td>${c.starLord}</td>
-          <td><strong style="color: var(--primary);">${c.subLord}</strong></td>
+          <td><strong style="color: var(--md-sys-color-primary);">${c.subLord}</strong></td>
           <td>${c.subSubLord}</td>
         `;
         cuspsBody.appendChild(tr);

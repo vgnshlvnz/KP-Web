@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import app from '../src/index.js';
+import { AYANAMSA_MODES } from '../src/engine/ayanamsa-defs.js';
 import { getHoraryEntry } from '../src/engine/kp-lords.js';
 import { NODE_AGENT_RULE_SET_DESCRIPTIONS } from '../src/engine/significators.js';
 
@@ -247,6 +248,16 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     }
   );
 
+  // #60 (owner, #29): all ten modes are accepted on every birth and horary route.
+  it.each(AYANAMSA_MODES)('every route accepts %s (birth and horary) and echoes it back', async (id) => {
+    for (const [path, base] of ROUTES) {
+      const res = await post(path, { ...base, ayanamsa: id });
+      expect(res.status, `${path} ${id}`).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.data?.ayanamsaType ?? json.ayanamsaType, `${path} ${id}`).toBe(id);
+    }
+  });
+
   it('kp_new and lahiri are not silently KP Old: the ayanamsa value and the Sun differ', async () => {
     const chart = async (ayanamsa: string) =>
       (await (await post('/api/calculate', { ...KL_1992, ayanamsa })).json()) as any;
@@ -457,7 +468,7 @@ describe('GET /api/ayanamsa', () => {
     ]);
     expect(json.ayanamsas.map((a: any) => a.label)).toContain('Lahiri');
     expect(json).not.toHaveProperty('default');
-    expect(json.defaultSelection).toBe('kp_straight_line_adjusted');
+    expect(json.defaultSelection).toBe('kp_new');
     expect(json.dateUtc).toBe('2026-11-21T06:00:00.000Z');
     const nil = json.ayanamsas.find((a: any) => a.id === 'nil');
     expect(nil.meanDegrees).toBe(0);
@@ -481,11 +492,13 @@ describe('GET /api/ayanamsa', () => {
     expect(Math.abs(mean('kp_new') - 24.155968) * 3600).toBeLessThan(0.1);
   });
 
-  it('a true ayanamsa is the mean plus the nutation in longitude', async () => {
+  it('a true ayanamsa is the mean plus the nutation in longitude (KPSTLA: true = mean, no nutation, #29)', async () => {
     const json = (await (await app.request('/api/ayanamsa?date=2000-01-01T12:00:00Z')).json()) as any;
-    for (const a of json.ayanamsas.filter((x: any) => x.id !== 'nil')) {
+    for (const a of json.ayanamsas.filter((x: any) => x.id !== 'nil' && x.id !== 'kp_straight_line_adjusted')) {
       expect(a.trueDegrees - a.meanDegrees).toBeCloseTo(json.nutationInLongitudeDegrees, 10);
     }
+    const stla = json.ayanamsas.find((x: any) => x.id === 'kp_straight_line_adjusted');
+    expect(stla.trueDegrees).toBe(stla.meanDegrees);
   });
 
   it('an invalid date is 400', async () => {
@@ -528,7 +541,7 @@ describe('GET /api/health (folded from worker.test.ts)', () => {
     expect(json.engine).toBe('astronomy-engine');
     expect(String(json.runtime)).toContain('Cloudflare Workers');
     expect(json.ayanamsas).toHaveLength(10);
-    expect(json.defaultSelection).toBe('kp_straight_line_adjusted');
+    expect(json.defaultSelection).toBe('kp_new');
     expect(json).not.toHaveProperty('defaultAyanamsa');
     expect(json.endpoints).toContain('POST /api/horary');
   });
