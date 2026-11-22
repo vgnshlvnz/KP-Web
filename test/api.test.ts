@@ -236,7 +236,7 @@ describe('ayanamsa is required and validated, no default and no fallback (#22 de
     expect(typeof fresh.error).toBe('string');
   });
 
-  it.each(['kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'])(
+  it.each(['kp_straight_line', 'kp_ayanamsa', 'kp_old', 'kp_new', 'lahiri', 'raman', 'fagan_bradley', 'yukteshwar', 'jn_bhasin', 'usha_shashi', 'nil'])(
     '/api/chart/calculate and /api/calculate accept %s and echo it back',
     async (id) => {
       const legacy = (await (await post('/api/chart/calculate', { ...KL_1992, ayanamsa: id })).json()) as any;
