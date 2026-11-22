@@ -13,14 +13,16 @@
  *   POST /api/calculate        natal chart, `calculateChart`, bare result
  *   POST /api/horary           horary chart, `calculateHoraryChart`, bare result
  *
- * The two `/api/chart/*` routes and `/api/horary/table` keep the request and response shapes that
- * `public/index.html` reads: the UI contract is open (#29, owner answer 10: "keep open, design
- * later"). The routes ported from Stack B (`/api/calculate`, `/api/horary`, `/api/horary-table`,
- * `/api/ayanamsa`) return the engine result bare and report errors as `{ error }`.
+ * `public/index.html` asks `POST /api/calculate` for the nine sidereal longitudes, then posts those
+ * `{ name, longitude }` rows to `POST /api/chart/calculate` and reads `data`: `julianDateUT`,
+ * `localSiderealTimeDegrees`, `obliquityTrue`, `nutationInLongitude` (degrees), `ayanamsaValue`,
+ * cusp `formatted` / `signName`, planet `formatted` / `signName` / `signIndex` / `house`,
+ * `significators.houseWise`, and `chartWheels.southIndian` / `northIndian` as arrays.
+ * `/api/calculate` returns that chart bare. `/api/chart/*` wraps it in `{ success, data }`.
  *
  * Errors: invalid input is 400 `{ error }`; `PolarLatitudeError` (horary) is 422; anything else is
  * 500 with a generic message and no stack trace. The `/api/chart/*` routes also carry
- * `success: false`, which the UI checks.
+ * `success: false`.
  *
  * Open owner decisions, never defaulted in the engine:
  *   - #22 decided (owner, #29): KP New is the UI's default selection; the API requires an explicit ayanamsa.
@@ -126,8 +128,8 @@ function numberField(body: Body, key: string, missing: number | undefined): numb
 
 /**
  * Civil date, time and place. `utcOffsetHours` handling is the one difference between the routes:
- * `'required'` (the new routes): a missing offset is 400, never silently UTC.
- * `'legacy_utc'` (`/api/chart/*`, whose UI does not send it): a missing offset is treated as UTC.
+ * `'required'` (`/api/calculate` and `/api/horary`): a missing offset is 400, never silently UTC.
+ * `'legacy_utc'` (`/api/chart/*`): a missing offset is still stored as 0. The page sends the offset.
  */
 function parseDateTimeLocation(body: Body, offset: 'required' | 'legacy_utc'): DateTimeLocation {
   const year = numberField(body, 'year', undefined);
@@ -138,8 +140,8 @@ function parseDateTimeLocation(body: Body, offset: 'required' | 'legacy_utc'): D
   const second = numberField(body, 'second', 0);
   const latitude = numberField(body, 'latitude', undefined);
   const longitude = numberField(body, 'longitude', undefined);
-  // TODO(#29 Q10): on the legacy routes a missing offset is treated as UTC (what they did before).
-  // The new routes require it; how the UI sends the offset is part of the postponed UI/API design.
+  // TODO(#29 Q10): on `/api/chart/*` a missing offset is still stored as 0 (UT = local clock).
+  // Positive `utcOffsetHours` is east of Greenwich: UT = local − offset. The page always sends it.
   const utcOffsetHours = numberField(body, 'utcOffsetHours', offset === 'legacy_utc' ? 0 : undefined);
 
   if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
@@ -197,7 +199,7 @@ app.use(
   cors({ origin: '*', allowMethods: ['GET', 'POST', 'OPTIONS'], allowHeaders: ['Content-Type'] })
 );
 
-/** The UI's routes carry `success`, which `public/index.html` checks; the others are `{ error }`. */
+/** `/api/chart/*` and `/api/horary/table` carry `success`. `/api/calculate` errors are `{ error }`. */
 function errorBody(path: string, message: string): Record<string, unknown> {
   return path.startsWith('/api/chart/') || path === '/api/horary/table'
     ? { success: false, error: message }
