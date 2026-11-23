@@ -592,7 +592,14 @@
       if (sample) fillSample(sample.input);
     });
 
-    Promise.all([loadLocations(), loadSamples()]).catch(err => alert('Could not load the places: ' + err.message));
+    // Auto-calculate on initial page load, only once the place selects are filled (#113).
+    // Calculating before /api/locations has loaded fails validation and alerts
+    // "Choose a country and a place." on every load.
+    const pageReady = Promise.all([loadLocations(), loadSamples()]);
+    pageReady.then(
+      () => document.getElementById('btnCalculate').click(),
+      err => alert('Could not load the places: ' + err.message)
+    );
 
     function readInt(id) {
       const raw = String(document.getElementById(id).value).trim();
@@ -860,10 +867,6 @@
       });
     }
 
-    // Auto-calculate on initial page load
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('btnCalculate').click();
-    });
   </script>
 </body>
 </html>

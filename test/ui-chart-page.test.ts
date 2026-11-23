@@ -237,3 +237,16 @@ describe('public/index.html place selection', () => {
     expect(bare.location).toEqual(chart.location);
   });
 });
+
+describe('public/index.html initial auto-calculate (#113)', () => {
+  it('runs only after the place and sample lists have loaded, not on DOMContentLoaded', () => {
+    // Clicking Calculate before /api/locations fills the selects alerted "Choose a country and a place." on every load.
+    expect(page).not.toContain("addEventListener('DOMContentLoaded'");
+    const ready = page.indexOf('const pageReady = Promise.all([loadLocations(), loadSamples()]);');
+    expect(ready).toBeGreaterThan(-1);
+    const chained = page.indexOf("pageReady.then(\n      () => document.getElementById('btnCalculate').click(),", ready);
+    expect(chained).toBeGreaterThan(ready);
+    // The only programmatic click on Calculate is the chained one.
+    expect(page.split("getElementById('btnCalculate').click()").length - 1).toBe(1);
+  });
+});
