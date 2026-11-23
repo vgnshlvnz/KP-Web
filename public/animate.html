@@ -803,6 +803,7 @@
         el('inpMinute').value = startSnapshot.minute;
         el('inpSecond').value = startSnapshot.second;
       }
+      labelOffsetOptions(null); // the fields were set from script, which fires no input event
       runCount = 0;
       el('metaRunCount').textContent = '0';
       fetchForDisplay('Restarted.');
@@ -816,6 +817,7 @@
       el('inpHour').value = now.getHours();
       el('inpMinute').value = now.getMinutes();
       el('inpSecond').value = now.getSeconds();
+      labelOffsetOptions(null); // the fields were set from script, which fires no input event
       fetchForDisplay('Now.');
     });
 

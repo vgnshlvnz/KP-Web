@@ -59,5 +59,8 @@ describe('repeated clock time: the chart and animate pages name the UTC offsets 
   it('animate.html adds the hint to its status line; each animation step resets the labels', () => {
     expect(animatePage).toContain("return 'Chart computation failed: ' + withOffsetHint(detail);");
     expect(between(animatePage, 'function advanceOneStep', "el('inpSecond').value = next.second;\n      labelOffsetOptions(null);")).toBeTruthy();
+    // Restart and Now! also set the fields from script (#125 review).
+    expect(between(animatePage, "el('btnRestart').addEventListener", "fetchForDisplay('Restarted.')")).toContain('labelOffsetOptions(null);');
+    expect(between(animatePage, "el('btnNow').addEventListener", "fetchForDisplay('Now.')")).toContain('labelOffsetOptions(null);');
   });
 });
