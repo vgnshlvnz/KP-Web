@@ -383,6 +383,20 @@ describe('public/match.html error handling against the real API (DST gap, repeat
     }
   });
 
+  it('shows the two UTC offsets from the API message (New York 2024-11-03 01:30: UTC-04:00 before, UTC-05:00 after)', async () => {
+    const ambiguousOffsets = new Function(
+      `${between('function ambiguousOffsets', 'const CHOICE_WHEN')}\nreturn ambiguousOffsets;`
+    )() as (message: string) => { earlier: string; later: string } | null;
+    const { error } = (await (await post('/api/match', base(twice))).json()) as { error: string };
+    // EDT (UTC-4) until 02:00 EDT, then EST (UTC-5): the earlier 01:30 is EDT, the later one EST.
+    expect(ambiguousOffsets(error)).toEqual({ earlier: 'UTC-04:00', later: 'UTC-05:00' });
+    expect(ambiguousOffsets('Ambiguous local time: nothing parseable')).toBeNull();
+    // The select options and the buttons name the offsets, not only "earlier" and "later".
+    expect(page).toContain('labelOffsetOptions(selectFor(target), offsets);');
+    expect(page).toContain("? who + ': ' + offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'");
+    expect(page).not.toContain('label="Repeated time');
+  });
+
   it('the page matches the API message to the birth with that local time, and so offers the choice for that person', async () => {
     const req = base(twice);
     const { error } = (await (await post('/api/match', req)).json()) as { error: string };
