@@ -595,7 +595,18 @@
     // Auto-calculate on initial page load, only once the place selects are filled (#113).
     // Calculating before /api/locations has loaded fails validation and alerts
     // "Choose a country and a place." on every load.
-    const pageReady = Promise.all([loadLocations(), loadSamples()]);
+    // The ayanamsa select's value is not set from the `selected` option until the select and its
+    // options have rendered; reading it earlier gives '' and alerts "Choose an ayanamsa." (#113).
+    // Set the preselected option's value explicitly, as match.html does.
+    async function selectPreselectedAyanamsa() {
+      const sel = document.getElementById('inpAyanamsa');
+      await sel.updateComplete;
+      const preselected = sel.querySelector('md-select-option[selected]');
+      if (preselected) sel.value = preselected.getAttribute('value');
+      await sel.updateComplete;
+    }
+
+    const pageReady = Promise.all([loadLocations(), loadSamples(), selectPreselectedAyanamsa()]);
     pageReady.then(
       () => document.getElementById('btnCalculate').click(),
       err => alert('Could not load the places: ' + err.message)
