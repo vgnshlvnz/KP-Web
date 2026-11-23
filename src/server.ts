@@ -24,7 +24,20 @@ const server = new Hono<{ Bindings: ServerEnv }>();
 
 const NOT_CONFIGURED = 'Sign-in is not configured on this server.';
 
+/**
+ * The Better Auth endpoints the pages use. Any other /api/auth path is a 404 here, before Better Auth runs,
+ * so it neither reaches an unused endpoint nor writes a rate-limit row.
+ */
+export const AUTH_ROUTES: ReadonlySet<string> = new Set([
+  'POST /api/auth/email-otp/send-verification-otp',
+  'POST /api/auth/sign-in/email-otp',
+  'GET /api/auth/get-session',
+  'POST /api/auth/sign-out',
+  'POST /api/auth/update-user',
+]);
+
 server.on(['GET', 'POST'], '/api/auth/*', (c) => {
+  if (!AUTH_ROUTES.has(c.req.method + ' ' + c.req.path)) return c.json({ error: 'Route not found: ' + c.req.path }, 404);
   if (!authConfigured(c.env)) return c.json({ error: NOT_CONFIGURED }, 503);
   return authFor(c.env).handler(c.req.raw);
 });

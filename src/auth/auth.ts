@@ -118,6 +118,9 @@ export function createAuth(env: AuthEnv) {
       customRules: { '/get-session': false, '/sign-out': false },
     },
     advanced: {
+      // Better Auth only marks cookies Secure when NODE_ENV is "production", which a Worker does not set.
+      // Always Secure: browsers still accept them on http://localhost and http://127.0.0.1 for local dev.
+      useSecureCookies: true,
       // Cloudflare sets cf-connecting-ip and replaces any client value; used for rate limiting only.
       ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
     },
