@@ -178,10 +178,10 @@
           </div>
           <div class="fields-2">
             <md-outlined-text-field type="number" id="inpSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
-            <md-outlined-select id="inpAmbiguous" label="Repeated time">
+            <md-outlined-select id="inpAmbiguous" label="UTC offset if the time repeats">
               <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
-              <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
-              <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+              <md-select-option value="earlier"><div slot="headline">Earlier offset (before the clocks went back)</div></md-select-option>
+              <md-select-option value="later"><div slot="headline">Later offset (after the clocks went back)</div></md-select-option>
             </md-outlined-select>
           </div>
 
@@ -523,9 +523,47 @@
     }
 
     // The API's own message (a DST gap, a repeated clock time, an unknown place) is shown as it is.
+
+    // ---- Repeated clock time: name the UTC offsets (as public/match.html) ----------------
+    // When the clocks go back, a local time occurs twice. The API refuses it with a message naming both offsets,
+    // "(UTC-04:00 before the clocks went back, UTC-05:00 after)". The page shows those offsets in the select, and
+    // drops them again when the date, time or place changes, so a stale offset is never on screen.
+    const ambiguousSel = document.getElementById('inpAmbiguous');
+    const CHOICE_WHEN = { earlier: 'before the clocks went back', later: 'after the clocks went back' };
+
+    function ambiguousOffsets(message) {
+      const m = /\((UTC[+-]\d\d:\d\d) before the clocks went back, (UTC[+-]\d\d:\d\d) after\)/.exec(message);
+      return m ? { earlier: m[1], later: m[2] } : null;
+    }
+
+    function labelOffsetOptions(offsets) {
+      ['earlier', 'later'].forEach((choice) => {
+        const headline = ambiguousSel.querySelector('md-select-option[value="' + choice + '"] [slot="headline"]');
+        if (!headline) return;
+        headline.textContent = offsets
+          ? offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'
+          : (choice === 'earlier' ? 'Earlier' : 'Later') + ' offset (' + CHOICE_WHEN[choice] + ')';
+      });
+    }
+
+    // For an API error: on a repeated time, label the options with the offsets and replace the API's
+    // 'Choose "earlier" or "later".' with the offsets to pick. Any other message is returned as it is.
+    function withOffsetHint(message) {
+      const text = String(message);
+      const offsets = ambiguousOffsets(text);
+      if (!offsets) return text;
+      labelOffsetOptions(offsets);
+      return text.replace(' Choose "earlier" or "later".', '') +
+        ' Choose ' + offsets.earlier + ' or ' + offsets.later + ' in "UTC offset if the time repeats", then try again.';
+    }
+
+    ['inpYear', 'inpMonth', 'inpDay', 'inpHour', 'inpMinute', 'inpSecond', 'inpCountry', 'inpPlace'].forEach((id) =>
+      ['input', 'change'].forEach((type) =>
+        document.getElementById(id).addEventListener(type, () => labelOffsetOptions(null))));
+
     function apiErrorMessage(result) {
       const detail = result.json && result.json.error ? result.json.error : 'HTTP ' + result.res.status;
-      return 'Chart computation failed: ' + detail;
+      return 'Chart computation failed: ' + withOffsetHint(detail);
     }
 
     function setCurrentTimeDisplay() {
@@ -678,6 +716,7 @@
       el('inpHour').value = next.hour;
       el('inpMinute').value = next.minute;
       el('inpSecond').value = next.second;
+      labelOffsetOptions(null); // stepping sets the fields from script, which fires no input event
       runCount += 1;
       el('metaRunCount').textContent = String(runCount);
     }
@@ -764,6 +803,7 @@
         el('inpMinute').value = startSnapshot.minute;
         el('inpSecond').value = startSnapshot.second;
       }
+      labelOffsetOptions(null); // the fields were set from script, which fires no input event
       runCount = 0;
       el('metaRunCount').textContent = '0';
       fetchForDisplay('Restarted.');
@@ -777,6 +817,7 @@
       el('inpHour').value = now.getHours();
       el('inpMinute').value = now.getMinutes();
       el('inpSecond').value = now.getSeconds();
+      labelOffsetOptions(null); // the fields were set from script, which fires no input event
       fetchForDisplay('Now.');
     });
 
