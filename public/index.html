@@ -264,13 +264,13 @@
 
           <div class="fields-2">
             <md-outlined-text-field type="number" id="inpSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
-            <md-outlined-select id="inpAmbiguous" label="Repeated time">
+            <md-outlined-select id="inpAmbiguous" label="UTC offset if the time repeats">
               <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
-              <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
-              <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+              <md-select-option value="earlier"><div slot="headline">Earlier offset (before the clocks went back)</div></md-select-option>
+              <md-select-option value="later"><div slot="headline">Later offset (after the clocks went back)</div></md-select-option>
             </md-outlined-select>
           </div>
-          <p class="supporting">Local civil time at the place chosen below. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date (zone changes and daylight saving included). A clock time that does not exist is refused. One that occurs twice (the clocks go back) is refused until you choose the earlier or the later one in "Repeated time".</p>
+          <p class="supporting">Local civil time at the place chosen below. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date (zone changes and daylight saving included). A clock time that does not exist is refused. One that occurs twice (the clocks go back) is refused until you choose its UTC offset in "UTC offset if the time repeats": the one before the clocks went back or the one after.</p>
 
           <md-outlined-select id="inpCountry" label="Country"></md-outlined-select>
           <md-outlined-select id="inpPlace" label="Place"></md-outlined-select>
@@ -576,7 +576,46 @@
       samples.forEach(sm => sel.appendChild(makeOption(sm.id, sm.title)));
     }
 
+
+    // ---- Repeated clock time: name the UTC offsets (as public/match.html) ----------------
+    // When the clocks go back, a local time occurs twice. The API refuses it with a message naming both offsets,
+    // "(UTC-04:00 before the clocks went back, UTC-05:00 after)". The page shows those offsets in the select, and
+    // drops them again when the date, time or place changes, so a stale offset is never on screen.
+    const ambiguousSel = document.getElementById('inpAmbiguous');
+    const CHOICE_WHEN = { earlier: 'before the clocks went back', later: 'after the clocks went back' };
+
+    function ambiguousOffsets(message) {
+      const m = /\((UTC[+-]\d\d:\d\d) before the clocks went back, (UTC[+-]\d\d:\d\d) after\)/.exec(message);
+      return m ? { earlier: m[1], later: m[2] } : null;
+    }
+
+    function labelOffsetOptions(offsets) {
+      ['earlier', 'later'].forEach((choice) => {
+        const headline = ambiguousSel.querySelector('md-select-option[value="' + choice + '"] [slot="headline"]');
+        if (!headline) return;
+        headline.textContent = offsets
+          ? offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'
+          : (choice === 'earlier' ? 'Earlier' : 'Later') + ' offset (' + CHOICE_WHEN[choice] + ')';
+      });
+    }
+
+    // For an API error: on a repeated time, label the options with the offsets and replace the API's
+    // 'Choose "earlier" or "later".' with the offsets to pick. Any other message is returned as it is.
+    function withOffsetHint(message) {
+      const text = String(message);
+      const offsets = ambiguousOffsets(text);
+      if (!offsets) return text;
+      labelOffsetOptions(offsets);
+      return text.replace(' Choose "earlier" or "later".', '') +
+        ' Choose ' + offsets.earlier + ' or ' + offsets.later + ' in "UTC offset if the time repeats", then try again.';
+    }
+
+    ['inpYear', 'inpMonth', 'inpDay', 'inpHour', 'inpMinute', 'inpSecond', 'inpCountry', 'inpPlace'].forEach((id) =>
+      ['input', 'change'].forEach((type) =>
+        document.getElementById(id).addEventListener(type, () => labelOffsetOptions(null))));
+
     async function fillSample(input) {
+      labelOffsetOptions(null); // the sample sets the fields from script, which fires no input event
       document.getElementById('inpYear').value = input.year;
       document.getElementById('inpMonth').value = input.month;
       document.getElementById('inpDay').value = input.day;
@@ -679,7 +718,7 @@
 
         const computed = await postJson('/api/calculate', payload);
         if (!computed.res.ok) {
-          alert('Calculation error: ' + (computed.json.error || computed.res.status));
+          alert('Calculation error: ' + withOffsetHint(computed.json.error || computed.res.status));
           return;
         }
         const positions = Array.isArray(computed.json.planets) ? computed.json.planets : [];
@@ -687,7 +726,7 @@
 
         const chart = await postJson('/api/chart/calculate', { ...payload, planets });
         if (!chart.res.ok || !chart.json.success) {
-          alert('Calculation error: ' + (chart.json.error || chart.res.status));
+          alert('Calculation error: ' + withOffsetHint(chart.json.error || chart.res.status));
           return;
         }
 
