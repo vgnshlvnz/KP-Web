@@ -142,15 +142,15 @@
             <md-outlined-text-field type="number" id="boyMinute" label="Min" value="" min="0" max="59"></md-outlined-text-field>
             <md-outlined-text-field type="number" id="boySecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
           </div>
-          <md-outlined-select id="boyAmbiguous" label="Repeated time">
+          <md-outlined-select id="boyAmbiguous" label="UTC offset if the time repeats">
             <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
-            <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
-            <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+            <md-select-option value="earlier"><div slot="headline">Earlier offset (before the clocks went back)</div></md-select-option>
+            <md-select-option value="later"><div slot="headline">Later offset (after the clocks went back)</div></md-select-option>
           </md-outlined-select>
           <md-outlined-select id="boyCountry" label="Country"></md-outlined-select>
           <md-outlined-select id="boyPlace" label="Place"></md-outlined-select>
         </div>
-        <p class="supporting" style="margin-top: var(--space-3); margin-bottom: 0;">Local civil time at the place. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date. A time that does not exist is refused; one that occurs twice (the clocks go back) is refused until you choose the earlier or the later one.</p>
+        <p class="supporting" style="margin-top: var(--space-3); margin-bottom: 0;">Local civil time at the place. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date. A time that does not exist is refused; one that occurs twice (the clocks go back) is refused until you choose which UTC offset applies: the one before the clocks went back or the one after.</p>
       </div>
       <div class="card">
         <h2>Girl</h2>
@@ -166,15 +166,15 @@
             <md-outlined-text-field type="number" id="girlMinute" label="Min" value="" min="0" max="59"></md-outlined-text-field>
             <md-outlined-text-field type="number" id="girlSecond" label="Sec" value="0" min="0" max="59"></md-outlined-text-field>
           </div>
-          <md-outlined-select id="girlAmbiguous" label="Repeated time">
+          <md-outlined-select id="girlAmbiguous" label="UTC offset if the time repeats">
             <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
-            <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
-            <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+            <md-select-option value="earlier"><div slot="headline">Earlier offset (before the clocks went back)</div></md-select-option>
+            <md-select-option value="later"><div slot="headline">Later offset (after the clocks went back)</div></md-select-option>
           </md-outlined-select>
           <md-outlined-select id="girlCountry" label="Country"></md-outlined-select>
           <md-outlined-select id="girlPlace" label="Place"></md-outlined-select>
         </div>
-        <p class="supporting" style="margin-top: var(--space-3); margin-bottom: 0;">Local civil time at the place. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date. A time that does not exist is refused; one that occurs twice (the clocks go back) is refused until you choose the earlier or the later one.</p>
+        <p class="supporting" style="margin-top: var(--space-3); margin-bottom: 0;">Local civil time at the place. The UTC offset is not typed in: it comes from the place's time zone, using the zone rules in force on that date. A time that does not exist is refused; one that occurs twice (the clocks go back) is refused until you choose which UTC offset applies: the one before the clocks went back or the one after.</p>
       </div>
     </div>
 
@@ -186,10 +186,10 @@
           <md-outlined-text-field type="number" id="chkMonth" label="Month" value="" min="1" max="12"></md-outlined-text-field>
           <md-outlined-text-field type="number" id="chkDay" label="Day" value="" min="1" max="31"></md-outlined-text-field>
         </div>
-        <md-outlined-select id="chkAmbiguous" label="Repeated time (checking date)">
+        <md-outlined-select id="chkAmbiguous" label="UTC offset if 12:00 repeats (checking date)">
           <md-select-option value="" selected><div slot="headline">Ask me</div></md-select-option>
-          <md-select-option value="earlier"><div slot="headline">Earlier one</div></md-select-option>
-          <md-select-option value="later"><div slot="headline">Later one</div></md-select-option>
+          <md-select-option value="earlier"><div slot="headline">Earlier offset (before the clocks went back)</div></md-select-option>
+          <md-select-option value="later"><div slot="headline">Later offset (after the clocks went back)</div></md-select-option>
         </md-outlined-select>
         <p class="supporting">The match is checked at 12:00 civil time on this date, in the girl's place, using that place's UTC offset on that date. The dasha, bhukti and antara lords running then are used by rules 7, 8 and 10. Defaults to today.</p>
         <md-outlined-select id="inpAyanamsa" label="KP Ayanamsa"></md-outlined-select>
@@ -482,15 +482,39 @@
       return target === 'checking' ? el('chkAmbiguous') : el(PERSON_IDS[target].ambiguous);
     }
 
+    // The message names both offsets: "(UTC+01:00 before the clocks went back, UTC+00:00 after)".
+    function ambiguousOffsets(message) {
+      const m = /\((UTC[+-]\d\d:\d\d) before the clocks went back, (UTC[+-]\d\d:\d\d) after\)/.exec(message);
+      return m ? { earlier: m[1], later: m[2] } : null;
+    }
+
+    const CHOICE_WHEN = { earlier: 'before the clocks went back', later: 'after the clocks went back' };
+
+    // Show the offsets in a select's options once the API has named them; without offsets, the plain labels.
+    function labelOffsetOptions(select, offsets) {
+      ['earlier', 'later'].forEach((choice) => {
+        const headline = select.querySelector('md-select-option[value="' + choice + '"] [slot="headline"]');
+        if (!headline) return;
+        headline.textContent = offsets
+          ? offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'
+          : (choice === 'earlier' ? 'Earlier' : 'Later') + ' offset (' + CHOICE_WHEN[choice] + ')';
+      });
+    }
+
     function showApiError(message, payload) {
       setStatus(message, true);
       if (!/Ambiguous local time/i.test(message)) return; // a DST gap: nothing to choose, the message is the answer
       const actions = el('errorActions');
+      const offsets = ambiguousOffsets(message);
       affectedBy(message, payload).forEach((target) => {
         const who = target === 'checking' ? 'Checking date' : PERSON_LABEL[target];
+        labelOffsetOptions(selectFor(target), offsets);
         ['earlier', 'later'].forEach((choice) => {
           const btn = document.createElement('md-outlined-button');
-          btn.textContent = who + ': use the ' + choice + ' one';
+          btn.dataset.target = target;
+          btn.textContent = offsets
+            ? who + ': ' + offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'
+            : who + ': use the ' + choice + ' offset';
           btn.addEventListener('click', () => {
             selectFor(target).value = choice;
             runMatch();
@@ -500,6 +524,25 @@
       });
       actions.hidden = actions.childElementCount === 0;
     }
+
+    // The offsets shown belong to one date, time and place: when any of those changes, drop them from the
+    // select and remove that target's offset buttons. A stale "UTC-04:00" button would otherwise send
+    // "earlier" for a new place or date, where "earlier" can be another offset.
+    function dropStaleOffsets(target) {
+      labelOffsetOptions(selectFor(target), null);
+      const actions = el('errorActions');
+      actions.querySelectorAll('[data-target="' + target + '"]').forEach((btn) => btn.remove());
+      actions.hidden = actions.childElementCount === 0;
+    }
+    function resetOffsetsOn(fieldIds, target) {
+      fieldIds.forEach((id) => ['input', 'change'].forEach((type) =>
+        el(id).addEventListener(type, () => dropStaleOffsets(target))));
+    }
+    ['boy', 'girl'].forEach((who) => {
+      const ids = PERSON_IDS[who];
+      resetOffsetsOn([ids.year, ids.month, ids.day, ids.hour, ids.minute, ids.second, ids.country, ids.place], who);
+    });
+    resetOffsetsOn(['chkYear', 'chkMonth', 'chkDay', 'girlCountry', 'girlPlace'], 'checking');
 
     // ---- Result ----------------------------------------------------------------------
     function cell(tag, content, cls) {
