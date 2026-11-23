@@ -17,26 +17,38 @@ function parseJsonc(text: string): any {
 describe('wrangler.jsonc', () => {
   const config = parseJsonc(wranglerRaw);
 
-  it('points at the Hono entrypoint and the static assets directory', () => {
+  it('points at the Worker entry (auth, gate, API, assets) and the static assets directory', () => {
     // The name is the Worker's name in the Cloudflare account, a deploy choice and not app logic.
     // Workers Builds (Git-connected deploys) writes the dashboard Worker's name into this field before
     // the build runs, so pinning one value fails any build whose Worker has another name. Check it is a
     // valid Worker name instead.
     expect(config.name).toMatch(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
-    expect(config.main).toBe('src/index.ts');
+    // #127: src/server.ts wraps the KP API (src/index.ts) with Better Auth and the walled-garden gate.
+    expect(config.main).toBe('src/server.ts');
     expect(config.assets.directory).toBe('./public');
+    expect(config.assets.binding).toBe('ASSETS');
   });
 
   it('turns observability (Workers Logs) on', () => {
     expect(config.observability).toEqual({ enabled: true });
   });
 
-  it('sends /api/* to the Worker first, so no asset can shadow an API path', () => {
-    expect(config.assets.run_worker_first).toEqual(['/api/*']);
+  it('sends every request to the Worker first, so the gate decides what a signed-out visitor may load (#127)', () => {
+    expect(config.assets.run_worker_first).toBe(true);
   });
 
-  it('does not enable nodejs_compat: nothing reachable from the entrypoint uses a Node API', () => {
-    expect(config.compatibility_flags ?? []).not.toContain('nodejs_compat');
+  it('enables only nodejs_als (AsyncLocalStorage for Better Auth), not full nodejs_compat', () => {
+    expect(config.compatibility_flags).toEqual(['nodejs_als']);
+  });
+
+  it('binds the auth database, Email Service and the sender address (#127)', () => {
+    expect(config.d1_databases).toEqual([
+      expect.objectContaining({ binding: 'DB', database_name: 'kp-web-auth', migrations_dir: 'migrations' }),
+    ]);
+    expect(config.send_email).toEqual([{ name: 'EMAIL' }]);
+    expect(typeof config.vars.AUTH_EMAIL_FROM).toBe('string');
+    // The secret is never in the config: it is set with `wrangler secret put BETTER_AUTH_SECRET`.
+    expect(wranglerRaw).not.toMatch(/BETTER_AUTH_SECRET"\s*:/);
   });
 
   it('has a compatibility date', () => {

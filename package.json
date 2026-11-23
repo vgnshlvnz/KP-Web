@@ -12,7 +12,8 @@
     "deploy": "wrangler deploy",
     "build": "tsc --noEmit",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "auth:migration": "esbuild scripts/generate-auth-migration.ts --bundle --platform=node --format=esm --packages=external --log-level=warning --outfile=scripts/.gen-auth-migration.mjs && node scripts/.gen-auth-migration.mjs && rm scripts/.gen-auth-migration.mjs"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
   "license": "ISC",
   "dependencies": {
     "astronomy-engine": "2.1.19",
+    "better-auth": "1.7.27",
     "hono": "^4.13.19"
   },
   "devDependencies": {
