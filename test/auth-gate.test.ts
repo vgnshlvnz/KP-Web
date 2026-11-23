@@ -296,6 +296,34 @@ describe('verifier findings on #129', () => {
   });
 });
 
+describe('verifier findings on #129 (second pass)', () => {
+  it('session cookies are Secure, HttpOnly and SameSite=Lax (a Worker has no NODE_ENV=production)', async () => {
+    const { env, sent } = makeEnv();
+    await post(env, '/api/auth/email-otp/send-verification-otp', { email: 'secure@example.test', type: 'sign-in' });
+    const code = /\b(\d{6})\b/.exec(sent[0].text)![1];
+    const res = await post(env, '/api/auth/sign-in/email-otp', { email: 'secure@example.test', otp: code });
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.length).toBeGreaterThan(0);
+    for (const c of cookies) {
+      expect(c).toMatch(/;\s*Secure/i);
+      expect(c).toMatch(/;\s*HttpOnly/i);
+      expect(c).toMatch(/;\s*SameSite=Lax/i);
+    }
+    expect(cookies.some((c) => c.startsWith('__Secure-better-auth.session_token='))).toBe(true);
+  });
+
+  it('only the auth endpoints the pages use are reachable; others are 404 and write no rate-limit row', async () => {
+    const { env, db } = makeEnv();
+    const count = () => (db.prepare('select count(*) as n from "rateLimit"').get() as { n: number }).n;
+    for (const path of ['/api/auth/nope', '/api/auth/ok', '/api/auth/list-sessions', '/api/auth/delete-user', '/api/auth/email-otp/reset-password']) {
+      expect((await post(env, path, {})).status, path).toBe(404);
+      expect((await get(env, path)).status, path).toBe(404);
+    }
+    expect(count()).toBe(0);
+    expect((await get(env, '/api/auth/sign-in/email-otp')).status).toBe(404); // wrong method
+  });
+});
+
 describe('gate helpers', () => {
   it('public paths are exactly the login page, /match, its two APIs, health, assets and auth', () => {
     expect(isPublicPath('/match')).toBe(true);
