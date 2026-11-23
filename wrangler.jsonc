@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kp-web",
+  "name": "kp-web-cloudflare",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-21",
   // Workers Logs (dashboard) and `wrangler tail`.

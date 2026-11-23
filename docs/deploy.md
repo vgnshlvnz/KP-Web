@@ -60,29 +60,29 @@ npm run deploy      # runs predeploy, then `wrangler deploy`
 ```
 
 `wrangler deploy` bundles `src/index.ts`, uploads the files in `public/` as static assets and publishes the Worker as
-`kp-web` (the `name` in `wrangler.jsonc`). On the first deploy wrangler may ask you to register a `workers.dev`
+`kp-web-cloudflare` (the `name` in `wrangler.jsonc`). On the first deploy wrangler may ask you to register a `workers.dev`
 subdomain for your account. When it finishes it prints the URL, of the form:
 
 ```
-https://kp-web.<your-subdomain>.workers.dev
+https://kp-web-cloudflare.<your-subdomain>.workers.dev
 ```
 
 Confirm it:
 
 ```bash
-curl https://kp-web.<your-subdomain>.workers.dev/api/health
+curl https://kp-web-cloudflare.<your-subdomain>.workers.dev/api/health
 ```
 
 That should return JSON with `"status":"ok"`. Then open the three pages in a browser:
 
-- `https://kp-web.<your-subdomain>.workers.dev/` (chart)
-- `https://kp-web.<your-subdomain>.workers.dev/match` (horoscope match)
-- `https://kp-web.<your-subdomain>.workers.dev/animate` (animated chart)
+- `https://kp-web-cloudflare.<your-subdomain>.workers.dev/` (chart)
+- `https://kp-web-cloudflare.<your-subdomain>.workers.dev/match` (horoscope match)
+- `https://kp-web-cloudflare.<your-subdomain>.workers.dev/animate` (animated chart)
 
 Check that an unknown API path answers with JSON, not a web page:
 
 ```bash
-curl -i https://kp-web.<your-subdomain>.workers.dev/api/nope      # 404, {"error":"Route not found: /api/nope"}
+curl -i https://kp-web-cloudflare.<your-subdomain>.workers.dev/api/nope      # 404, {"error":"Route not found: /api/nope"}
 ```
 
 Later deploys are the same command. `wrangler deploy --help` also lists `--message` and `--tag` to label a version.
@@ -128,7 +128,7 @@ needed today.
 npx wrangler tail                 # live log stream for the deployed Worker (`wrangler tail --help` lists --format, --status, --method, --search)
 ```
 
-Workers Logs are also in the Cloudflare dashboard: Workers & Pages, `kp-web`, Observability (`observability` is
+Workers Logs are also in the Cloudflare dashboard: Workers & Pages, `kp-web-cloudflare`, Observability (`observability` is
 enabled in `wrangler.jsonc`). Unhandled errors are logged as `Unhandled error:` by `src/index.ts`; the response itself
 never carries a stack trace.
 
@@ -167,7 +167,7 @@ size and load nothing from external hosts.
 Dashboard steps; no code change is needed.
 
 1. Add your domain to Cloudflare (Websites, Add a site) and switch its nameservers as instructed.
-2. Workers & Pages, `kp-web`, Settings, Domains & Routes, Add, Custom Domain.
+2. Workers & Pages, `kp-web-cloudflare`, Settings, Domains & Routes, Add, Custom Domain.
 3. Enter the hostname (for example `kp.example.com`). Cloudflare creates the DNS record and the certificate.
 
 ## 10. Updating locations
@@ -194,6 +194,15 @@ To update the locations:
 
 Cloudflare D1 (a hosted SQLite database) is an option only if locations must change without a redeploy, or if the list
 grows very large. Today, bundling the list is simpler and faster.
+
+## 10a. Deploying from the Cloudflare dashboard (Workers Builds)
+
+If the Worker is connected to this GitHub repo in the dashboard (Workers & Pages, Settings, Build), Cloudflare builds
+and deploys on every push to the production branch. Workers Builds uses the **dashboard Worker's name**: it writes that name
+into `name` in `wrangler.jsonc` before the build runs. Keep `name` in `wrangler.jsonc` the same as the dashboard Worker
+(`kp-web-cloudflare`), so `npm run deploy` from your machine and Git builds update the same Worker, not two.
+
+Suggested build settings: build command `npm test` (or `npm run typecheck && npm test`), deploy command `npx wrangler deploy`.
 
 ## 11. Not covered yet
 

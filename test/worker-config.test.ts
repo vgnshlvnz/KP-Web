@@ -18,7 +18,11 @@ describe('wrangler.jsonc', () => {
   const config = parseJsonc(wranglerRaw);
 
   it('points at the Hono entrypoint and the static assets directory', () => {
-    expect(config.name).toBe('kp-web');
+    // The name is the Worker's name in the Cloudflare account, a deploy choice and not app logic.
+    // Workers Builds (Git-connected deploys) writes the dashboard Worker's name into this field before
+    // the build runs, so pinning one value fails any build whose Worker has another name. Check it is a
+    // valid Worker name instead.
+    expect(config.name).toMatch(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/);
     expect(config.main).toBe('src/index.ts');
     expect(config.assets.directory).toBe('./public');
   });
