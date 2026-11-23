@@ -395,6 +395,9 @@ describe('public/match.html error handling against the real API (DST gap, repeat
     expect(page).toContain('labelOffsetOptions(selectFor(target), offsets);');
     expect(page).toContain("? who + ': ' + offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'");
     expect(page).not.toContain('label="Repeated time');
+    // Editing a date, time or place removes that target's offset buttons, not only the select labels (#122 review).
+    expect(page).toContain('btn.dataset.target = target;');
+    expect(page).toContain("actions.querySelectorAll('[data-target=\"' + target + '\"]').forEach((btn) => btn.remove());");
   });
 
   it('the page matches the API message to the birth with that local time, and so offers the choice for that person', async () => {

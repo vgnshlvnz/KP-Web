@@ -511,6 +511,7 @@
         labelOffsetOptions(selectFor(target), offsets);
         ['earlier', 'later'].forEach((choice) => {
           const btn = document.createElement('md-outlined-button');
+          btn.dataset.target = target;
           btn.textContent = offsets
             ? who + ': ' + offsets[choice] + ' (' + CHOICE_WHEN[choice] + ')'
             : who + ': use the ' + choice + ' offset';
@@ -524,16 +525,24 @@
       actions.hidden = actions.childElementCount === 0;
     }
 
-    // The offsets shown belong to one date, time and place: drop them when any of those changes.
-    function resetOffsetLabelsOn(fieldIds, selectId) {
+    // The offsets shown belong to one date, time and place: when any of those changes, drop them from the
+    // select and remove that target's offset buttons. A stale "UTC-04:00" button would otherwise send
+    // "earlier" for a new place or date, where "earlier" can be another offset.
+    function dropStaleOffsets(target) {
+      labelOffsetOptions(selectFor(target), null);
+      const actions = el('errorActions');
+      actions.querySelectorAll('[data-target="' + target + '"]').forEach((btn) => btn.remove());
+      actions.hidden = actions.childElementCount === 0;
+    }
+    function resetOffsetsOn(fieldIds, target) {
       fieldIds.forEach((id) => ['input', 'change'].forEach((type) =>
-        el(id).addEventListener(type, () => labelOffsetOptions(el(selectId), null))));
+        el(id).addEventListener(type, () => dropStaleOffsets(target))));
     }
     ['boy', 'girl'].forEach((who) => {
       const ids = PERSON_IDS[who];
-      resetOffsetLabelsOn([ids.year, ids.month, ids.day, ids.hour, ids.minute, ids.second, ids.country, ids.place], ids.ambiguous);
+      resetOffsetsOn([ids.year, ids.month, ids.day, ids.hour, ids.minute, ids.second, ids.country, ids.place], who);
     });
-    resetOffsetLabelsOn(['chkYear', 'chkMonth', 'chkDay', 'girlCountry', 'girlPlace'], 'chkAmbiguous');
+    resetOffsetsOn(['chkYear', 'chkMonth', 'chkDay', 'girlCountry', 'girlPlace'], 'checking');
 
     // ---- Result ----------------------------------------------------------------------
     function cell(tag, content, cls) {
