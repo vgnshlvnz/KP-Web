@@ -202,11 +202,13 @@ and deploys on every push to the production branch. Workers Builds uses the **da
 into `name` in `wrangler.jsonc` before the build runs. Keep `name` in `wrangler.jsonc` the same as the dashboard Worker
 (`kp-web-cloudflare`), so `npm run deploy` from your machine and Git builds update the same Worker, not two.
 
-Suggested build settings: build command `npm test` (or `npm run typecheck && npm test`), deploy command `npx wrangler deploy`.
+Build settings: build command `npm run typecheck && npm test` (the tests alone do not type-check), deploy command
+`npx wrangler deploy`.
 
 ## 11. Not covered yet
 
-- **CI deploy.** Deploying from GitHub Actions is blocked by billing, so deploys are manual (`npm run deploy`).
+- **GitHub Actions deploy.** GitHub Actions is blocked by billing. Deploys run either from your machine (`npm run deploy`)
+  or from Cloudflare Workers Builds on a push (section 10a).
 - **Persistence.** Saved charts, accounts and consent records have no storage yet (issues #12, #14, #17). The Worker is
   stateless today.
 - **Open owner decisions.** Rules still waiting on the owner (issues #23 and #24 in the code) are explicit options in the
