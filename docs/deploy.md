@@ -179,11 +179,14 @@ size and load nothing from external hosts.
 
 ## 9. Custom domain (optional)
 
-Dashboard steps; no code change is needed.
+Dashboard steps, plus one config line for sign-in (step 4).
 
 1. Add your domain to Cloudflare (Websites, Add a site) and switch its nameservers as instructed.
 2. Workers & Pages, `kp-web-cloudflare`, Settings, Domains & Routes, Add, Custom Domain.
 3. Enter the hostname (for example `kp.example.com`). Cloudflare creates the DNS record and the certificate.
+4. **Sign-in:** add the hostname to `vars.AUTH_EXTRA_HOSTS` in `wrangler.jsonc` (comma-separated, for example
+   `"kp.example.com"`), then commit and deploy. Until then, every gated page and sign-in on that domain fail with a 500,
+   because Better Auth only builds URLs for the hosts it allows (`src/auth/auth.ts`).
 
 ## 10. Updating locations
 
@@ -279,7 +282,16 @@ up.
 5. **Deploy** (`npm run deploy`, or push to `main` for Workers Builds), then open the site. It should send you to
    `/login`. Sign in with a code, and the pages show "Signed in as …".
 
-Do steps 1 to 4 **before** the first deploy that includes the login. Until then, gated pages return 503.
+Do steps 1 to 4 **before** the first deploy that includes the login, and so before merging it to `main` (Workers
+Builds deploys on every push to `main`). Until then, gated pages return 503 ("Sign-in is not configured"). If the
+database exists but step 2 was skipped, they return 500 instead.
+
+Email Service: check during onboarding that it sends to any recipient address for this binding (Email Routing's older
+`send_email` only sent to verified addresses). A local `wrangler dev` only simulates sending.
+
+### Custom domain
+
+Add it to `vars.AUTH_EXTRA_HOSTS` (section 9, step 4).
 
 ### Changing the schema
 
@@ -287,7 +299,7 @@ If the auth config in `src/auth/auth.ts` changes its fields, regenerate the SQL.
 matches. Add it as a new numbered migration, and apply it with `--local` and then `--remote`:
 
 ```bash
-npm run auth:migration
+npm run auth:migration   # uses esbuild, which comes with wrangler
 ```
 
 ### Looking at the opt-ins
@@ -296,5 +308,18 @@ npm run auth:migration
 npx wrangler d1 execute kp-web-auth --remote --command 'select email, marketingOptInAt from "user" where marketingOptIn = 1'
 ```
 
-Sessions store no IP address or user agent. The client IP (`cf-connecting-ip`) is used only for the sign-in rate limits
-(3 codes a minute).
+### Withdrawing marketing consent
+
+A signed-in user can change the opt-in with `POST /api/auth/update-user` and `{"marketingOptIn": false}` (or `true`).
+The server stamps the change: opting in records `marketingOptInAt`, withdrawing clears it, and both record the notice
+version. The client can never set `marketingOptInAt` or `marketingNoticeVersion` itself. There is no button for this
+on the pages yet.
+
+### Personal data
+
+- **Sessions:** store no IP address or user agent. After sign-out, a copied session cookie stops working within
+  60 seconds (session cookie cache).
+- **Client IP (`cf-connecting-ip`):** used for the sign-in rate limits (3 codes a minute). Better Auth stores it, with
+  the path, in the D1 `rateLimit` table.
+- **Daily cleanup:** a cron (`triggers.crons` in `wrangler.jsonc`, 03:17 UTC) deletes rows older than a day.
+  Reading the session on page loads is not rate-limited, so it writes no rows.
