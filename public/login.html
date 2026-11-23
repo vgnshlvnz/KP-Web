@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KP-Web — Sign in</title>
+  <link rel="stylesheet" href="/styles/kp-m3-tokens.css">
+  <script src="/vendor/material-web-2.5.0.js"></script>
+  <style>
+    :where(div, span, p, h1, h2, h3, header, ul, li) { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      margin: 0;
+      font: 400 1rem/1.5rem var(--font-plain);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      padding: var(--space-4);
+    }
+    @media (min-width: 600px) { body { padding: var(--space-6); } }
+    header { max-width: 960px; margin: 0 auto var(--space-6) auto; }
+    header h1 { font: 400 1.5rem/2rem var(--font-brand); color: var(--md-sys-color-primary); }
+    header p { font: 400 0.875rem/1.25rem var(--font-plain); color: var(--md-sys-color-on-surface-variant); }
+    main { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: 3fr 2fr; gap: var(--space-4); align-items: start; }
+    @media (max-width: 839px) { main { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: var(--md-sys-shape-corner-medium);
+      padding: var(--space-4);
+    }
+    .card h2 { font: 400 1.375rem/1.75rem var(--font-plain); margin-bottom: var(--space-3); }
+    .supporting { font: 400 0.875rem/1.25rem var(--font-plain); color: var(--md-sys-color-on-surface-variant); }
+    .fields { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+    md-outlined-text-field { width: 100%; }
+    md-filled-button { width: 100%; }
+    .notice-box {
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--md-sys-shape-corner-medium);
+      font: 400 0.875rem/1.25rem var(--font-plain);
+    }
+    label.opt-in { display: flex; gap: var(--space-2); align-items: flex-start; font: 400 0.875rem/1.25rem var(--font-plain); cursor: pointer; }
+    #status { font: 500 0.875rem/1.25rem var(--font-plain); min-height: 1.25rem; }
+    #status.is-error { color: var(--md-sys-color-error); }
+    .free-card { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+    .free-card h2 { color: inherit; }
+    .free-card a.go { display: inline-block; margin-top: var(--space-3); font: 500 1rem/1.5rem var(--font-plain); color: inherit; }
+    [hidden] { display: none !important; }
+    .row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .row md-filled-button, .row md-outlined-button { flex: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>KP-Web</h1>
+    <p>KP (Krishnamurti Paddhati) charts, horary and animation. Sign in with a code we send to your email.</p>
+  </header>
+
+  <main>
+    <section class="card" aria-labelledby="signInTitle">
+      <h2 id="signInTitle">Sign in</h2>
+
+      <!-- Already signed in -->
+      <div id="signedIn" hidden>
+        <p>Signed in as <strong id="signedInEmail"></strong>.</p>
+        <div class="row fields">
+          <md-filled-button id="btnContinue">Continue to KP-Web</md-filled-button>
+          <md-outlined-button id="btnSignOut">Sign out</md-outlined-button>
+        </div>
+      </div>
+
+      <!-- Step 1: email -->
+      <form id="stepEmail" class="fields" novalidate>
+        <md-outlined-text-field id="inpEmail" type="email" label="Email address" autocomplete="email" required></md-outlined-text-field>
+        <div class="notice-box" id="marketingNotice">
+          We use your email address to sign you in. We may also use it to send you marketing emails at a later
+          date, but only if you tick the box below. You can withdraw at any time.
+        </div>
+        <label class="opt-in">
+          <md-checkbox id="chkMarketing" touch-target="wrapper"></md-checkbox>
+          <span>Yes, KP-Web may email me about products and offers.</span>
+        </label>
+        <md-filled-button id="btnSend" type="submit">Send me a code</md-filled-button>
+      </form>
+
+      <!-- Step 2: code -->
+      <form id="stepCode" class="fields" novalidate hidden>
+        <p class="supporting">We sent a 6-digit code to <strong id="codeEmail"></strong>. It expires in 10 minutes.</p>
+        <md-outlined-text-field id="inpCode" label="6-digit code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></md-outlined-text-field>
+        <md-filled-button id="btnSignIn" type="submit">Sign in</md-filled-button>
+        <md-text-button id="btnBack" type="button">Use a different email</md-text-button>
+      </form>
+
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <aside class="card free-card" aria-labelledby="freeTitle">
+      <h2 id="freeTitle">Horoscope Match: free, no login needed</h2>
+      <p>KP Dasavidha Porutham for a boy and a girl, scored rule by rule. Free to use, no account required.</p>
+      <a class="go" href="/match">Open Horoscope Match →</a>
+    </aside>
+  </main>
+
+  <script>
+    // Sign-in by email code (#127): Better Auth emailOTP at /api/auth. Plain fetch, no client bundle.
+    const el = (id) => document.getElementById(id);
+    let email = '';
+
+    // Only a path on this site: the same rule as safeNextPath in src/auth/gate.ts.
+    function nextPath() {
+      const next = new URLSearchParams(location.search).get('next');
+      if (typeof next !== 'string' || !next.startsWith('/') || next.startsWith('//') || /[\\\u0000-\u001f]/.test(next)) return '/';
+      return next;
+    }
+
+    function setStatus(text, isError) {
+      el('status').textContent = text;
+      el('status').classList.toggle('is-error', Boolean(isError));
+    }
+
+    async function postAuth(path, body) {
+      const res = await fetch('/api/auth' + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      let json = null;
+      try { json = await res.json(); } catch (_) { /* empty body */ }
+      return { res, json };
+    }
+
+    function errorText(result, fallback) {
+      if (result.res.status === 429) return 'Too many attempts. Please wait a minute and try again.';
+      return (result.json && (result.json.message || result.json.error)) || fallback;
+    }
+
+    function showStep(step) {
+      el('stepEmail').hidden = step !== 'email';
+      el('stepCode').hidden = step !== 'code';
+      el('signedIn').hidden = step !== 'signedIn';
+    }
+
+    el('stepEmail').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      email = String(el('inpEmail').value).trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setStatus('Enter a valid email address.', true); return; }
+      setStatus('Sending…', false);
+      const r = await postAuth('/email-otp/send-verification-otp', { email, type: 'sign-in' });
+      if (!r.res.ok) { setStatus(errorText(r, 'Could not send the code.'), true); return; }
+      el('codeEmail').textContent = email;
+      showStep('code');
+      setStatus('', false);
+      el('inpCode').focus();
+    });
+
+    el('stepCode').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otp = String(el('inpCode').value).trim();
+      if (!/^\d{6}$/.test(otp)) { setStatus('The code is 6 digits.', true); return; }
+      setStatus('Signing in…', false);
+      // marketingOptIn is only read when this email signs in for the first time (account creation).
+      const r = await postAuth('/sign-in/email-otp', { email, otp, marketingOptIn: Boolean(el('chkMarketing').checked) });
+      if (!r.res.ok) { setStatus(errorText(r, 'That code did not work.'), true); return; }
+      location.assign(nextPath());
+    });
+
+    el('btnBack').addEventListener('click', () => { showStep('email'); setStatus('', false); });
+    el('btnContinue').addEventListener('click', () => location.assign(nextPath()));
+    el('btnSignOut').addEventListener('click', async () => {
+      await postAuth('/sign-out', {});
+      showStep('email');
+      setStatus('Signed out.', false);
+    });
+
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/get-session', { credentials: 'same-origin' });
+        const json = res.ok ? await res.json() : null;
+        if (json && json.user && json.user.email) {
+          el('signedInEmail').textContent = json.user.email;
+          showStep('signedIn');
+        }
+      } catch (_) { /* stay on the email step */ }
+    })();
+  </script>
+</body>
+</html>

@@ -28,9 +28,21 @@ If `whoami` lists more than one account, check that the one you want is the one 
 
 ## 3. Run it locally
 
+The app is behind a login (section 12). Once, set up the local sign-in database and secret:
+
+```bash
+printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 32)" > .dev.vars   # gitignored
+npx wrangler d1 migrations apply kp-web-auth --local                          # local database only
+```
+
+Then:
+
 ```bash
 npm run dev       # wrangler dev, http://localhost:8787
 ```
+
+Locally, sign-in emails are not sent: `wrangler dev` prints each one and writes its text to a file under
+`.wrangler/tmp/email/`, where you can read the 6-digit code.
 
 Open `/`, `/match` and `/animate` in a browser, and try:
 
@@ -158,7 +170,10 @@ to watch. The Free plan also has a daily request cap; the paid plan (Workers Pai
 Consider it when you see "exceeded CPU" errors in the logs, or traffic near the daily cap. Check Cloudflare's current
 limits page for exact figures, because they change.
 
-Size: the bundled Worker is about 206 KB minified (71 KB gzipped). The limit is 3 MB compressed on Free and 10 MB on
+A signed-out request through the login gate takes about 0.2 ms warm. The first request in a new isolate also builds the
+Better Auth instance once (about 34 ms in Node), so watch CPU time in the dashboard after deploying the login.
+
+Size: with Better Auth (#127) the bundled Worker is about 990 KB minified (280 KB gzipped). The limit is 3 MB compressed on Free and 10 MB on
 Paid. `public/` is 672 KB of static files (self-hosted fonts and Material Web), which do not count against the Worker
 size and load nothing from external hosts.
 
@@ -209,8 +224,77 @@ Build settings: build command `npm run typecheck && npm test` (the tests alone d
 
 - **GitHub Actions deploy.** GitHub Actions is blocked by billing. Deploys run either from your machine (`npm run deploy`)
   or from Cloudflare Workers Builds on a push (section 10a).
-- **Persistence.** Saved charts, accounts and consent records have no storage yet (issues #12, #14, #17). The Worker is
-  stateless today.
+- **Saved charts and account deletion.** Accounts exist for sign-in only (section 12). Saved charts, data export and
+  account deletion are not built yet (issues #14, #17).
 - **Open owner decisions.** Rules still waiting on the owner (issues #23 and #24 in the code) are explicit options in the
   engine, not defaults. They are not blockers for a deploy, but results for those rules may change when decided.
 - **Content-Security-Policy**, **restricting CORS**, and a **rate limit** are later options.
+
+## 12. Login and accounts (#127)
+
+Everything except the login page and the free **Horoscope Match** (`/match`) needs a signed-in user. Sign-in is a 6-digit
+code sent by email (Better Auth, `emailOTP` plugin). A new email address gets an account on its first sign-in. The sign-in
+page says that email addresses may be used for marketing at a later date. Agreeing is a separate, unticked checkbox, and
+the answer is stored with its time and the notice version (`marketingOptIn`, `marketingOptInAt`,
+`marketingNoticeVersion` on the `user` table).
+
+What runs where:
+
+| Piece | Where |
+|---|---|
+| Worker entry: auth, then the gate, then the KP API, then the pages | `src/server.ts` (`main` in `wrangler.jsonc`) |
+| Better Auth config | `src/auth/auth.ts` |
+| Public paths (login, `/match`, `/api/match`, `/api/locations`, health, assets) | `src/auth/gate.ts` |
+| Database: users, sessions, codes, rate limits | D1 `kp-web-auth` (binding `DB`), schema `migrations/0001_better_auth.sql` |
+| Sending the codes | Cloudflare Email Service (binding `EMAIL`), sender `AUTH_EMAIL_FROM` |
+
+Without the database or the secret, every gated path returns 503 and nothing behind the login is served. `/match` stays
+up.
+
+### One-time setup (run these yourself; they change your Cloudflare account)
+
+1. **Create the database** and copy the `database_id` it prints into `d1_databases` in `wrangler.jsonc` (commit it):
+
+   ```bash
+   npx wrangler d1 create kp-web-auth
+   ```
+
+2. **Create the tables** in the new database:
+
+   ```bash
+   npx wrangler d1 migrations apply kp-web-auth --remote
+   ```
+
+3. **Set the secret** that signs sessions (a random 32-byte value; keep it out of the repo):
+
+   ```bash
+   openssl rand -base64 32 | npx wrangler secret put BETTER_AUTH_SECRET
+   ```
+
+4. **Email Service:** in the dashboard, go to Email, Email Service, and onboard the domain you will send from. The domain
+   must be on Cloudflare, and onboarding adds its DNS records. Then set `vars.AUTH_EMAIL_FROM` in `wrangler.jsonc` to an
+   address on that domain, for example `KP-Web <login@yourdomain.com>`, and commit it. Check Email Service's current
+   plan and limits there.
+
+5. **Deploy** (`npm run deploy`, or push to `main` for Workers Builds), then open the site. It should send you to
+   `/login`. Sign in with a code, and the pages show "Signed in as …".
+
+Do steps 1 to 4 **before** the first deploy that includes the login. Until then, gated pages return 503.
+
+### Changing the schema
+
+If the auth config in `src/auth/auth.ts` changes its fields, regenerate the SQL. `test/auth-gate.test.ts` fails until it
+matches. Add it as a new numbered migration, and apply it with `--local` and then `--remote`:
+
+```bash
+npm run auth:migration
+```
+
+### Looking at the opt-ins
+
+```bash
+npx wrangler d1 execute kp-web-auth --remote --command 'select email, marketingOptInAt from "user" where marketingOptIn = 1'
+```
+
+Sessions store no IP address or user agent. The client IP (`cf-connecting-ip`) is used only for the sign-in rate limits
+(3 codes a minute).

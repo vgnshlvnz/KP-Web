@@ -93,8 +93,11 @@ npm run deploy                  # publishes to Cloudflare; run it yourself, see 
 
 ### Pages
 
+Everything except `/login` and `/match` needs a signed-in user. Sign-in is a 6-digit code sent by email (Better Auth); setup is in `docs/deploy.md` section 12.
+
+- `/login` — sign in with an emailed code. The page says email addresses may be used for marketing later; agreeing is an optional, unticked checkbox.
 - `/` — natal chart (cusps, planets, lords, significators, South and North Indian wheels).
-- `/match` — KP Dasavidha Porutham (horoscope matching).
+- `/match` — KP Dasavidha Porutham (horoscope matching). **Free: no login needed.**
 - `/animate` — animated chart over time.
 
 ### API endpoints
@@ -125,6 +128,8 @@ Work to arc-seconds and collect birth time to the second. A cuspal sub-lord can 
 ### Privacy
 
 Birth data is personal data under Malaysia's [PDPA](https://www.pdp.gov.my/en/faq/). Horary questions often touch health or religion, which can count as sensitive data. Consent, retention, and export/delete need to be in the MVP.
+
+Sign-in (#127) stores the email address, sessions (with no IP address or user agent) and the optional marketing opt-in with its time, in the D1 database `kp-web-auth`. Export and deletion are still open (#14, #17).
 
 ## Open / unresolved decisions
 
