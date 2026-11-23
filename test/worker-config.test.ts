@@ -47,6 +47,8 @@ describe('wrangler.jsonc', () => {
     ]);
     expect(config.send_email).toEqual([{ name: 'EMAIL' }]);
     expect(typeof config.vars.AUTH_EMAIL_FROM).toBe('string');
+    expect(typeof config.vars.AUTH_EXTRA_HOSTS).toBe('string');
+    expect(config.triggers).toEqual({ crons: ['17 3 * * *'] });
     // The secret is never in the config: it is set with `wrangler secret put BETTER_AUTH_SECRET`.
     expect(wranglerRaw).not.toMatch(/BETTER_AUTH_SECRET"\s*:/);
   });

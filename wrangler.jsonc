@@ -29,8 +29,12 @@
   ],
   // Cloudflare Email Service, for the sign-in codes.
   "send_email": [{ "name": "EMAIL" }],
+  // Daily at 03:17 UTC: delete rate-limit rows older than a day (they hold the client IP); see src/server.ts.
+  "triggers": { "crons": ["17 3 * * *"] },
   "vars": {
     // The sender address; its domain must be onboarded to Email Service (docs/deploy.md).
-    "AUTH_EMAIL_FROM": "KP-Web <login@example.com>"
+    "AUTH_EMAIL_FROM": "KP-Web <login@example.com>",
+    // Extra hosts sign-in accepts, comma-separated, e.g. a custom domain: "kp.example.com".
+    "AUTH_EXTRA_HOSTS": ""
   }
 }

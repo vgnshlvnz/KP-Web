@@ -17,6 +17,15 @@ export const MARKETING_NOTICE_VERSION = '2026-11-24';
 /** Hosts the auth base URL may be built from. Requests from any other host are refused by Better Auth. */
 export const AUTH_ALLOWED_HOSTS = ['kp-web-cloudflare.*.workers.dev', 'localhost', 'localhost:*', '127.0.0.1:*'];
 
+/** The built-in hosts plus `AUTH_EXTRA_HOSTS` (comma-separated, e.g. a custom domain "kp.example.com"). */
+export function allowedHosts(env: AuthEnv): string[] {
+  const extra = (env.AUTH_EXTRA_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean);
+  return [...AUTH_ALLOWED_HOSTS, ...extra];
+}
+
+/** Rate-limit rows older than this are deleted by the daily cleanup (they hold the client IP). */
+export const RATE_LIMIT_RETENTION_MS = 24 * 60 * 60 * 1000;
+
 /** A D1 binding in the Worker; a `node:sqlite` DatabaseSync in tests. Better Auth detects which. */
 export type AuthDatabase = object;
 
@@ -25,6 +34,7 @@ export interface AuthEnv {
   EMAIL?: SendEmailBinding;
   BETTER_AUTH_SECRET?: string;
   AUTH_EMAIL_FROM?: string;
+  AUTH_EXTRA_HOSTS?: string;
 }
 
 /** True when the bindings and the secret sign-in needs are present. Without them the gate fails closed. */
@@ -37,14 +47,15 @@ export function createAuth(env: AuthEnv) {
   return betterAuth({
     appName: 'KP-Web',
     basePath: '/api/auth',
-    baseURL: { allowedHosts: AUTH_ALLOWED_HOSTS },
+    baseURL: { allowedHosts: allowedHosts(env) },
     secret: env.BETTER_AUTH_SECRET,
     database: env.DB as never,
     telemetry: { enabled: false },
     emailAndPassword: { enabled: false },
     user: {
       additionalFields: {
-        // Set by the sign-in request (the unticked checkbox on the login page); only read on account creation.
+        // Set by the sign-in request (the unticked checkbox on the login page) on account creation, or by
+        // update-user later; the hooks below stamp marketingOptInAt and marketingNoticeVersion each time.
         marketingOptIn: { type: 'boolean', required: false, defaultValue: false, input: true },
         // Stamped by the server, never by the client.
         marketingOptInAt: { type: 'date', required: false, input: false },
@@ -66,6 +77,23 @@ export function createAuth(env: AuthEnv) {
             };
           },
         },
+        update: {
+          // Any change to the opt-in (for example through /api/auth/update-user) is stamped by the server:
+          // opting in records the time; withdrawing clears it. Either way the notice version in force at the
+          // change is recorded. The client can never set those two fields itself (input: false).
+          before: async (data) => {
+            if (!('marketingOptIn' in data)) return;
+            const optIn = (data as { marketingOptIn?: unknown }).marketingOptIn === true;
+            return {
+              data: {
+                ...data,
+                marketingOptIn: optIn,
+                marketingOptInAt: optIn ? new Date() : null,
+                marketingNoticeVersion: MARKETING_NOTICE_VERSION,
+              },
+            };
+          },
+        },
       },
       session: {
         create: {
@@ -77,10 +105,18 @@ export function createAuth(env: AuthEnv) {
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24,
-      cookieCache: { enabled: true, maxAge: 5 * 60 },
+      // A copied session cookie stops working within 60 s of sign-out (the cache is not checked against D1).
+      cookieCache: { enabled: true, maxAge: 60 },
     },
     // In-memory limits do not hold across Worker isolates. The emailOTP plugin adds 3 per 60 s for sending a code.
-    rateLimit: { enabled: true, storage: 'database', window: 60, max: 60 },
+    rateLimit: {
+      enabled: true,
+      storage: 'database',
+      window: 60,
+      max: 60,
+      // Every page load reads the session (the signed-in bar); rate-limiting it would write a D1 row each time.
+      customRules: { '/get-session': false, '/sign-out': false },
+    },
     advanced: {
       // Cloudflare sets cf-connecting-ip and replaces any client value; used for rate limiting only.
       ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },

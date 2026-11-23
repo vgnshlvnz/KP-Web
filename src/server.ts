@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import api from './index.js';
-import { authConfigured, authFor, type AuthEnv } from './auth/auth.js';
+import { authConfigured, authFor, RATE_LIMIT_RETENTION_MS, type AuthEnv } from './auth/auth.js';
 import { isPublicPath, loginRedirectFor } from './auth/gate.js';
 
 /**
@@ -55,4 +55,27 @@ server.all('*', (c) => {
   return c.env.ASSETS.fetch(c.req.raw);
 });
 
-export default server;
+/** The D1 calls the daily cleanup uses. */
+interface D1Like {
+  prepare(sql: string): { bind(...values: unknown[]): { run(): Promise<unknown> } };
+}
+
+/**
+ * Daily cleanup (cron in wrangler.jsonc): Better Auth's rate-limit rows are keyed by client IP and path and are
+ * never deleted by Better Auth itself. Rows older than RATE_LIMIT_RETENTION_MS are no longer needed for any limit.
+ */
+export async function deleteOldRateLimitRows(env: ServerEnv, now = Date.now()): Promise<void> {
+  const db = env.DB as D1Like | undefined;
+  if (!db || typeof db.prepare !== 'function') return;
+  await db.prepare('delete from "rateLimit" where "lastRequest" < ?').bind(now - RATE_LIMIT_RETENTION_MS).run();
+}
+
+/** The Hono app, for tests (`app.request`). */
+export const app = server;
+
+export default {
+  fetch: server.fetch,
+  async scheduled(_controller: unknown, env: ServerEnv): Promise<void> {
+    await deleteOldRateLimitRows(env);
+  },
+};

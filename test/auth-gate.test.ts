@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
-import server, { type ServerEnv } from '../src/server.js';
+import worker, { app as server, deleteOldRateLimitRows, type ServerEnv } from '../src/server.js';
 import { MARKETING_NOTICE_VERSION } from '../src/auth/auth.js';
 import { isPublicPath, loginRedirectFor, safeNextPath } from '../src/auth/gate.js';
 import { authMigrationSql } from '../scripts/auth-migration.js';
@@ -224,6 +224,75 @@ describe('marketing notice and optional opt-in (owner decision on #127)', () => 
     const s = db.prepare('select ipAddress, userAgent from "session"').all() as Array<{ ipAddress: unknown; userAgent: unknown }>;
     expect(s.length).toBe(1);
     expect(s[0]).toEqual({ ipAddress: null, userAgent: null });
+  });
+});
+
+describe('verifier findings on #129', () => {
+  type Row = { marketingOptIn: number | null; marketingOptInAt: string | null; marketingNoticeVersion: string | null };
+  const row = (db: DatabaseSync, email: string) =>
+    db.prepare('select marketingOptIn, marketingOptInAt, marketingNoticeVersion from "user" where email = ?').get(email) as Row;
+
+  it('changing the opt-in later (update-user) is stamped by the server: opt in records the time, withdraw clears it', async () => {
+    const { env, db, sent } = makeEnv();
+    const cookie = await signIn(env, sent, 'later@example.test');
+    expect(row(db, 'later@example.test').marketingOptInAt).toBeNull();
+
+    const optIn = await post(env, '/api/auth/update-user', { marketingOptIn: true }, cookie);
+    expect(optIn.status).toBe(200);
+    const r1 = row(db, 'later@example.test');
+    expect(r1.marketingOptIn).toBe(1);
+    expect(r1.marketingOptInAt).not.toBeNull();
+    expect(r1.marketingNoticeVersion).toBe(MARKETING_NOTICE_VERSION);
+
+    const withdraw = await post(env, '/api/auth/update-user', { marketingOptIn: false }, cookie);
+    expect(withdraw.status).toBe(200);
+    const r2 = row(db, 'later@example.test');
+    expect(r2.marketingOptIn).toBe(0);
+    expect(r2.marketingOptInAt).toBeNull();
+
+    // The stamps themselves can still not be sent by the client.
+    const forged = await post(env, '/api/auth/update-user', { marketingOptInAt: '2000-01-01T00:00:00.000Z' }, cookie);
+    expect(forged.status).toBe(400);
+    expect(row(db, 'later@example.test').marketingOptInAt).toBeNull();
+  });
+
+  it('an update that does not touch the opt-in leaves its fields alone', async () => {
+    const { env, db, sent } = makeEnv();
+    const cookie = await signIn(env, sent, 'keep@example.test', { marketingOptIn: true });
+    const before = row(db, 'keep@example.test');
+    expect((await post(env, '/api/auth/update-user', { name: 'Keep' }, cookie)).status).toBe(200);
+    expect(row(db, 'keep@example.test')).toEqual(before);
+  });
+
+  it('a custom domain is accepted once it is listed in AUTH_EXTRA_HOSTS, and refused before', async () => {
+    const custom = (env: ServerEnv) =>
+      server.request('https://kp.example.org/', { headers: { 'cf-connecting-ip': nextIp() }, redirect: 'manual' }, env);
+    expect((await custom(makeEnv().env)).status).toBe(500);
+    const res = await custom(makeEnv({ AUTH_EXTRA_HOSTS: 'kp.example.org' }).env);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/login?next=%2F');
+  });
+
+  it('reading the session on each page load writes no rate-limit row', async () => {
+    const { env, db, sent } = makeEnv();
+    const cookie = await signIn(env, sent, 'reader2@example.test');
+    const count = () => (db.prepare('select count(*) as n from "rateLimit"').get() as { n: number }).n;
+    const n = count();
+    for (let i = 0; i < 5; i++) expect((await get(env, '/api/auth/get-session', cookie)).status).toBe(200);
+    expect(count()).toBe(n);
+  });
+
+  it('the daily cron deletes rate-limit rows older than a day (they hold the client IP)', async () => {
+    const { env, db } = makeEnv();
+    const now = Date.UTC(2026, 10, 24, 3, 17);
+    const insert = db.prepare('insert into "rateLimit" (id, key, count, lastRequest) values (?, ?, 1, ?)');
+    insert.run('old', '203.0.113.1|/email-otp/send-verification-otp', now - 25 * 3600 * 1000);
+    insert.run('new', '203.0.113.2|/email-otp/send-verification-otp', now - 3600 * 1000);
+    // A D1-shaped wrapper (prepare, bind, run) over node:sqlite.
+    const d1 = { prepare: (sql: string) => ({ bind: (...v: unknown[]) => ({ run: async () => db.prepare(sql).run(...(v as [number])) }) }) };
+    await deleteOldRateLimitRows({ ...env, DB: d1 }, now);
+    expect((db.prepare('select id from "rateLimit"').all() as Array<{ id: string }>).map((r) => r.id)).toEqual(['new']);
+    expect(typeof worker.scheduled).toBe('function');
   });
 });
 
