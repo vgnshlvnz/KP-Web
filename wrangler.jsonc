@@ -18,12 +18,13 @@
     "run_worker_first": true
   },
   // Accounts, sessions, login codes and rate limits. Schema: migrations/0001_better_auth.sql
-  // (owner: `npx wrangler d1 create kp-web-auth`, add its database_id here, then
-  // `npx wrangler d1 migrations apply kp-web-auth --remote`; see docs/deploy.md).
+  // Created by the owner (2026-11-24); tables: `npx wrangler d1 migrations apply kp-web-auth --remote`
+  // (see docs/deploy.md).
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "kp-web-auth",
+      "database_id": "a3e860f8-1460-4dc9-88e3-6a192e10208d",
       "migrations_dir": "migrations"
     }
   ],

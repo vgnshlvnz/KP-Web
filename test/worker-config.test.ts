@@ -43,7 +43,13 @@ describe('wrangler.jsonc', () => {
 
   it('binds the auth database, Email Service and the sender address (#127)', () => {
     expect(config.d1_databases).toEqual([
-      expect.objectContaining({ binding: 'DB', database_name: 'kp-web-auth', migrations_dir: 'migrations' }),
+      expect.objectContaining({
+        binding: 'DB',
+        database_name: 'kp-web-auth',
+        // The owner's D1 database (#132).
+        database_id: 'a3e860f8-1460-4dc9-88e3-6a192e10208d',
+        migrations_dir: 'migrations',
+      }),
     ]);
     expect(config.send_email).toEqual([{ name: 'EMAIL' }]);
     // The owner's sender (#132); its domain must be onboarded to Email Service, never a placeholder.
