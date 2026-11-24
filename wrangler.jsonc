@@ -33,7 +33,7 @@
   "triggers": { "crons": ["17 3 * * *"] },
   "vars": {
     // The sender address; its domain must be onboarded to Email Service (docs/deploy.md).
-    "AUTH_EMAIL_FROM": "KP-Web <login@example.com>",
+    "AUTH_EMAIL_FROM": "noreply@vgnshlv.nz",
     // Extra hosts sign-in accepts, comma-separated, e.g. a custom domain: "kp.example.com".
     "AUTH_EXTRA_HOSTS": ""
   }

@@ -46,7 +46,8 @@ describe('wrangler.jsonc', () => {
       expect.objectContaining({ binding: 'DB', database_name: 'kp-web-auth', migrations_dir: 'migrations' }),
     ]);
     expect(config.send_email).toEqual([{ name: 'EMAIL' }]);
-    expect(typeof config.vars.AUTH_EMAIL_FROM).toBe('string');
+    // The owner's sender (#132); its domain must be onboarded to Email Service, never a placeholder.
+    expect(config.vars.AUTH_EMAIL_FROM).toBe('noreply@vgnshlv.nz');
     expect(typeof config.vars.AUTH_EXTRA_HOSTS).toBe('string');
     expect(config.triggers).toEqual({ crons: ['17 3 * * *'] });
     // The secret is never in the config: it is set with `wrangler secret put BETTER_AUTH_SECRET`.
