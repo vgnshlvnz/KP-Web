@@ -54,7 +54,8 @@ describe('wrangler.jsonc', () => {
     expect(config.send_email).toEqual([{ name: 'EMAIL' }]);
     // The owner's sender (#132); its domain must be onboarded to Email Service, never a placeholder.
     expect(config.vars.AUTH_EMAIL_FROM).toBe('noreply@vgnshlv.nz');
-    expect(typeof config.vars.AUTH_EXTRA_HOSTS).toBe('string');
+    // The owner's custom domain (#134): without it every gated page and sign-in there is a 500.
+    expect(config.vars.AUTH_EXTRA_HOSTS).toBe('kpastro.tamizh-jathagam.app');
     expect(config.triggers).toEqual({ crons: ['17 3 * * *'] });
     // The secret is never in the config: it is set with `wrangler secret put BETTER_AUTH_SECRET`.
     expect(wranglerRaw).not.toMatch(/BETTER_AUTH_SECRET"\s*:/);

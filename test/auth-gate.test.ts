@@ -273,6 +273,19 @@ describe('verifier findings on #129', () => {
     expect(res.headers.get('location')).toBe('/login?next=%2F');
   });
 
+  it('the owner\'s domain from wrangler.jsonc gets the login redirect, not a 500 (#134)', async () => {
+    const wrangler = readFileSync(fileURLToPath(new URL('../wrangler.jsonc', import.meta.url).href), 'utf8');
+    const extra = /"AUTH_EXTRA_HOSTS":\s*"([^"]*)"/.exec(wrangler)?.[1];
+    expect(extra).toBe('kpastro.tamizh-jathagam.app');
+    const res = await server.request(
+      'https://kpastro.tamizh-jathagam.app/',
+      { headers: { 'cf-connecting-ip': nextIp() }, redirect: 'manual' },
+      makeEnv({ AUTH_EXTRA_HOSTS: extra }).env,
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/login?next=%2F');
+  });
+
   it('reading the session on each page load writes no rate-limit row', async () => {
     const { env, db, sent } = makeEnv();
     const cookie = await signIn(env, sent, 'reader2@example.test');
