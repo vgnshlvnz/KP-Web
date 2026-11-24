@@ -1,16 +1,41 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "kp-web-cloudflare",
-  "main": "src/index.ts",
+  // The Worker entry: Better Auth, the walled-garden gate, the KP API (src/index.ts), then static assets (#127).
+  "main": "src/server.ts",
   "compatibility_date": "2026-11-21",
+  // Better Auth needs AsyncLocalStorage, and only that (no other Node API is used at runtime).
+  "compatibility_flags": ["nodejs_als"],
   // Workers Logs (dashboard) and `wrangler tail`.
   "observability": {
     "enabled": true
   },
   "assets": {
     "directory": "./public",
-    // Every /api/* request goes to the Worker first, so no static file can ever shadow an API path and an unknown
-    // /api/... path gets the Worker's JSON 404, not an HTML page.
-    "run_worker_first": ["/api/*"]
+    "binding": "ASSETS",
+    // Every request goes to the Worker first, so the gate decides what a signed-out visitor may load
+    // (only the login page, /match and shared assets); src/server.ts serves allowed files through ASSETS.
+    "run_worker_first": true
+  },
+  // Accounts, sessions, login codes and rate limits. Schema: migrations/0001_better_auth.sql
+  // Created by the owner (2026-11-24); tables: `npx wrangler d1 migrations apply kp-web-auth --remote`
+  // (see docs/deploy.md).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kp-web-auth",
+      "database_id": "a3e860f8-1460-4dc9-88e3-6a192e10208d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Cloudflare Email Service, for the sign-in codes.
+  "send_email": [{ "name": "EMAIL" }],
+  // Daily at 03:17 UTC: delete rate-limit rows older than a day (they hold the client IP); see src/server.ts.
+  "triggers": { "crons": ["17 3 * * *"] },
+  "vars": {
+    // The sender address; its domain must be onboarded to Email Service (docs/deploy.md).
+    "AUTH_EMAIL_FROM": "noreply@vgnshlv.nz",
+    // Extra hosts sign-in accepts, comma-separated, e.g. a custom domain: "kp.example.com".
+    "AUTH_EXTRA_HOSTS": ""
   }
 }
